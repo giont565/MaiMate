@@ -50,9 +50,9 @@ function statusTable(s, rows, y, colW, rowH) {
   s.background = { color: NAVY_D };
   s.addShape("ellipse", { x: 10.2, y: -1.8, w: 5.5, h: 5.5, fill: { color: NAVY } });
   s.addText("隊伍「第五名」團隊會議", { x: M, y: 1.6, w: 8, h: 0.4, fontFace: FONT, fontSize: 14, color: GOLD, margin: 0 });
-  s.addText("MaiMate 工作項目狀態", { x: M, y: 2.1, w: W - 2 * M, h: 1.0, fontFace: FONT, fontSize: 46, bold: true, color: WHITE, margin: 0 });
-  s.addText("39 項全盤點・四級誠實標示・分工討論用", { x: M, y: 3.3, w: 10, h: 0.5, fontFace: FONT, fontSize: 18, color: ICE, margin: 0 });
-  s.addText("盤點日 2026/07/19｜決賽 8/1–8/2｜完整版：docs/STATUS.md", { x: M, y: 6.4, w: 10, h: 0.4, fontFace: FONT, fontSize: 13, color: "8FA0C9", margin: 0 });
+  s.addText("MaiMate 開發手冊", { x: M, y: 2.1, w: W - 2 * M, h: 1.0, fontFace: FONT, fontSize: 46, bold: true, color: WHITE, margin: 0 });
+  s.addText("狀態・分工・架構・成本・驗收・Kiro 教學——隊內唯一簡報", { x: M, y: 3.3, w: 10, h: 0.5, fontFace: FONT, fontSize: 18, color: ICE, margin: 0 });
+  s.addText("2026/07/19｜決賽 8/1–8/2｜文字完整版：repo 首頁 README.md", { x: M, y: 6.4, w: 10, h: 0.4, fontFace: FONT, fontSize: 13, color: "8FA0C9", margin: 0 });
 }
 
 // ============ 2 總覽 ============
@@ -157,30 +157,58 @@ function statusTable(s, rows, y, colW, rowH) {
   ], 1.75, [3.1, 1.5, 5.7, 1.83], 0.6);
 }
 
-// ============ 7 四工作包 ============
+// ============ 7 四工作包（定案版：地盤制） ============
 {
   const s = pres.addSlide();
   s.background = { color: WHITE };
-  bigTitle(s, "分工討論：建議切成四個工作包（未指派）");
-  const packs = [
-    { t: "A｜Agent 核心", c: NAVY, body: "#1 confirm帶出\n#5 模型路由\n#10 Profile\n#11 三方案\nBedrock 首跑", skill: "Python・Bedrock" },
-    { t: "B｜資料與 RAG", c: GOLD, body: "#9 語料+KB建置\n#12 Audit Log\n#2 Public API 實測", skill: "Python・AWS 資料" },
-    { t: "C｜前端與體驗", c: GREEN, body: "#13 手機版改版\n三方案卡/徽章/軌跡面板\n離線備援驗證\n麥麥視覺", skill: "HTML/JS・設計" },
-    { t: "D｜整合與交付", c: RED, body: "#14 部署演練\n#4 Private API E2E\n#6 Guardrails\n#8 錄影・#15 簡報\nE2E 測試主導", skill: "AWS・統籌" },
+  bigTitle(s, "四個工作包：自選，每包獨佔自己的地盤", "目錄所有權互不重疊（git 不打架）＋工時拉平＋交接只走 README §3 介面契約");
+  const header = ["工作包", "做什麼（issues）", "獨佔目錄", "工時", "適合的人"].map(t =>
+    ({ text: t, options: { bold: true, color: WHITE, fill: { color: NAVY } } }));
+  const rows = [
+    [{ text: "A｜Agent 與方案引擎", options: { bold: true, color: NAVY } },
+     "confirm帶出(#1)、模型路由(#5)、Profile(#10)、三方案(#11)、Bedrock 首跑",
+     "backend/agent/", { text: "4.5 天", options: { bold: true, color: GOLD } }, "想深玩 LLM 的人"],
+    [{ text: "B｜資料服務與 RAG", options: { bold: true, color: NAVY } },
+     "Public API 實測(#2)、RAG 語料+KB(#9)、Audit Log(#12)",
+     "backend/integrations/ + analysis/ + 語料", { text: "4 天", options: { bold: true, color: GOLD } }, "喜歡資料工程的人"],
+    [{ text: "C｜前端與品牌", options: { bold: true, color: NAVY } },
+     "手機版(#13)、三方案卡/徽章/軌跡面板、離線備援、麥麥視覺",
+     "frontend/ + mockups/ + brand/", { text: "4 天", options: { bold: true, color: GOLD } }, "重視覺體驗的人"],
+    [{ text: "D｜整合部署與交付", options: { bold: true, color: NAVY } },
+     "部署演練(#14)、Private E2E(#4)、Guardrails(#6)、錄影(#8)、簡報(#15)、E2E 主導",
+     "infra/ + docs/", { text: "4 天", options: { bold: true, color: GOLD } }, "喜歡統籌的人"],
   ];
-  packs.forEach((p, i) => {
-    const x = M + i * 3.1;
-    card(s, x, 1.7, 2.85, 3.9, ICE);
-    s.addShape("roundRect", { x, y: 1.7, w: 2.85, h: 0.6, rectRadius: 0.09, fill: { color: p.c }, line: { type: "none" } });
-    s.addText(p.t, { x: x + 0.2, y: 1.7, w: 2.5, h: 0.6, fontFace: FONT, fontSize: 14.5, bold: true, color: WHITE, valign: "middle", margin: 0 });
-    s.addText(p.body, { x: x + 0.25, y: 2.5, w: 2.4, h: 2.3, fontFace: FONT, fontSize: 11.5, color: INK, margin: 0 });
-    s.addText(p.skill, { x: x + 0.25, y: 5.05, w: 2.4, h: 0.4, fontFace: FONT, fontSize: 10.5, bold: true, color: MUT, margin: 0 });
+  s.addTable([header, ...rows], {
+    x: M, y: 1.75, w: W - 2 * M, colW: [2.3, 4.6, 2.7, 0.9, 1.63],
+    fontFace: FONT, fontSize: 11, color: INK, valign: "middle",
+    border: { type: "solid", color: "D5DEF0", pt: 0.75 }, rowH: 0.95, margin: 0.08,
   });
-  card(s, M, 5.9, W - 2 * M, 0.95, "FFF4E0");
+  card(s, M, 6.4, W - 2 * M, 0.85, "FFF4E0");
   s.addText([
-    { text: "相依關係：", options: { bold: true, color: NAVY } },
-    { text: "#3 全員KYC 擋 #4｜AWS 帳號擋 Bedrock首跑・#9・#14｜#11 擋三方案卡片。今天要定：AWS 帳號誰出、四包誰認領。", options: { color: INK } },
-  ], { x: M + 0.3, y: 6.02, w: W - 2 * M - 0.6, h: 0.7, fontFace: FONT, fontSize: 12.5, valign: "middle", margin: 0 });
+    { text: "選包：Slack #general 回覆先搶先贏，撞包自己聊。", options: { bold: true, color: NAVY } },
+    { text: "共同任務（不算包內工時）：自己的 Lv2 KYC＋Key(#3)、Kiro 設定、每天合回 main。", options: { color: INK } },
+  ], { x: M + 0.3, y: 6.52, w: W - 2 * M - 0.6, h: 0.62, fontFace: FONT, fontSize: 12.5, valign: "middle", margin: 0 });
+}
+
+// ============ 7b 不打架五規則 ============
+{
+  const s = pres.addSlide();
+  s.background = { color: WHITE };
+  bigTitle(s, "交接不打架的五條規則");
+  const rules = [
+    ["1", "地盤制", "每包只 commit 自己的目錄。要動別人的地盤 → 開 issue 給對方包，不直接改", NAVY],
+    ["2", "介面契約先行", "四支 API 格式寫死在 README §3——C 包照契約用假資料先做，不用等後端", GOLD],
+    ["3", "共用檔單一 owner", "tools.py／loop.py 歸 A；B 寫好函式由 A 註冊。infra 歸 D。誰的檔誰合", GREEN],
+    ["4", "每日回合", "每天至少一次 pull --rebase ＋合回 main。衝突當天解，不隔夜", BLUE],
+    ["5", "改介面要廣播", "要改 README §3 先在 #dev 說，受影響的包點頭才動", RED],
+  ];
+  rules.forEach(([n, t, d, c], i) => {
+    const y = 1.7 + i * 1.02;
+    s.addShape("ellipse", { x: M, y: y + 0.1, w: 0.55, h: 0.55, fill: { color: c } });
+    s.addText(n, { x: M, y: y + 0.1, w: 0.55, h: 0.55, fontFace: FONT, fontSize: 16, bold: true, color: WHITE, align: "center", valign: "middle", margin: 0 });
+    s.addText(t, { x: M + 0.8, y, w: 2.4, h: 0.85, fontFace: FONT, fontSize: 15.5, bold: true, color: NAVY, valign: "middle", margin: 0 });
+    s.addText(d, { x: M + 3.3, y, w: 8.9, h: 0.85, fontFace: FONT, fontSize: 12.5, color: INK, valign: "middle", margin: 0 });
+  });
 }
 
 // ============ 8 功能 × 評分對應 ============
@@ -484,6 +512,63 @@ function statusTable(s, rows, y, colW, rowH) {
     x: M, y: 6.4, w: W - 2 * M, h: 0.45, fontFace: FONT, fontSize: 12, color: MUT, margin: 0 });
 }
 
+// ============ 驗收總覽 ============
+{
+  const s = pres.addSlide();
+  s.background = { color: WHITE };
+  bigTitle(s, "驗收總覽：十組清單，打勾才算數", "逐條版在 README §4——完成一項就去那裡打勾");
+  const header = ["驗收組", "狀態", "關鍵驗收（一句話版）"].map(t =>
+    ({ text: t, options: { bold: true, color: WHITE, fill: { color: NAVY } } }));
+  const rows = [
+    ["4.1 行為分析引擎", { text: "✅ 已全過", options: { bold: true, color: GREEN } }, "真實資料四項指標全數驗證（65%／2,660萬／31萬／14.2%）"],
+    ["4.2 對話 Agent", { text: "進行中", options: { bold: true, color: GOLD } }, "個人問題引數字、行情附時間、明牌不給、confirm 帶出、≤8 輪"],
+    ["4.3 三方案引擎", { text: "待做", options: { bold: true, color: RED } }, "三方案數字全由程式算、費率附來源、相容 prepare_order"],
+    ["4.4 Profile Engine", { text: "待做", options: { bold: true, color: RED } }, "確定性分三模式、同句話三種回應肉眼可辨"],
+    ["4.5 授權下單流", { text: "待驗", options: { bold: true, color: GOLD } }, "60s 憑證單次有效、過期重放 410、最小額度真成交一次"],
+    ["4.6 RAG 知識庫", { text: "待做", options: { bold: true, color: RED } }, "KB+S3 Vectors、回答附出處、語料不進 git"],
+    ["4.7 Audit Log", { text: "待做", options: { bold: true, color: RED } }, "工具+訂單全留痕、軌跡可還原、append-only"],
+    ["4.8 前端", { text: "待做", options: { bold: true, color: RED } }, "照 mockups 三畫面實作、拔網路 mock 自動接手"],
+    ["4.9 安全與法遵", { text: "設計已定", options: { bold: true, color: GOLD } }, "四紅線＝四個架構決策，兩層護欄各自能單獨擋"],
+    ["4.10 部署與交付", { text: "待做", options: { bold: true, color: RED } }, "從零部署 <1hr、E2E 全過、六項決賽交付物齊"],
+  ];
+  s.addTable([header, ...rows.map(r => [
+    { text: r[0], options: { bold: true, color: INK } }, r[1],
+    { text: r[2], options: { color: INK } },
+  ])], {
+    x: M, y: 1.7, w: W - 2 * M, colW: [2.3, 1.3, 8.53],
+    fontFace: FONT, fontSize: 10.5, valign: "middle",
+    border: { type: "solid", color: "D5DEF0", pt: 0.75 }, rowH: 0.485, margin: 0.06,
+  });
+}
+
+// ============ 成果 ============
+{
+  const s = pres.addSlide();
+  s.background = { color: NAVY_D };
+  s.addText("目前成果", { x: M, y: 0.55, w: W - 2 * M, h: 0.7, fontFace: FONT, fontSize: 28, bold: true, color: WHITE, margin: 0 });
+  card(s, M, 1.55, 5.9, 5.2, NAVY);
+  s.addText("已驗證的真實洞察", { x: M + 0.35, y: 1.8, w: 5.2, h: 0.45, fontFace: FONT, fontSize: 16, bold: true, color: GOLD, margin: 0 });
+  s.addText([
+    { text: "追高 65%（2,350 筆買入）", options: { bullet: true, breakLine: true } },
+    { text: "殺低僅 34.1% —— 非恐慌型", options: { bullet: true, breakLine: true } },
+    { text: "年度機會成本 NT$26,598,877", options: { bullet: true, breakLine: true } },
+    { text: "最痛單筆 1/8 DOGE 少賺 NT$312,924", options: { bullet: true, breakLine: true } },
+    { text: "下跌後出金僅 14.2%", options: { bullet: true, breakLine: true } },
+    { text: "最活躍 2025-05／08（各 416 筆）", options: { bullet: true } },
+  ], { x: M + 0.35, y: 2.35, w: 5.2, h: 4.2, fontFace: FONT, fontSize: 13.5, color: ICE, paraSpaceAfter: 10, margin: 0 });
+  card(s, M + 6.25, 1.55, 5.9, 5.2, "22315E");
+  s.addText("已完成的資產", { x: M + 6.6, y: 1.8, w: 5.2, h: 0.45, fontFace: FONT, fontSize: 16, bold: true, color: GOLD, margin: 0 });
+  s.addText([
+    { text: "程式骨架：Agent 迴圈/護欄、Lambda×4、MAX 整合、前端 SPA、SAM", options: { bullet: true, breakLine: true } },
+    { text: ".kiro/：steering×3＋specs×6＋MCP 設定（+5% 證據）", options: { bullet: true, breakLine: true } },
+    { text: "設計：三張 Demo 畫面＋麥麥像素吉祥物三態", options: { bullet: true, breakLine: true } },
+    { text: "簡報：提案簡報（評審版）＋本手冊", options: { bullet: true, breakLine: true } },
+    { text: "環境：repo＋Issues×15＋Slack＋Drive＋setup.sh", options: { bullet: true } },
+  ], { x: M + 6.6, y: 2.35, w: 5.25, h: 4.2, fontFace: FONT, fontSize: 13, color: ICE, paraSpaceAfter: 10, margin: 0 });
+  s.addText("唯一文件：github.com/giont565/MaiMate（README）——驗收打勾、改介面、改範圍都在那裡。", {
+    x: M, y: 6.95, w: W - 2 * M, h: 0.4, fontFace: FONT, fontSize: 12.5, color: "8FA0C9", margin: 0 });
+}
+
 // ============ 12 時間軸 ============
 {
   const s = pres.addSlide();
@@ -507,5 +592,5 @@ function statusTable(s, rows, y, colW, rowH) {
     x: M, y: 6.85, w: W - 2 * M, h: 0.4, fontFace: FONT, fontSize: 12, color: "8FA0C9", margin: 0 });
 }
 
-const out = path.join(__dirname, "工作項目狀態.pptx");
+const out = path.join(__dirname, "MaiMate_開發手冊.pptx");
 pres.writeFile({ fileName: out }).then(() => console.log("written:", out));
