@@ -52,19 +52,19 @@ function statusTable(s, rows, y, colW, rowH) {
   s.addText("隊伍「第五名」團隊會議", { x: M, y: 1.6, w: 8, h: 0.4, fontFace: FONT, fontSize: 14, color: GOLD, margin: 0 });
   s.addText("MaiMate 開發手冊", { x: M, y: 2.1, w: W - 2 * M, h: 1.0, fontFace: FONT, fontSize: 46, bold: true, color: WHITE, margin: 0 });
   s.addText("狀態・分工・架構・成本・驗收・Kiro 教學——隊內唯一簡報", { x: M, y: 3.3, w: 10, h: 0.5, fontFace: FONT, fontSize: 18, color: ICE, margin: 0 });
-  s.addText("2026/07/19｜決賽 8/1–8/2｜文字完整版：repo 首頁 README.md", { x: M, y: 6.4, w: 10, h: 0.4, fontFace: FONT, fontSize: 13, color: "8FA0C9", margin: 0 });
+  s.addText("2026/07/19 晚間更新｜決賽 8/1–8/2｜文字完整版：repo 首頁 README.md", { x: M, y: 6.4, w: 10, h: 0.4, fontFace: FONT, fontSize: 13, color: "8FA0C9", margin: 0 });
 }
 
 // ============ 2 總覽 ============
 {
   const s = pres.addSlide();
   s.background = { color: WHITE };
-  bigTitle(s, "總覽：repo 看起來很滿，驗證過的只有 8 項");
+  bigTitle(s, "總覽：07/19 部署上線，驗證過的從 8 項推進到 15 項");
   const stats = [
-    { n: "8", l: "已完成並驗證", c: GREEN, d: "行為分析、文件、環境腳本" },
-    { n: "11", l: "寫好但沒測過", c: GOLD, d: "Agent迴圈、API串接、SAM…" },
-    { n: "14", l: "待做", c: RED, d: "RAG、三方案、Profile、手機版…" },
-    { n: "6", l: "純測試項", c: BLUE, d: "E2E、雙層護欄、部署計時…" },
+    { n: "15", l: "已完成並驗證", c: GREEN, d: "行為分析、Bedrock迴圈、部署上線、前端…" },
+    { n: "7", l: "寫好但沒測過", c: GOLD, d: "confirm E2E、Private簽章、離線備援…" },
+    { n: "12", l: "待做", c: RED, d: "RAG、三方案、Profile、手機版…" },
+    { n: "5", l: "純測試項", c: BLUE, d: "E2E、雙層護欄、部署計時…" },
   ];
   stats.forEach((st, i) => {
     const x = M + i * 3.1;
@@ -76,7 +76,7 @@ function statusTable(s, rows, y, colW, rowH) {
   card(s, M, 4.7, W - 2 * M, 1.0, "FDF0EF");
   s.addText([
     { text: "最大隱藏風險：", options: { bold: true, color: RED } },
-    { text: "Agent 迴圈從沒對真實 Bedrock 跑過、Private API 簽章沒驗證過、SAM 從沒 deploy 過——「寫好」不等於「能動」。", options: { color: INK } },
+    { text: "Private API 簽章仍未驗證（#4 最小成交前不算數）、/order 沒真跑過、模型暫全走 Haiku（#5 路由未做）——上線 ≠ Golden Path 能走通。", options: { color: INK } },
   ], { x: M + 0.3, y: 4.85, w: W - 2 * M - 0.6, h: 0.7, fontFace: FONT, fontSize: 14, valign: "middle", margin: 0 });
   s.addText("本週原則：先讓 🧪 變 ✅（把寫好的測到能動），再開 🔨 新工。", {
     x: M, y: 6.0, w: W - 2 * M, h: 0.45, fontFace: FONT, fontSize: 15, bold: true, color: NAVY, margin: 0 });
@@ -86,14 +86,14 @@ function statusTable(s, rows, y, colW, rowH) {
 {
   const s = pres.addSlide();
   s.background = { color: WHITE };
-  bigTitle(s, "Agent 核心（10 項）｜主責 A", "Bedrock 首跑是全案最優先——唯一沒碰過真傢伙的核心路徑");
+  bigTitle(s, "Agent 核心（10 項）｜主責 A", "07/19 迴圈已對真模型跑通（Haiku@us-east-1）——重心轉 confirm E2E・路由・三方案");
   statusTable(s, [
-    ["Converse tool-use 迴圈", "code", "程式完成，從沒對真實 Bedrock 跑過", "agent/loop.py"],
-    ["工具定義×4＋dispatch", "code", "同上", "agent/tools.py"],
+    ["Converse tool-use 迴圈", "done", "07/19 線上跑通：真模型多輪工具呼叫＋引用真實數據", "agent/loop.py"],
+    ["工具定義×4＋dispatch", "done", "隨迴圈上線；已加 key_findings 摘要（答非所問保險）", "agent/tools.py"],
     ["prepare/execute 下單分離", "code", "架構完成，待端到端驗證", "tools+order"],
     ["程式層護欄（明牌/PII）", "code", "正則可測，未寫測試", "guardrails.py"],
-    ["confirm 欄位帶出前端", "todo", "迴圈把確認卡帶給 handler 回應", "#1"],
-    ["Haiku/Sonnet 路由", "todo", "含 prompt caching", "#5"],
+    ["confirm 欄位帶出前端", "code", "後端 07/19 完成上線（任務5）；待一次下單對話 E2E", "#1"],
+    ["Haiku/Sonnet 路由", "todo", "暫全走 Haiku；路由與 prompt caching 待做", "#5"],
     ["Bedrock Guardrails", "todo", "與程式層雙保險", "#6"],
     ["Profile Engine 簡版", "todo", "行為推斷三模式→提醒強度", "#10 spec✓"],
     ["三方案生成", "todo", "Golden Path 核心，確定性計算", "#11 spec✓"],
@@ -113,8 +113,8 @@ function statusTable(s, rows, y, colW, rowH) {
     ["RAG 語料蒐集", "todo", "防詐/教材公開資源＋工作坊資料（授權限制）", "#9"],
     ["Knowledge Base + S3 Vectors", "todo", "賽前建好，決賽只上架", "#9"],
     ["query_knowledge 工具", "todo", "回答附出處", "#9"],
-    ["Lambda×4 handlers", "code", "未部署未打過", "handlers/"],
-    ["MAX Public API（快取+退避）", "code", "路徑需對官方文件核對後實測", "#2"],
+    ["Lambda×4 handlers", "done", "07/19 SAM 部署上線；/chat /health /market 線上實測，/order 待 #4", "handlers/"],
+    ["MAX Public API（快取+退避）", "code", "ticker 已線上實測（任務6）；kline/depth 待對文件核驗", "#2"],
     ["MAX Private API（HMAC）", "code", "簽章未驗證——對照 max-mcp-server 核對", "#4"],
     ["CoinMarketCap 延伸", "code", "無金鑰自動略過，未測", "thirdparty.py"],
     ["全員 Lv2 KYC＋API Key", "todo", "人工項，審核有等待期——最急", "#3"],
@@ -127,13 +127,13 @@ function statusTable(s, rows, y, colW, rowH) {
   s.background = { color: WHITE };
   bigTitle(s, "前端・部署・交付物（12 項）｜前端 C／部署交付 D");
   statusTable(s, [
-    ["桌機三欄 SPA", "code", "寫好，未在瀏覽器完整走過", "frontend/"],
-    ["離線 mock 備援", "code", "機制寫好，fallback 未驗證", "app.js"],
+    ["桌機三欄 SPA", "done", "07/19 上線實測＋UX 修正（行情就地更新/氣泡渲染）", "frontend/"],
+    ["離線 mock 備援", "code", "行情斷網保值已由 npm run smoke 驗證；整站拔網路實測待做", "app.js"],
     ["手機版 RWD（Golden Path 動線）", "todo", "對話主畫面、確認卡放大、麥麥視覺", "#13"],
     ["三方案卡片／模式徽章／軌跡面板", "todo", "隨 #11 #10 #12", "—"],
-    ["SAM 模板", "code", "從未實際 deploy", "infra/"],
-    ["自家 AWS 帳號＋Bedrock 開通", "todo", "多條線的前置——今天定誰出帳號", "—"],
-    ["從零部署演練＋DEPLOY.md", "todo", "目標<1hr，7/31 前至少一次", "#14"],
+    ["SAM 模板", "done", "07/19 首次 deploy 成功（us-east-1 API+S3）", "infra/"],
+    ["自家 AWS 帳號＋Bedrock 開通", "done", "隊長帳號出線，Bedrock 已開通（07/19）", "—"],
+    ["從零部署演練＋DEPLOY.md", "todo", "首次部署經驗已有；<1hr 計時演練＋文件待做（含 API_BASE 檢查項）", "#14"],
     ["提案簡報 16 頁", "done", "含評審兩題頁；視覺本機過一次", "docs/"],
     ["上手指南／架構文件／法規檢討", "done", "三份皆完成", "docs/"],
     ["整合簡報修正", "todo", "Skill 標示＋補兩頁", "#15"],
@@ -148,7 +148,7 @@ function statusTable(s, rows, y, colW, rowH) {
   s.background = { color: WHITE };
   bigTitle(s, "測試清單（6 項）｜主責 D（E2E 全員配合）", "寫好的程式都要過這關才算數");
   statusTable(s, [
-    ["Bedrock 迴圈首次實跑", "test", "對真模型完成一次多工具對話——全案最優先", "需AWS帳號"],
+    ["Bedrock 迴圈首次實跑", "done", "07/19 完成：Haiku 多工具對話、線上引用真實數據", "已達成"],
     ["Guardrails 雙層攔截", "test", "「推薦我買哪個幣」兩層各自單獨擋住", "#6 後"],
     ["憑證安全", "test", "token 過期/重放回 410；60 秒邊界", "#1 #4 後"],
     ["離線備援切換", "test", "拔網路 mock 自動接手＋UI 標示", "前端部署後"],
@@ -166,10 +166,10 @@ function statusTable(s, rows, y, colW, rowH) {
   s.addText("A｜Agent 與方案引擎　4.5 天", { x: M + 0.3, y: 1.85, w: 5.3, h: 0.4, fontFace: FONT, fontSize: 15, bold: true, color: NAVY, margin: 0 });
   s.addText("地盤：backend/agent/", { x: M + 0.3, y: 2.25, w: 5.3, h: 0.3, fontFace: "Courier New", fontSize: 10.5, color: MUT, margin: 0 });
   s.addText([
-    { text: "🧪 Bedrock 迴圈首跑（全案最優先）", options: { bullet: true, bold: true, color: RED, breakLine: true } },
+    { text: "✅ Bedrock 迴圈首跑——07/19 完成", options: { bullet: true, bold: true, color: GREEN, breakLine: true } },
     { text: "🧪 tools dispatch／護欄 單元測試", options: { bullet: true, breakLine: true } },
     { text: "🧪 prepare/execute 單元驗證（E2E 歸 D）", options: { bullet: true, breakLine: true } },
-    { text: "🔨 #1 confirm 帶出｜#5 模型路由+caching", options: { bullet: true, breakLine: true } },
+    { text: "🧪 #1 confirm 後端✅待E2E｜🔨 #5 路由+caching", options: { bullet: true, breakLine: true } },
     { text: "🔨 #10 Profile 引擎（徽章 UI 歸 C）", options: { bullet: true, breakLine: true } },
     { text: "🔨 #11 三方案計算（卡片渲染歸 C）", options: { bullet: true, breakLine: true } },
     { text: "🔨 註冊 B 的函式／掛 D 的 Guardrails／埋 audit 點", options: { bullet: true } },
@@ -182,7 +182,7 @@ function statusTable(s, rows, y, colW, rowH) {
     { text: "🔨 #9 Bedrock KB＋S3 Vectors 建置", options: { bullet: true, breakLine: true } },
     { text: "🔨 #9 query_knowledge 函式（交 A 註冊）", options: { bullet: true, breakLine: true } },
     { text: "🔨 #12 audit.py＋/audit endpoint（A 埋點、C 面板）", options: { bullet: true, breakLine: true } },
-    { text: "🧪 #2 max_public 三 endpoint 實測", options: { bullet: true, breakLine: true } },
+    { text: "🧪 #2 max_public：ticker✅ 07/19，kline/depth 待驗", options: { bullet: true, breakLine: true } },
     { text: "🧪 max_private 簽章對照 max-mcp-server 核對", options: { bullet: true, breakLine: true } },
     { text: "🧪 thirdparty CMC 冒煙", options: { bullet: true } },
   ], { x: M + 6.55, y: 2.65, w: 5.4, h: 4.1, fontFace: FONT, fontSize: 11.5, color: INK, paraSpaceAfter: 8, margin: 0 });
@@ -208,8 +208,8 @@ function statusTable(s, rows, y, colW, rowH) {
   s.addText("D｜整合部署與交付　4 天（多為測試/設定短項）", { x: M + 6.55, y: 1.85, w: 5.4, h: 0.4, fontFace: FONT, fontSize: 14.5, bold: true, color: NAVY, margin: 0 });
   s.addText("地盤：infra/ + docs/", { x: M + 6.55, y: 2.25, w: 5.3, h: 0.3, fontFace: "Courier New", fontSize: 10.5, color: MUT, margin: 0 });
   s.addText([
-    { text: "🔨 AWS 帳號＋Bedrock 開通（前置，第一件做）", options: { bullet: true, bold: true, color: RED, breakLine: true } },
-    { text: "🧪 SAM 首次部署＋Lambda×4 冒煙", options: { bullet: true, breakLine: true } },
+    { text: "✅ AWS 帳號＋Bedrock 開通——07/19 完成（隊長帳號）", options: { bullet: true, bold: true, color: GREEN, breakLine: true } },
+    { text: "✅ SAM 部署上線 07/19（/order 冒煙待真單）", options: { bullet: true, breakLine: true } },
     { text: "🔨 #6 Guardrails 建立｜#14 部署演練+DEPLOY.md", options: { bullet: true, breakLine: true } },
     { text: "🔬 #4 Private E2E 成交｜憑證 410｜雙層護欄測試", options: { bullet: true, breakLine: true } },
     { text: "🔬 E2E Golden Path 主導｜從零部署計時", options: { bullet: true, breakLine: true } },
@@ -599,7 +599,7 @@ function statusTable(s, rows, y, colW, rowH) {
     ["4.7 Audit Log", "B（埋點:A 面板:C）", { text: "待做", options: { bold: true, color: RED } }, "工具+訂單全留痕、軌跡可還原、append-only"],
     ["4.8 前端", "C", { text: "待做", options: { bold: true, color: RED } }, "照 mockups 三畫面實作、拔網路 mock 自動接手"],
     ["4.9 安全與法遵", "D（掛載:A）", { text: "設計已定", options: { bold: true, color: GOLD } }, "四紅線＝四個架構決策，兩層護欄各自能單獨擋"],
-    ["4.10 部署與交付", "D", { text: "待做", options: { bold: true, color: RED } }, "從零部署 <1hr、E2E 全過、六項決賽交付物齊"],
+    ["4.10 部署與交付", "D", { text: "進行中", options: { bold: true, color: GOLD } }, "07/19 首次部署上線；從零 <1hr 演練、E2E、六項交付物待做"],
   ];
   s.addTable([header, ...rows.map(r => [
     { text: r[0], options: { bold: true, color: INK } },
