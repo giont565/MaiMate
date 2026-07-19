@@ -205,13 +205,13 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 
 ## 4. 完整驗收項目
 
-### 4.1 行為分析引擎（behavior-engine）— ✅ 全數通過（2026-07-19 真實資料驗證）
+### 4.1 行為分析引擎（behavior-engine）｜B 地盤 — ✅ 全數通過（2026-07-19 真實資料驗證）
 - [x] 10,000 筆全數解析（欄位尾端空白 strip）
 - [x] 追高 65.0%／殺低 34.1%
 - [x] 機會成本總額 NT$26,598,877；最痛單筆 2025-01-08 DOGE NT$312,924
 - [x] 峰值集中 2025-12 twd 98.6%；提領僅 14.2% 於下跌後
 
-### 4.2 對話 Agent（chat-agent）
+### 4.2 對話 Agent（chat-agent）｜主責 A（E2E 驗證：D）
 - [ ] 個人問題必先呼叫 query_user_history 且回答引用具體數字；資料不足如實說明
 - [ ] 行情問題必呼叫 get_market_data 且附資料時間；個人×市場交叉引用
 - [ ] 要求明牌時給脈絡與數據、不給建議（紅線）
@@ -220,38 +220,38 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 - [ ] 輸入 PII 先清洗；輸出命中明牌句式走安全回覆；迴圈 ≤8 輪
 - [ ] Haiku/Sonnet 意圖路由＋prompt caching（#5）
 
-### 4.3 三方案引擎（trade-scenarios，#11）
+### 4.3 三方案引擎（trade-scenarios，#11）｜主責 A（卡片渲染：C）
 - [ ] 交易意圖 → 三方案（保守/原意圖/暫停），數字全由程式計算
 - [ ] 每方案含預估金額、手續費（MAX 公告費率＋來源註記）、執行後集中度、個人行為註記
 - [ ] 標的不在持倉 → 明確錯誤；暫停版不產生訂單；方案欄位相容 prepare_order
 - [ ] 滑價聲明標注
 
-### 4.4 Profile Engine（profile-engine，#10）
+### 4.4 Profile Engine（profile-engine，#10）｜主責 A（徽章與切換 UI：C）
 - [ ] 從 health_report 確定性規則分類三模式（cautious/growth/pro）＋附判定依據
 - [ ] 模式注入 system prompt 改變語氣與提醒強度；安全機制三模式一致
 - [ ] Demo 可切換模式：同一句「幫我全賣」三種回應肉眼可辨
 
-### 4.5 授權下單流（order-flow，#4）
+### 4.5 授權下單流（order-flow，#4）｜主責 D（單元驗證：A；Key 設定：全員）
 - [ ] 憑證 60 秒單次有效存 DynamoDB；過期/重放回 410 不重試
 - [ ] API Key 只開「讀取＋交易」不開「提領」（人工設定，Demo 前檢查）
 - [ ] 金鑰只從環境變數/Secrets Manager 讀（已實作，待驗證）
 - [ ] 最小額度真實成交一次 E2E
 
-### 4.6 RAG 知識庫（#9）
+### 4.6 RAG 知識庫（#9）｜主責 B（工具註冊：A）
 - [ ] 語料：防詐（公開資源）＋教材＋工作坊資料（僅競賽用、不進 git、放 S3）
 - [ ] Bedrock KB + S3 Vectors 建置；query_knowledge 回答附出處
 - [ ] 「什麼是定期定額」「這是不是詐騙話術」能引用語料回答
 
-### 4.7 Audit Log（#12）
+### 4.7 Audit Log（#12）｜主責 B（loop 埋點：A；面板：C）
 - [ ] 每次工具呼叫留痕（摘要不含 PII）；訂單生命週期 draft→confirmed/expired→executed
 - [ ] GET /audit 可還原完整軌跡；前端「決策軌跡」面板；append-only
 
-### 4.8 前端（#13）
+### 4.8 前端（#13）｜主責 C
 - [ ] 手機版 RWD：對話主畫面、健檢卡收合、確認卡放大（照 docs/mockups/ 三畫面實作）
 - [ ] 三方案卡、模式徽章、軌跡面板渲染
 - [ ] API 失敗自動切離線 mock＋UI 標示（拔網路實測）
 
-### 4.9 安全與法遵（上台講法：「合規不是免責聲明，是系統設計」）
+### 4.9 安全與法遵｜主責 D（Guardrails 掛載：A）（上台講法：「合規不是免責聲明，是系統設計」）
 - [ ] 不報明牌＝三層護欄（prompt＋正則＋Bedrock Guardrails #6，任一層可獨立擋住）
 - [ ] 不代操＝LLM 碰不到 execute_order＋逐筆確認
 - [ ] 不碰保管提領＝資產留在 MAX（已洗防登記）＋API 權限鎖死
@@ -260,7 +260,7 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 - 金管會 AI 指引六原則逐條有對應（治理問責/以人為本/隱私/穩健/透明可解釋/永續）
 - 本節為工程自查非法律意見；虛擬資產專法立法中，商業化前過正式法遵
 
-### 4.10 部署與交付（#14、#8、#15）
+### 4.10 部署與交付（#14、#8、#15）｜主責 D
 - [ ] 從零部署演練 <1 小時＋DEPLOY.md（含 Bedrock use case 開通步驟）
 - [ ] E2E Golden Path 全線通過；預錄影片 v1（7/30 前）＋決賽 final
 - [ ] 決賽交付：提案簡報／Live Demo 網址／錄影連結／GitHub／Lv2 證明／Kiro 證據截圖

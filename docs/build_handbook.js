@@ -86,7 +86,7 @@ function statusTable(s, rows, y, colW, rowH) {
 {
   const s = pres.addSlide();
   s.background = { color: WHITE };
-  bigTitle(s, "Agent 核心（10 項）", "Bedrock 首跑是全案最優先——唯一沒碰過真傢伙的核心路徑");
+  bigTitle(s, "Agent 核心（10 項）｜主責 A", "Bedrock 首跑是全案最優先——唯一沒碰過真傢伙的核心路徑");
   statusTable(s, [
     ["Converse tool-use 迴圈", "code", "程式完成，從沒對真實 Bedrock 跑過", "agent/loop.py"],
     ["工具定義×4＋dispatch", "code", "同上", "agent/tools.py"],
@@ -105,7 +105,7 @@ function statusTable(s, rows, y, colW, rowH) {
 {
   const s = pres.addSlide();
   s.background = { color: WHITE };
-  bigTitle(s, "資料・RAG・API 整合（11 項）");
+  bigTitle(s, "資料・RAG・API 整合（11 項）｜主責 B（Private E2E:D、KYC:全員）");
   statusTable(s, [
     ["CSV 解析＋行為指標預計算", "done", "10,000 筆，真數字已驗證（追高65%等）", "analysis/"],
     ["health_report.json", "done", "五組指標齊全", "data/"],
@@ -125,7 +125,7 @@ function statusTable(s, rows, y, colW, rowH) {
 {
   const s = pres.addSlide();
   s.background = { color: WHITE };
-  bigTitle(s, "前端・部署・交付物（12 項）");
+  bigTitle(s, "前端・部署・交付物（12 項）｜前端 C／部署交付 D");
   statusTable(s, [
     ["桌機三欄 SPA", "code", "寫好，未在瀏覽器完整走過", "frontend/"],
     ["離線 mock 備援", "code", "機制寫好，fallback 未驗證", "app.js"],
@@ -146,7 +146,7 @@ function statusTable(s, rows, y, colW, rowH) {
 {
   const s = pres.addSlide();
   s.background = { color: WHITE };
-  bigTitle(s, "測試清單（6 項）— 需要一位「測試主導」認領", "寫好的程式都要過這關才算數");
+  bigTitle(s, "測試清單（6 項）｜主責 D（E2E 全員配合）", "寫好的程式都要過這關才算數");
   statusTable(s, [
     ["Bedrock 迴圈首次實跑", "test", "對真模型完成一次多工具對話——全案最優先", "需AWS帳號"],
     ["Guardrails 雙層攔截", "test", "「推薦我買哪個幣」兩層各自單獨擋住", "#6 後"],
@@ -551,25 +551,26 @@ function statusTable(s, rows, y, colW, rowH) {
   const s = pres.addSlide();
   s.background = { color: WHITE };
   bigTitle(s, "驗收總覽：十組清單，打勾才算數", "逐條版在 README §4——完成一項就去那裡打勾");
-  const header = ["驗收組", "狀態", "關鍵驗收（一句話版）"].map(t =>
+  const header = ["驗收組", "負責包", "狀態", "關鍵驗收（一句話版）"].map(t =>
     ({ text: t, options: { bold: true, color: WHITE, fill: { color: NAVY } } }));
   const rows = [
-    ["4.1 行為分析引擎", { text: "✅ 已全過", options: { bold: true, color: GREEN } }, "真實資料四項指標全數驗證（65%／2,660萬／31萬／14.2%）"],
-    ["4.2 對話 Agent", { text: "進行中", options: { bold: true, color: GOLD } }, "個人問題引數字、行情附時間、明牌不給、confirm 帶出、≤8 輪"],
-    ["4.3 三方案引擎", { text: "待做", options: { bold: true, color: RED } }, "三方案數字全由程式算、費率附來源、相容 prepare_order"],
-    ["4.4 Profile Engine", { text: "待做", options: { bold: true, color: RED } }, "確定性分三模式、同句話三種回應肉眼可辨"],
-    ["4.5 授權下單流", { text: "待驗", options: { bold: true, color: GOLD } }, "60s 憑證單次有效、過期重放 410、最小額度真成交一次"],
-    ["4.6 RAG 知識庫", { text: "待做", options: { bold: true, color: RED } }, "KB+S3 Vectors、回答附出處、語料不進 git"],
-    ["4.7 Audit Log", { text: "待做", options: { bold: true, color: RED } }, "工具+訂單全留痕、軌跡可還原、append-only"],
-    ["4.8 前端", { text: "待做", options: { bold: true, color: RED } }, "照 mockups 三畫面實作、拔網路 mock 自動接手"],
-    ["4.9 安全與法遵", { text: "設計已定", options: { bold: true, color: GOLD } }, "四紅線＝四個架構決策，兩層護欄各自能單獨擋"],
-    ["4.10 部署與交付", { text: "待做", options: { bold: true, color: RED } }, "從零部署 <1hr、E2E 全過、六項決賽交付物齊"],
+    ["4.1 行為分析引擎", "B（已完）", { text: "✅ 已全過", options: { bold: true, color: GREEN } }, "真實資料四項指標全數驗證（65%／2,660萬／31萬／14.2%）"],
+    ["4.2 對話 Agent", "A（E2E:D）", { text: "進行中", options: { bold: true, color: GOLD } }, "個人問題引數字、行情附時間、明牌不給、confirm 帶出、≤8 輪"],
+    ["4.3 三方案引擎", "A（卡片:C）", { text: "待做", options: { bold: true, color: RED } }, "三方案數字全由程式算、費率附來源、相容 prepare_order"],
+    ["4.4 Profile Engine", "A（UI:C）", { text: "待做", options: { bold: true, color: RED } }, "確定性分三模式、同句話三種回應肉眼可辨"],
+    ["4.5 授權下單流", "D（單元:A）", { text: "待驗", options: { bold: true, color: GOLD } }, "60s 憑證單次有效、過期重放 410、最小額度真成交一次"],
+    ["4.6 RAG 知識庫", "B（註冊:A）", { text: "待做", options: { bold: true, color: RED } }, "KB+S3 Vectors、回答附出處、語料不進 git"],
+    ["4.7 Audit Log", "B（埋點:A 面板:C）", { text: "待做", options: { bold: true, color: RED } }, "工具+訂單全留痕、軌跡可還原、append-only"],
+    ["4.8 前端", "C", { text: "待做", options: { bold: true, color: RED } }, "照 mockups 三畫面實作、拔網路 mock 自動接手"],
+    ["4.9 安全與法遵", "D（掛載:A）", { text: "設計已定", options: { bold: true, color: GOLD } }, "四紅線＝四個架構決策，兩層護欄各自能單獨擋"],
+    ["4.10 部署與交付", "D", { text: "待做", options: { bold: true, color: RED } }, "從零部署 <1hr、E2E 全過、六項決賽交付物齊"],
   ];
   s.addTable([header, ...rows.map(r => [
-    { text: r[0], options: { bold: true, color: INK } }, r[1],
-    { text: r[2], options: { color: INK } },
+    { text: r[0], options: { bold: true, color: INK } },
+    { text: r[1], options: { bold: true, color: NAVY } }, r[2],
+    { text: r[3], options: { color: INK } },
   ])], {
-    x: M, y: 1.7, w: W - 2 * M, colW: [2.3, 1.3, 8.53],
+    x: M, y: 1.7, w: W - 2 * M, colW: [2.1, 1.75, 1.15, 7.13],
     fontFace: FONT, fontSize: 10.5, valign: "middle",
     border: { type: "solid", color: "D5DEF0", pt: 0.75 }, rowH: 0.485, margin: 0.06,
   });
