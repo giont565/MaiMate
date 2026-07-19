@@ -1,0 +1,20 @@
+# 官方命題資料：僅供競賽使用、勿轉傳（主辦規定）——原始檔只放 Drive
+data/MaiCoin_transactions.csv
+data/MaiCoin_*.csv
+data/*.zip
+
+# 金鑰與本地設定
+.env
+*.pem
+samconfig.toml
+
+# 建置產物
+node_modules/
+package.json
+package-lock.json
+__pycache__/
+*.pyc
+.aws-sam/
+docs/*.pdf
+docs/slide-*.jpg
+.DS_Store

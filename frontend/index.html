@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MaiMate</title>
+<style>
+  :root{--navy:#16224D;--navy-d:#0D1530;--ice:#EAF0FB;--gold:#E8A13A;--green:#1F9D66;--red:#D64550;--ink:#1F2937;--mut:#6B7280}
+  *{box-sizing:border-box;font-family:"Microsoft JhengHei","PingFang TC",system-ui,sans-serif}
+  body{margin:0;background:#F4F7FD;color:var(--ink)}
+  header{background:var(--navy-d);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:12px}
+  header h1{font-size:18px;margin:0}
+  header .badge{font-size:11px;color:var(--gold)}
+  main{display:grid;grid-template-columns:300px 1fr 260px;gap:16px;padding:16px;max-width:1280px;margin:0 auto}
+  .panel{background:#fff;border-radius:14px;padding:16px;box-shadow:0 1px 4px rgba(22,34,77,.08)}
+  .panel h2{font-size:14px;margin:0 0 12px;color:var(--navy)}
+  .stat{background:var(--ice);border-radius:10px;padding:10px 14px;margin-bottom:10px}
+  .stat .n{font-size:22px;font-weight:700}
+  .stat .l{font-size:11px;color:var(--mut)}
+  #chatlog{height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+  .msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:14px;line-height:1.6}
+  .msg.user{align-self:flex-end;background:var(--ice)}
+  .msg.ai{align-self:flex-start;background:var(--navy);color:#fff}
+  .confirm-card{border:2px solid var(--gold);background:#FFF4E0;border-radius:12px;padding:12px;font-size:13px}
+  .confirm-card button{margin-top:8px;margin-right:8px;padding:6px 18px;border:0;border-radius:8px;cursor:pointer}
+  .confirm-card .ok{background:var(--green);color:#fff}
+  .confirm-card .no{background:#ddd}
+  form{display:flex;gap:8px}
+  input{flex:1;padding:10px 14px;border:1px solid #D5DEF0;border-radius:10px;font-size:14px}
+  button[type=submit]{padding:10px 20px;background:var(--navy);color:#fff;border:0;border-radius:10px;cursor:pointer}
+  .tick{display:flex;justify-content:space-between;background:var(--ice);border-radius:10px;padding:8px 12px;margin-bottom:8px;font-size:13px}
+  .offline{font-size:11px;color:var(--red);display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>MaiMate</h1><span class="badge">懂你操作史的 AI 投資特助</span>
+  <span class="offline" id="offline">離線模式（展示資料）</span>
+</header>
+<main>
+  <section class="panel"><h2>行為健檢</h2><div id="health"></div></section>
+  <section class="panel">
+    <h2>AI 對話</h2>
+    <div id="chatlog"></div>
+    <form id="chatform"><input id="q" placeholder="問我任何事，例如：我去年表現怎麼樣？" autocomplete="off"><button type="submit">送出</button></form>
+  </section>
+  <section class="panel"><h2>即時行情</h2><div id="market"></div></section>
+</main>
+<script>window.API_BASE = "https://4vjxh3jv8d.execute-api.us-east-1.amazonaws.com";</script>
+<script src="app.js"></script>
+</body>
+</html>

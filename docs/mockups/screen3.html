@@ -1,0 +1,47 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"><link rel="stylesheet" href="base.css">
+<style>
+.confirm{background:#FFF8EA;border:2px solid var(--gold);border-radius:16px;padding:16px;margin-bottom:12px}
+.confirm .h{font-size:14.5px;font-weight:800;color:var(--navy);margin-bottom:10px}
+.confirm table{width:100%;font-size:12.5px;border-collapse:collapse}
+.confirm td{padding:5px 0;color:var(--mut)}
+.confirm td:last-child{text-align:right;color:var(--ink);font-weight:700}
+.confirm .warn{font-size:10.5px;color:var(--red);margin-top:8px;line-height:1.5}
+.btns{display:flex;gap:10px;margin-top:12px}
+.btns .ok{flex:1.4;background:var(--green);color:#fff;border-radius:12px;padding:12px;text-align:center;font-weight:800;font-size:14px}
+.btns .no{flex:1;background:#E8EDF7;color:var(--ink);border-radius:12px;padding:12px;text-align:center;font-weight:700;font-size:14px}
+.done{background:#EBF9F1;border:1.5px solid var(--green);color:#116b45;border-radius:12px;padding:10px 14px;font-size:12.5px;font-weight:700;margin-bottom:12px}
+.trail{background:#fff;border-radius:14px;padding:14px;box-shadow:0 1px 6px rgba(22,34,77,.06)}
+.trail .h{font-size:12.5px;font-weight:800;color:var(--navy);display:flex;margin-bottom:10px}
+.trail .h span{margin-left:auto;font-size:10px;color:var(--green);font-weight:700}
+.step{display:flex;gap:10px;font-size:11px;color:var(--ink);margin-bottom:7px;align-items:baseline}
+.step i{font-style:normal;color:var(--mut);font-size:10px;flex:none;width:40px}
+.step em{font-style:normal;font-family:ui-monospace,Consolas,monospace;background:var(--ice);color:var(--navy);border-radius:6px;padding:1px 7px;font-size:10px}
+.step.hl em{background:#FFEBC2;color:#8a5a00}
+</style></head><body>
+<div class="topbar"><div class="logo"><img src="../brand/maimate_bot_small.png" alt="麥麥"></div><div><h1>MaiMate 麥麥</h1><div class="sub">市場一直在變，麥麥一直陪你</div></div><div class="badge">成長陪跑</div></div>
+<div class="page">
+  <div class="confirm">
+    <div class="h">📋 下單確認 — 最後一步由你決定</div>
+    <table>
+      <tr><td>動作</td><td>賣出 ETH（市價）</td></tr>
+      <tr><td>數量</td><td>0.3125 ETH（持倉 25%）</td></tr>
+      <tr><td>預估金額</td><td>NT$35,920</td></tr>
+      <tr><td>預估手續費</td><td>NT$57</td></tr>
+      <tr><td>確認時效</td><td>60 秒內有效</td></tr>
+    </table>
+    <div class="warn">⚠ 以當下價格估算，實際成交可能有滑價。麥麥不會替你按下這顆按鈕。</div>
+    <div class="btns"><div class="ok">確認賣出</div><div class="no">取消</div></div>
+  </div>
+  <div class="done">✅ 已成交（單號 #8837121）— 健檢分數與持倉已更新</div>
+  <div class="trail">
+    <div class="h">🔍 決策軌跡（本次對話）<span>已寫入稽核紀錄</span></div>
+    <div class="step"><i>14:32</i><em>get_portfolio</em> ETH 佔比 54%</div>
+    <div class="step"><i>14:32</i><em>get_market_data</em> 24H −6.8%</div>
+    <div class="step"><i>14:32</i><em>query_user_history</em> 1/8 類似情境</div>
+    <div class="step"><i>14:32</i><em>calculate_scenarios</em> 三方案試算</div>
+    <div class="step hl"><i>14:33</i><em>prepare_order</em> 草稿＋60s 憑證</div>
+    <div class="step hl"><i>14:33</i><em>user_confirmed</em> 使用者按下確認</div>
+    <div class="step hl"><i>14:33</i><em>executed</em> MAX Private API 成交</div>
+  </div>
+</div>
+</body></html>

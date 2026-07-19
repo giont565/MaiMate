@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "max-exchange": {
+      "command": "node",
+      "args": ["REPLACE_WITH_LOCAL_PATH/max-mcp-server/index.js"],
+      "env": {
+        "MAX_API_KEY": "${env:MAX_API_KEY}",
+        "MAX_API_SECRET": "${env:MAX_API_SECRET}"
+      },
+      "disabled": false,
+      "autoApprove": ["get_ticker", "get_depth", "get_kline"]
+    }
+  }
+}
