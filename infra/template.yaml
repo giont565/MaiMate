@@ -1,0 +1,95 @@
+# AWS SAM — MAX Copilot 完整部署
+# 部署：sam build && sam deploy --guided
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: MAX Copilot serverless stack
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 30
+    MemorySize: 512
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref SessionTable
+
+Resources:
+  Api:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins: ["*"]
+        AllowMethods: [GET, POST, OPTIONS]
+        AllowHeaders: ["Content-Type"]
+
+  ChatFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: backend.handlers.chat.handler
+      CodeUri: ../
+      Timeout: 60
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [bedrock:InvokeModel, bedrock:Converse]
+              Resource: "*"
+        - DynamoDBCrudPolicy: { TableName: !Ref SessionTable }
+      Events:
+        Post: { Type: HttpApi, Properties: { ApiId: !Ref Api, Path: /chat, Method: POST } }
+
+  HealthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: backend.handlers.health.handler
+      CodeUri: ../
+      Events:
+        Get: { Type: HttpApi, Properties: { ApiId: !Ref Api, Path: /health, Method: GET } }
+
+  MarketFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: backend.handlers.market.handler
+      CodeUri: ../
+      Events:
+        Get: { Type: HttpApi, Properties: { ApiId: !Ref Api, Path: /market, Method: GET } }
+
+  OrderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: backend.handlers.order.handler
+      CodeUri: ../
+      Policies:
+        - DynamoDBCrudPolicy: { TableName: !Ref SessionTable }
+      # MAX_API_KEY / MAX_API_SECRET 不寫在模板——部署後由 Secrets Manager
+      # 或 console 環境變數注入，嚴禁進版控
+      Events:
+        Post: { Type: HttpApi, Properties: { ApiId: !Ref Api, Path: /order, Method: POST } }
+
+  SessionTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey: { Name: pk, Type: String }
+
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      WebsiteConfiguration: { IndexDocument: index.html }
+
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action: s3:GetObject
+            Resource: !Sub "${FrontendBucket.Arn}/*"
+
+Outputs:
+  ApiUrl:
+    Value: !Sub "https://${Api}.execute-api.${AWS::Region}.amazonaws.com"
+  FrontendUrl:
+    Value: !GetAtt FrontendBucket.WebsiteURL
+  # 正式 Demo 前可在 FrontendBucket 前加 CloudFront（HTTPS）；
+  # 黑客松時程內 S3 website endpoint 已足夠展示

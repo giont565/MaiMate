@@ -1,0 +1,134 @@
+{
+  "generated_at": "2026-07-19T11:07:32.515855+00:00",
+  "row_count": 10000,
+  "period": {
+    "start": "2025-01-01",
+    "end": "2025-12-31"
+  },
+  "chase_index": {
+    "buy_above_ma_pct": 65.0,
+    "sell_below_ma_pct": 34.1,
+    "buy_total": 2350,
+    "sell_total": 2304,
+    "ma_window": 7
+  },
+  "opportunity_cost": {
+    "total_missed_twd": 26598877.0,
+    "worst_single_sell": {
+      "date": "2025-01-08",
+      "currency": "doge",
+      "qty": 6216.214174,
+      "sell_price": 14.2,
+      "eoy_price": 64.54,
+      "missed_twd": 312924.0
+    }
+  },
+  "concentration": {
+    "monthly_top_holding": {
+      "2025-01": {
+        "top_currency": "twd",
+        "top_pct": 86.2,
+        "portfolio_twd": 10009890.0
+      },
+      "2025-02": {
+        "top_currency": "twd",
+        "top_pct": 87.4,
+        "portfolio_twd": 17143471.0
+      },
+      "2025-03": {
+        "top_currency": "twd",
+        "top_pct": 94.5,
+        "portfolio_twd": 25935134.0
+      },
+      "2025-04": {
+        "top_currency": "twd",
+        "top_pct": 96.8,
+        "portfolio_twd": 35535888.0
+      },
+      "2025-05": {
+        "top_currency": "twd",
+        "top_pct": 97.3,
+        "portfolio_twd": 47755884.0
+      },
+      "2025-06": {
+        "top_currency": "twd",
+        "top_pct": 97.5,
+        "portfolio_twd": 58767691.0
+      },
+      "2025-07": {
+        "top_currency": "twd",
+        "top_pct": 98.3,
+        "portfolio_twd": 66019828.0
+      },
+      "2025-08": {
+        "top_currency": "twd",
+        "top_pct": 97.8,
+        "portfolio_twd": 76286568.0
+      },
+      "2025-09": {
+        "top_currency": "twd",
+        "top_pct": 97.6,
+        "portfolio_twd": 88909691.0
+      },
+      "2025-10": {
+        "top_currency": "twd",
+        "top_pct": 98.5,
+        "portfolio_twd": 97023162.0
+      },
+      "2025-11": {
+        "top_currency": "twd",
+        "top_pct": 98.5,
+        "portfolio_twd": 105919067.0
+      },
+      "2025-12": {
+        "top_currency": "twd",
+        "top_pct": 98.6,
+        "portfolio_twd": 118168980.0
+      }
+    },
+    "peak_concentration": {
+      "month": "2025-12",
+      "top_currency": "twd",
+      "top_pct": 98.6,
+      "portfolio_twd": 118168980.0
+    }
+  },
+  "cash_flow_behavior": {
+    "twd_withdrawal_count": 417,
+    "withdrawals_after_7d_btc_drop_pct": 14.2
+  },
+  "activity_profile": {
+    "trades_per_month": {
+      "2025-01": 388,
+      "2025-02": 348,
+      "2025-03": 402,
+      "2025-04": 385,
+      "2025-05": 416,
+      "2025-06": 358,
+      "2025-07": 406,
+      "2025-08": 416,
+      "2025-09": 392,
+      "2025-10": 393,
+      "2025-11": 395,
+      "2025-12": 375
+    },
+    "busiest_month": {
+      "month": "2025-05",
+      "trades": 416
+    },
+    "trades_by_currency": {
+      "sol": 812,
+      "usdt": 779,
+      "doge": 779,
+      "btc": 775,
+      "usdc": 769,
+      "eth": 760
+    },
+    "action_counts": {
+      "deposit": 2679,
+      "buy": 2357,
+      "sell": 2317,
+      "withdrawal": 2647
+    }
+  }
+}
