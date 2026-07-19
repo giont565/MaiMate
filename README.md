@@ -67,9 +67,52 @@ mockup HTML 在 `docs/mockups/`＝C 包前端起點，畫面中所有數字皆�
 
 **全員共同**（不算包內工時）：#3 自己的 Lv2 KYC＋API Key、Kiro 設定、過程截圖存 Drive、每天合回 main。
 
-**跨包交接件**（只有這四條，其他互不相欠）：
-B→A：query_knowledge/audit 函式交付｜A→C：/chat 回應 schema（§3，已定義）｜
-D→A：Guardrails ID｜A→D：可測版本 tag（E2E 開跑的訊號）。
+### 交棒地圖：哪個工項完成，交付給誰
+
+三波推進；箭頭上是交付物。看自己的包：進來的箭頭＝你在等什麼，出去的箭頭＝誰在等你。
+
+```mermaid
+flowchart LR
+    subgraph W1["第一波｜前置（~7/22）"]
+        AWS["D：AWS 帳號＋Bedrock 開通"]
+        KYC["全員：Lv2 KYC＋API Key(#3)"]
+        PUB["B：max_public 實測(#2)"]
+        SIG["B：簽章對照核對"]
+    end
+    subgraph W2["第二波｜構建（7/23–27）"]
+        FIRST["A：Bedrock 迴圈首跑"]
+        CORE["A：#1 confirm｜#5 路由<br/>#10 Profile｜#11 三方案"]
+        RAG["B：RAG 語料＋KB＋query_knowledge"]
+        AUD["B：audit.py＋/audit endpoint"]
+        GRD["D：Guardrails 建立(#6)"]
+        SAM["D：SAM 首次部署冒煙"]
+        FE["C：手機版＋三方案卡<br/>徽章＋軌跡面板(#13)"]
+    end
+    subgraph W3["第三波｜整合（7/28–31）"]
+        E2E["D：E2E Golden Path<br/>＋Private 成交(#4)"]
+        REC["D：預錄影片(#8)＋DEPLOY.md(#14)"]
+    end
+    AWS -->|"帳號憑證"| FIRST
+    AWS -->|"帳號憑證"| RAG
+    AWS -->|"帳號憑證"| SAM
+    KYC -->|"各自 API Key"| E2E
+    PUB -->|"可靠的行情工具"| CORE
+    SIG -->|"簽章確認"| E2E
+    FIRST -->|"跑通的迴圈"| CORE
+    RAG -->|"query_knowledge 函式"| CORE
+    AUD -->|"log/trail 函式（A 埋點）"| CORE
+    AUD -->|"/audit schema"| FE
+    GRD -->|"Guardrail ID（A 掛載）"| CORE
+    CORE -->|"scenarios/confirm schema（§3）"| FE
+    CORE -->|"可測版本 tag"| E2E
+    FE -->|"可操作前端"| E2E
+    SAM -->|"部署好的環境"| E2E
+    E2E -->|"全線綠燈"| REC
+    REC -->|"影片＋部署 SOP"| FINAL["8/1 決賽：全員"]
+```
+
+文字版四大交接（背這四條就夠）：**B→A** 函式交付｜**A→C** schema（§3 已定義，C 可先用假資料）｜
+**D→A** Guardrails ID｜**A→D** 可測版本 tag（E2E 開跑訊號）。
 
 **不打架五規則**：①地盤制（動別人目錄→開 issue）②介面契約先行（見 §3，C 包用假資料平行開發）
 ③共用檔單一 owner（tools.py/loop.py 歸 A、infra 歸 D）④每日 pull --rebase 合回 main ⑤改介面先在 #dev 廣播。

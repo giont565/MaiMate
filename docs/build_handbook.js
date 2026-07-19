@@ -224,6 +224,42 @@ function statusTable(s, rows, y, colW, rowH) {
   ], { x: M + 0.3, y: 6.52, w: W - 2 * M - 0.6, h: 0.62, fontFace: FONT, fontSize: 11.5, valign: "middle", margin: 0 });
 }
 
+// ============ 7c 交棒地圖 ============
+{
+  const s = pres.addSlide();
+  s.background = { color: WHITE };
+  bigTitle(s, "交棒地圖：哪個工項完成，交付給誰", "進來的箭頭＝你在等什麼；出去的箭頭＝誰在等你。流程圖版在 README §1");
+  const header = ["完成的工項", "交付物", "交給", "對方拿去做什麼"].map(t =>
+    ({ text: t, options: { bold: true, color: WHITE, fill: { color: NAVY } } }));
+  const rows = [
+    ["D：AWS 帳號＋Bedrock 開通", "帳號憑證", "A／B／D", "Bedrock 首跑｜KB 建置｜SAM 部署"],
+    ["全員：Lv2 KYC＋Key（#3）", "各自 API Key", "D", "Private API E2E（#4）"],
+    ["B：max_public 實測（#2）", "可靠的行情工具", "A", "get_market_data 放心用"],
+    ["B：簽章對照核對", "簽章確認", "D", "E2E 真下單前置"],
+    ["A：Bedrock 迴圈首跑", "跑通的迴圈", "A 自己", "解鎖 #1 #5 #10 #11 開發"],
+    ["B：query_knowledge＋audit.py", "函式", "A", "註冊進 tools＋loop 埋點"],
+    ["B：/audit endpoint", "audit schema", "C", "決策軌跡面板"],
+    ["D：Guardrails 建立（#6）", "Guardrail ID", "A", "loop 掛載"],
+    ["A：#11／#10／#1 完成", "scenarios/confirm schema（§3）", "C", "三方案卡・徽章・確認卡接真資料"],
+    ["A：核心全完成", "可測版本 tag", "D", "E2E Golden Path 開跑"],
+    ["C：手機版＋元件（#13）", "可操作前端", "D", "E2E＋離線備援驗證"],
+    ["D：E2E 全線綠燈", "綠燈", "D 自己", "預錄影片（#8）＋DEPLOY.md（#14）"],
+    ["D：影片＋部署 SOP", "決賽武器包", "全員", "8/1 上場"],
+  ];
+  s.addTable([header, ...rows.map(r => [
+    { text: r[0], options: { bold: true, color: INK } },
+    { text: r[1], options: { color: NAVY } },
+    { text: r[2], options: { bold: true, color: GOLD } },
+    { text: r[3], options: { color: INK } },
+  ])], {
+    x: M, y: 1.65, w: W - 2 * M, colW: [3.5, 2.9, 1.35, 4.38],
+    fontFace: FONT, fontSize: 10, valign: "middle",
+    border: { type: "solid", color: "D5DEF0", pt: 0.75 }, rowH: 0.385, margin: 0.05,
+  });
+  s.addText("背四條就夠：B→A 函式｜A→C schema（已定義，C 先用假資料）｜D→A Guardrail ID｜A→D 可測版本 tag。", {
+    x: M, y: 6.95, w: W - 2 * M, h: 0.4, fontFace: FONT, fontSize: 11.5, bold: true, color: NAVY, margin: 0 });
+}
+
 // ============ 7b 不打架五規則 ============
 {
   const s = pres.addSlide();
