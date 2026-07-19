@@ -497,25 +497,31 @@ function arrowRight(slide, x, y) {
     s.addNotes("＜加分 +5%：採用 Kiro＞不要只說「我們有用」，講 spec-driven 在 30 小時內帶來的速度差。");
   }
 
-  // ============ S12 商業 ============
+  // ============ S12 商業：怎麼賺錢 ============
   {
     const s = pres.addSlide();
     s.background = { color: WHITE };
-    bigTitle(s, "這是只有交易所做得出來的產品");
+    bigTitle(s, "怎麼賺錢：四條收入線，第一條今天就在收");
     const cols = [
-      { t: "給誰用", body: "MAX 活躍用戶裡的中階散戶：有交易量、繳過學費、還沒有自己的紀律系統——行為洞察對他們價值最大。" },
-      { t: "為什麼是 MAX", body: "行為數據只有交易所自己有，外部工具永遠拿不到。確認卡機制也延續了 MaiCoin「所有金額異動須明確授權」的產品哲學——這個產品長在 MAX 身上最自然。" },
-      { t: "怎麼長大", body: "先當 MAX App 的免費健檢功能養黏著；再推訂閱制進階分析；最後把行為 API 開放給量化用戶。" },
+      { t: "① 手續費放大", tag: "現在", c: NAVY, body: "不敢交易的新手 → 陪跑出第一筆單；恐慌離場的用戶 LTV 歸零 → 攔住＝保住手續費年金；MaiCoin → MAX 升級導流。中階散戶月交易 NT$50 萬 ≈ 平台月收 NT$250–750/人。" },
+      { t: "② 冷靜期→定期定額", tag: "現在", c: GREEN, body: "三方案的「暫停」不是不賺——導向既有 DCA 產品，衝動單變長期定投：穩定費流＋資產沉澱。一次性的手續費，變年金。" },
+      { t: "③ Premium 訂閱", tag: "第二曲線", c: GOLD, body: "損益歸因、年度健檢、即時行為提醒。月費 NT$99–199；10 萬活躍用戶滲透 5% ≈ 月收 NT$50–100 萬。" },
+      { t: "④ B2B 白牌", tag: "第三曲線", c: RED, body: "行為引擎＋合規 Agent 框架授權其他交易所／銀行財管。VASP 專法上路後，合規 AI 是剛需。" },
     ];
-    cols.forEach((c, i) => {
-      const x = M + i * 4.1;
-      card(s, x, 1.9, 3.8, 4.0, i === 1 ? NAVY : ICE);
-      s.addText(c.t, { x: x + 0.35, y: 2.2, w: 3.1, h: 0.5, fontFace: FONT, fontSize: 18, bold: true, color: i === 1 ? GOLD : NAVY, margin: 0 });
-      s.addText(c.body, { x: x + 0.35, y: 2.8, w: 3.15, h: 2.9, fontFace: FONT, fontSize: 12.5, color: i === 1 ? ICE : INK, margin: 0 });
+    cols.forEach((c, i2) => {
+      const x = M + (i2 % 2) * 6.2, y = 1.8 + Math.floor(i2 / 2) * 2.15;
+      card(s, x, y, 5.95, 1.95, ICE);
+      s.addText(c.t, { x: x + 0.3, y: y + 0.15, w: 4.2, h: 0.45, fontFace: FONT, fontSize: 16, bold: true, color: c.c, margin: 0 });
+      s.addShape("roundRect", { x: x + 4.6, y: y + 0.18, w: 1.1, h: 0.38, rectRadius: 0.19, fill: { color: c.c }, line: { type: "none" } });
+      s.addText(c.tag, { x: x + 4.6, y: y + 0.18, w: 1.1, h: 0.38, fontFace: FONT, fontSize: 10.5, bold: true, color: WHITE, align: "center", valign: "middle", margin: 0 });
+      s.addText(c.body, { x: x + 0.3, y: y + 0.62, w: 5.4, h: 1.25, fontFace: FONT, fontSize: 11.5, color: INK, margin: 0 });
     });
-    s.addText("投資人不缺數據——缺的是「關於自己的數據」。", {
-      x: M, y: 6.25, w: W - 2 * M, h: 0.5, fontFace: FONT, fontSize: 14, bold: true, color: NAVY, margin: 0 });
-    s.addNotes("＜商業性 20%＞中間那張卡是給 MaiCoin 評審聽的：這產品跟你們既有哲學一致、而且只有你們做得出來。");
+    card(s, M, 6.15, W - 2 * M, 0.95, NAVY);
+    s.addText([
+      { text: "單位經濟學：", options: { bold: true, color: GOLD } },
+      { text: "AI 成本 <NT$60/月/重度用戶；月交易額 NT$4 萬手續費就回本。留存每 +1%，手續費增量遠大於整個 AI 帳單。", options: { color: WHITE } },
+    ], { x: M + 0.35, y: 6.3, w: W - 2 * M - 0.7, h: 0.7, fontFace: FONT, fontSize: 14, valign: "middle", margin: 0 });
+    s.addNotes("＜商業性 20%＞評審是交易所的人——先講①手續費語言最直接（此資料集帳戶年 4,674 筆，流失一個平台年損上萬到數十萬手續費），再用③④展示想像空間。費率以 MAX 官網公告為準（約掛單 0.05%/吃單 0.15%）。「只有交易所做得出來」：行為數據只有交易所有，外部工具拿不到。");
   }
 
   // ============ S13 交付物 ============
