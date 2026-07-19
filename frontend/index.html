@@ -29,6 +29,9 @@
   input{flex:1;padding:10px 14px;border:1px solid #D5DEF0;border-radius:10px;font-size:14px}
   button[type=submit]{padding:10px 20px;background:var(--navy);color:#fff;border:0;border-radius:10px;cursor:pointer}
   .tick{display:flex;justify-content:space-between;background:var(--ice);border-radius:10px;padding:8px 12px;margin-bottom:8px;font-size:13px}
+  .tick .v{font-variant-numeric:tabular-nums;transition:color .3s}
+  .tick .v.up{color:var(--green)}
+  .tick .v.down{color:var(--red)}
   .offline{font-size:11px;color:var(--red);display:none}
 </style>
 </head>
