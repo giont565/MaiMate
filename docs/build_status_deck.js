@@ -300,7 +300,70 @@ function statusTable(s, rows, y, colW, rowH) {
     x: M, y: 6.6, w: W - 2 * M, h: 0.45, fontFace: FONT, fontSize: 12, color: MUT, margin: 0 });
 }
 
-// ============ 11 Kiro 部署（一次設定）============
+// ============ 11 系統架構成本明細 ============
+{
+  const s = pres.addSlide();
+  s.background = { color: WHITE };
+  bigTitle(s, "系統架構成本明細：這套東西到底花多少錢", "單價以 AWS 主控台現價估算；serverless＝用多少付多少，不用先繳月費");
+  const header = [
+    { text: "元件", options: { bold: true, color: WHITE, fill: { color: NAVY } } },
+    { text: "計費方式", options: { bold: true, color: WHITE, fill: { color: NAVY } } },
+    { text: "賽前開發期", options: { bold: true, color: WHITE, fill: { color: NAVY } } },
+    { text: "決賽 Demo", options: { bold: true, color: WHITE, fill: { color: NAVY } } },
+    { text: "千人規模/月", options: { bold: true, color: WHITE, fill: { color: NAVY } } },
+  ];
+  const rows = [
+    ["Bedrock 模型（Haiku/Sonnet）", "依 token 計價＋prompt caching 一折", "≈NT$300（約500次測試對話）", "<NT$100", "依用量：重度用戶≈NT$60/人"],
+    ["Lambda ×4＋API Gateway", "依請求數；免費額度 100 萬次/月", "≈NT$0（免費額度內）", "≈NT$0", "<NT$500"],
+    ["DynamoDB（憑證/審計/session）", "on-demand 依讀寫", "≈NT$0", "≈NT$0", "<NT$300"],
+    ["S3＋CloudFront（前端/資料）", "儲存＋流量", "<NT$30", "<NT$30", "<NT$500"],
+    ["Knowledge Base＋S3 Vectors", "embedding 一次性＋向量儲存", "<NT$50（語料小）", "查詢零頭", "<NT$700"],
+    ["MAX API", "呼叫免費；成交才收手續費", "NT$0", "最小額度手續費 <NT$10", "使用者自付"],
+    ["Kiro（開發工具）", "黑客松贈點 2000/人", "NT$0（贈點內）", "NT$0", "—（開發工具）"],
+  ];
+  s.addTable([header, ...rows.map(r => r.map((c, j) => ({
+    text: c, options: { color: j === 0 ? INK : j >= 2 ? NAVY : MUT, bold: j === 0, fontSize: 10.5 },
+  })))], {
+    x: M, y: 1.65, w: W - 2 * M, colW: [3.0, 2.9, 2.5, 1.9, 1.83],
+    fontFace: FONT, valign: "middle",
+    border: { type: "solid", color: "D5DEF0", pt: 0.75 }, rowH: 0.58, margin: 0.06,
+  });
+  card(s, M, 6.2, W - 2 * M, 0.85, ICE);
+  s.addText([
+    { text: "全隊賽前總花費 < NT$500", options: { bold: true, color: GREEN, fontSize: 15 } },
+    { text: "（幾乎只有 Bedrock 測試呼叫）；千人規模基礎設施 < NT$3,000/月＋模型依用量——本頁同時是可行性 20% 的簡報素材。", options: { color: INK, fontSize: 12.5 } },
+  ], { x: M + 0.3, y: 6.32, w: W - 2 * M - 0.6, h: 0.62, fontFace: FONT, valign: "middle", margin: 0 });
+}
+
+// ============ 12 成本效益：三個省錢決策＋價值錨點 ============
+{
+  const s = pres.addSlide();
+  s.background = { color: NAVY_D };
+  s.addText("成本效益：我們主動避開的三個坑，和一句話的價值", { x: M, y: 0.55, w: W - 2 * M, h: 0.7, fontFace: FONT, fontSize: 26, bold: true, color: WHITE, margin: 0 });
+  const traps = [
+    { t: "向量庫選 S3 Vectors", bad: "預設 OpenSearch Serverless 最低月費 ≈ NT$1 萬起", good: "S3 Vectors 幾十元搞定小語料——省 9 成以上" },
+    { t: "全 serverless", bad: "EC2/容器要付閒置時間＋有人要顧機器", good: "Lambda 用多少付多少；30 小時裡零運維" },
+    { t: "模型分層＋快取", bad: "全用大模型：每次對話 ≈ NT$2.2", good: "Haiku 日常＋Sonnet 深度＋prompt caching → 混合 <NT$0.6/次" },
+  ];
+  traps.forEach((tr, i) => {
+    const x = M + i * 4.1;
+    card(s, x, 1.6, 3.85, 2.9, NAVY);
+    s.addText(tr.t, { x: x + 0.3, y: 1.85, w: 3.3, h: 0.5, fontFace: FONT, fontSize: 16, bold: true, color: GOLD, margin: 0 });
+    s.addText([
+      { text: "✘ " + tr.bad, options: { color: "E8A5AC", breakLine: true } },
+      { text: "", options: { breakLine: true } },
+      { text: "✔ " + tr.good, options: { color: "9FE5B0" } },
+    ], { x: x + 0.3, y: 2.45, w: 3.3, h: 1.9, fontFace: FONT, fontSize: 12, margin: 0 });
+  });
+  card(s, M, 4.85, W - 2 * M, 1.9, "22315E");
+  s.addText("價值錨點（上台就講這句）", { x: M + 0.4, y: 5.05, w: 6, h: 0.4, fontFace: FONT, fontSize: 13, bold: true, color: GOLD, margin: 0 });
+  s.addText([
+    { text: "每次對話 <NT$0.6；這個帳戶平均每筆賣出的機會成本 NT$11,480。", options: { color: WHITE, fontSize: 16, breakLine: true } },
+    { text: "一年只要攔下「一筆」衝動交易，就抵掉這位用戶 16 年的 AI 成本。", options: { color: WHITE, fontSize: 20, bold: true } },
+  ], { x: M + 0.4, y: 5.5, w: W - 2 * M - 0.8, h: 1.1, fontFace: FONT, margin: 0 });
+}
+
+// ============ 13 Kiro 部署（一次設定）============
 {
   const s = pres.addSlide();
   s.background = { color: WHITE };
