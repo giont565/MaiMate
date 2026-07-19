@@ -183,7 +183,107 @@ function statusTable(s, rows, y, colW, rowH) {
   ], { x: M + 0.3, y: 6.02, w: W - 2 * M - 0.6, h: 0.7, fontFace: FONT, fontSize: 12.5, valign: "middle", margin: 0 });
 }
 
-// ============ 8 時間軸 ============
+// ============ 8 Kiro 部署（一次設定）============
+{
+  const s = pres.addSlide();
+  s.background = { color: WHITE };
+  bigTitle(s, "Kiro 部署｜每人一次設定（約 15 分鐘）", "認領工作包後，先把這頁做完才開工");
+  const steps = [
+    ["1", "下載安裝", "kiro.dev 下載（Mac/Windows）。介面就是 VS Code，不用重學", NAVY],
+    ["2", "登入", "用自己的 Google 帳號。帳號與額度不能共用（主辦規定，違者取消資格）", NAVY],
+    ["3", "兌換額度", "輸入兌換碼 GenAIHack26 → 頭像選單看到 Bonus Credits 2000 即成功，截圖存證", GOLD],
+    ["4", "開啟專案", "git clone github.com/giont565/MaiMate → Kiro「Open Folder」選 MaiMate 資料夾", GREEN],
+    ["5", "確認載入", "左側出現 Specs 面板（5 個 spec）＝.kiro/ 讀取成功；跑 bash scripts/setup.sh 檢查環境", GREEN],
+  ];
+  steps.forEach(([n, t, d, c], i) => {
+    const y = 1.7 + i * 0.95;
+    s.addShape("ellipse", { x: M, y: y + 0.08, w: 0.55, h: 0.55, fill: { color: c } });
+    s.addText(n, { x: M, y: y + 0.08, w: 0.55, h: 0.55, fontFace: FONT, fontSize: 16, bold: true, color: WHITE, align: "center", valign: "middle", margin: 0 });
+    s.addText(t, { x: M + 0.8, y, w: 1.9, h: 0.75, fontFace: FONT, fontSize: 15, bold: true, color: NAVY, valign: "middle", margin: 0 });
+    s.addText(d, { x: M + 2.8, y, w: 9.4, h: 0.75, fontFace: FONT, fontSize: 13, color: INK, valign: "middle", margin: 0 });
+  });
+  s.addText("疑難：登入卡住→換瀏覽器完成 OAuth；Specs 面板沒出現→確認開的是 MaiMate 根目錄不是上層資料夾。", {
+    x: M, y: 6.55, w: W - 2 * M, h: 0.45, fontFace: FONT, fontSize: 11.5, color: MUT, margin: 0 });
+}
+
+// ============ 9 Kiro 開發：Steering 與 Specs ============
+{
+  const s = pres.addSlide();
+  s.background = { color: WHITE };
+  bigTitle(s, "Kiro 開發｜.kiro 目錄就是團隊大腦", "打開專案它就懂我們的規矩——不用自己記紅線");
+  const rows = [
+    [".kiro/steering/", "自動載入的團隊約定", "product.md 紅線（不報明牌/下單必確認）、data-schema.md 欄位與 API 格式、tech.md 架構規範。Kiro 生成的每行程式都遵守"],
+    [".kiro/specs/<功能>/", "五個功能規格（三件套）", "requirements.md 驗收條件（EARS）→ design.md 設計 → tasks.md 任務清單。已備：chat-agent、behavior-engine、order-flow、profile-engine、trade-scenarios、audit-log"],
+    [".kiro/settings/mcp.json", "MAX MCP 接入", "把 REPLACE_WITH_LOCAL_PATH 改成本機 clone 的 max-mcp-server 路徑；金鑰走環境變數。之後對 Kiro 說「查 BTC 現價」它直接打 MAX API"],
+  ];
+  rows.forEach(([t, sub, d], i) => {
+    const y = 1.7 + i * 1.55;
+    card(s, M, y, W - 2 * M, 1.4, ICE);
+    s.addText(t, { x: M + 0.35, y: y + 0.15, w: 3.4, h: 0.5, fontFace: "Courier New", fontSize: 14, bold: true, color: NAVY, margin: 0 });
+    s.addText(sub, { x: M + 0.35, y: y + 0.68, w: 3.4, h: 0.4, fontFace: FONT, fontSize: 11, bold: true, color: GOLD, margin: 0 });
+    s.addText(d, { x: M + 3.95, y: y + 0.12, w: 8.2, h: 1.2, fontFace: FONT, fontSize: 12, color: INK, valign: "middle", margin: 0 });
+  });
+  s.addText("Steering 寫得越清楚，Kiro 來回修正越少——這就是我們省 credit 的主要手段。", {
+    x: M, y: 6.55, w: W - 2 * M, h: 0.45, fontFace: FONT, fontSize: 13, bold: true, color: NAVY, margin: 0 });
+}
+
+// ============ 10 Kiro 開發：日常循環 ============
+{
+  const s = pres.addSlide();
+  s.background = { color: WHITE };
+  bigTitle(s, "Kiro 開發｜日常循環：領任務 → 開分支 → Kiro 做 → 合回去");
+  const flow = [
+    ["領任務", "GitHub Issues 認領（開會分配的工作包），Slack #dev 說一聲避免撞車", NAVY],
+    ["開分支", "git checkout -b feat/任務名（從最新 main 開）", NAVY],
+    ["Kiro 執行", "Specs 面板 → 對應 spec → tasks → 點「Start task」。Kiro 讀 requirements+design 上下文動手改碼；做完自己看 diff 再收", GOLD],
+    ["驗證", "跑該 spec tasks.md 的驗收條件（單元測試/劇本），過了才算完成、打勾", GREEN],
+    ["合回去", "git pull --rebase → push → PR（賽前）或直合（決賽現場求快）", GREEN],
+  ];
+  flow.forEach(([t, d, c], i) => {
+    const y = 1.65 + i * 0.94;
+    s.addShape("ellipse", { x: M, y: y + 0.08, w: 0.55, h: 0.55, fill: { color: c } });
+    s.addText(String(i + 1), { x: M, y: y + 0.08, w: 0.55, h: 0.55, fontFace: FONT, fontSize: 16, bold: true, color: WHITE, align: "center", valign: "middle", margin: 0 });
+    s.addText(t, { x: M + 0.8, y, w: 1.7, h: 0.75, fontFace: FONT, fontSize: 15, bold: true, color: NAVY, valign: "middle", margin: 0 });
+    s.addText(d, { x: M + 2.6, y, w: 9.6, h: 0.75, fontFace: FONT, fontSize: 12.5, color: INK, valign: "middle", margin: 0 });
+  });
+  card(s, M, 6.35, W - 2 * M, 0.75, "FFF4E0");
+  s.addText([
+    { text: "要開 spec 沒涵蓋的新功能時：", options: { bold: true, color: NAVY } },
+    { text: "先對 Kiro 說「幫我為 XX 建立 spec」，人審過 requirements 再讓它動手——規格便宜，返工很貴。", options: { color: INK } },
+  ], { x: M + 0.3, y: 6.45, w: W - 2 * M - 0.6, h: 0.55, fontFace: FONT, fontSize: 12.5, valign: "middle", margin: 0 });
+}
+
+// ============ 11 Kiro credit 紀律與雷區 ============
+{
+  const s = pres.addSlide();
+  s.background = { color: WHITE };
+  bigTitle(s, "Kiro｜Credit 紀律與雷區", "2000 點只發一次、用完不補——全隊共同資產");
+  card(s, M, 1.7, 5.9, 4.4, ICE);
+  s.addText("預算分配（每人）", { x: M + 0.35, y: 1.95, w: 5.2, h: 0.45, fontFace: FONT, fontSize: 16, bold: true, color: NAVY, margin: 0 });
+  const budget = [
+    ["練習期（～7/22）", "≤ 300", GOLD],
+    ["開發期（7/23–31）", "~ 1000", NAVY],
+    ["決賽保底（8/1–2）", "≥ 700", RED],
+  ];
+  budget.forEach(([t, n, c], i) => {
+    const y = 2.55 + i * 1.05;
+    card(s, M + 0.35, y, 5.2, 0.9, WHITE);
+    s.addText(t, { x: M + 0.6, y: y + 0.08, w: 3.1, h: 0.75, fontFace: FONT, fontSize: 13.5, color: INK, valign: "middle", margin: 0 });
+    s.addText(n, { x: M + 3.7, y: y + 0.08, w: 1.7, h: 0.75, fontFace: FONT, fontSize: 20, bold: true, color: c, valign: "middle", margin: 0 });
+  });
+  card(s, M + 6.25, 1.7, 5.9, 4.4, "FDF0EF");
+  s.addText("四個雷區", { x: M + 6.6, y: 1.95, w: 5.2, h: 0.45, fontFace: FONT, fontSize: 16, bold: true, color: RED, margin: 0 });
+  s.addText([
+    { text: "Autopilot 只在跑定義好的 task 時開——探索、跟課、隨便問問一律關，它會自主連跑燒點數", options: { bullet: true, breakLine: true } },
+    { text: "小改動自己動手改，讓 Kiro 做「一個 task 一次到位」的活", options: { bullet: true, breakLine: true } },
+    { text: "同一個問題別在 Kiro 裡反覆重試——換個問法前先想清楚要什麼", options: { bullet: true, breakLine: true } },
+    { text: "頭像選單隨時看剩餘點數；低於個人決賽保底就停手回報", options: { bullet: true } },
+  ], { x: M + 6.6, y: 2.55, w: 5.3, h: 3.3, fontFace: FONT, fontSize: 12.5, color: INK, paraSpaceAfter: 10, margin: 0 });
+  s.addText("加分項證據：過程隨手截 Specs 面板／task 執行／MCP 查行情畫面，丟 Drive「Kiro證據」資料夾。", {
+    x: M, y: 6.4, w: W - 2 * M, h: 0.45, fontFace: FONT, fontSize: 12, color: MUT, margin: 0 });
+}
+
+// ============ 12 時間軸 ============
 {
   const s = pres.addSlide();
   s.background = { color: NAVY_D };
