@@ -1,0 +1,39 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"><link rel="stylesheet" href="base.css">
+<style>
+.scen{background:#fff;border:1.5px solid #E3E9F5;border-radius:14px;padding:12px 14px;margin-bottom:9px;box-shadow:0 1px 5px rgba(22,34,77,.05)}
+.scen.pick{border-color:var(--gold);background:#FFFDF6}
+.scen .t{display:flex;align-items:center;font-size:13.5px;font-weight:800;color:var(--navy);margin-bottom:6px}
+.scen .tag{margin-left:auto;font-size:9.5px;font-weight:700;border-radius:999px;padding:2px 8px;background:var(--ice);color:var(--navy)}
+.scen.pick .tag{background:var(--gold);color:#fff}
+.scen .row{display:flex;gap:10px;font-size:10.5px;color:var(--mut)}
+.scen .row b{display:block;font-size:12.5px;color:var(--ink);margin-top:1px}
+.scen .row>div{flex:1}
+</style></head><body>
+<div class="topbar"><div class="logo">🐣</div><div><h1>MaiMate 麥麥</h1><div class="sub">市場一直在變，麥麥一直陪你</div></div><div class="badge">成長陪跑</div></div>
+<div class="page">
+  <div class="msg user">ETH 跌太多了，幫我全部賣掉！</div>
+  <div class="tools">
+    <span class="tool"><span class="ok">✓</span> 查持倉</span>
+    <span class="tool"><span class="ok">✓</span> 查行情</span>
+    <span class="tool"><span class="ok">✓</span> 查交易史</span>
+    <span class="tool"><span class="ok">✓</span> 行為風險</span>
+    <span class="tool"><span class="ok">✓</span> 方案試算</span>
+  </div>
+  <div class="msg ai">我理解你想賣，先陪你看 30 秒再決定。<br><br>
+  ETH 現在佔你持倉 <b>54%</b>，24H 跌 6.8%（14:32）。要提醒你：<b>今年 1/8 急跌時你也全賣過</b>——那一次，到年末少賺了 <b>NT$312,924</b>。<br><br>
+  這不是說你不能賣，是給你三個都算好數字的選項：</div>
+  <div class="scen pick">
+    <div class="t">🛡️ 先賣 25%，留 75% 觀察<span class="tag">麥麥陪跑建議看看</span></div>
+    <div class="row"><div>預估金額<b>NT$35,920</b></div><div>手續費<b>NT$54</b></div><div>賣後 ETH 佔比<b>44%</b></div></div>
+  </div>
+  <div class="scen">
+    <div class="t">📤 照原計畫全部賣出<span class="tag">你的原意圖</span></div>
+    <div class="row"><div>預估金額<b>NT$143,680</b></div><div>手續費<b>NT$216</b></div><div>賣後 ETH 佔比<b>0%</b></div></div>
+  </div>
+  <div class="scen">
+    <div class="t">⏸️ 先不動，設 -10% 價格提醒<span class="tag">冷靜期</span></div>
+    <div class="row"><div>動作<b>不產生訂單</b></div><div>提醒價<b>NT$107,100</b></div><div>ETH 佔比<b>維持 54%</b></div></div>
+  </div>
+</div>
+<div class="inputbar"><div class="field">或直接告訴麥麥你的想法…</div><div class="send">➤</div></div>
+</body></html>

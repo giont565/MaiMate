@@ -1,0 +1,50 @@
+<!-- @dsCard group="MaiMate 手機畫面" -->
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"><style>:root{--navy:#16224D;--navy-d:#0D1530;--ice:#EAF0FB;--gold:#E8A13A;--green:#1F9D66;--red:#D64550;--ink:#1F2937;--mut:#6B7280;--bg:#F4F7FD}
+*{box-sizing:border-box;font-family:"Noto Sans CJK TC","Microsoft JhengHei","PingFang TC",sans-serif;margin:0}
+body{width:390px;min-height:844px;background:var(--bg);color:var(--ink)}
+.topbar{background:var(--navy-d);color:#fff;padding:14px 16px 12px;display:flex;align-items:center;gap:8px}
+.topbar .logo{width:30px;height:30px;border-radius:9px;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:17px}
+.topbar h1{font-size:17px;font-weight:700}
+.topbar .sub{font-size:10px;color:#A9B7D9}
+.badge{margin-left:auto;background:#22315E;border:1px solid var(--gold);color:var(--gold);font-size:10.5px;padding:3px 10px;border-radius:999px;font-weight:700}
+.page{padding:14px}
+.msg{max-width:86%;padding:11px 14px;border-radius:14px;font-size:13.5px;line-height:1.65;margin-bottom:10px}
+.msg.user{margin-left:auto;background:var(--ice);border-bottom-right-radius:4px}
+.msg.ai{background:var(--navy);color:#fff;border-bottom-left-radius:4px}
+.msg.ai b{color:var(--gold)}
+.tools{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 10px}
+.tool{font-size:10px;background:#fff;border:1px solid #C9D6EE;color:var(--navy);border-radius:999px;padding:3px 9px;font-weight:600}
+.tool .ok{color:var(--green)}
+.inputbar{position:fixed;bottom:0;left:0;width:390px;background:#fff;padding:10px 14px 22px;display:flex;gap:8px;border-top:1px solid #E3E9F5}
+.inputbar .field{flex:1;background:var(--bg);border:1px solid #D5DEF0;border-radius:999px;padding:10px 16px;font-size:12.5px;color:var(--mut)}
+.inputbar .send{width:40px;height:40px;border-radius:999px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px}
+</style>
+<style>
+.hello{font-size:15px;font-weight:700;margin:4px 2px 12px}
+.hello span{color:var(--mut);font-weight:400;font-size:12px;display:block;margin-top:3px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.card{background:#fff;border-radius:16px;padding:14px;box-shadow:0 1px 6px rgba(22,34,77,.07)}
+.card .n{font-size:24px;font-weight:800}
+.card .l{font-size:10.5px;color:var(--mut);margin-top:3px;line-height:1.4}
+.card.wide{grid-column:1/3;display:flex;align-items:center;gap:14px}
+.ring{width:64px;height:64px;border-radius:50%;background:conic-gradient(var(--gold) 0 62%, #E8EDF7 62% 100%);display:flex;align-items:center;justify-content:center;flex:none}
+.ring i{width:48px;height:48px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:800;font-size:15px;color:var(--navy)}
+.sec{font-size:12px;font-weight:700;color:var(--navy);margin:2px 2px 8px}
+.insight{background:#fff;border-left:4px solid var(--red);border-radius:12px;padding:11px 13px;font-size:12px;line-height:1.6;margin-bottom:10px;box-shadow:0 1px 6px rgba(22,34,77,.06)}
+.insight b{color:var(--red)}
+.insight.g{border-color:var(--green)} .insight.g b{color:var(--green)}
+</style></head><body>
+<div class="topbar"><div class="logo">🐣</div><div><h1>MaiMate 麥麥</h1><div class="sub">市場一直在變，麥麥一直陪你</div></div><div class="badge">成長陪跑</div></div>
+<div class="page">
+  <div class="hello">早安！這是你今天的投資健檢<span>依據你 2025 全年 10,000 筆真實交易紀錄</span></div>
+  <div class="cards">
+    <div class="card wide"><div class="ring"><i>62</i></div><div><div class="n" style="color:var(--navy)">投資健康分</div><div class="l">頻率很好、紀律待加強——追高習慣扣了最多分</div></div></div>
+    <div class="card"><div class="n" style="color:var(--red)">65%</div><div class="l">追高指數<br>買在近7筆均價上方</div></div>
+    <div class="card"><div class="n" style="color:var(--gold)">2,660萬</div><div class="l">年度賣出機會成本<br>（NT$）</div></div>
+  </div>
+  <div class="sec">麥麥幫你看到的事</div>
+  <div class="insight">你 2,350 筆買入中有 <b>65% 買在高點</b>——這是典型的 FOMO 模式，本月已出現 3 次。</div>
+  <div class="insight g">你的出金習慣很健康：417 筆提領只有 <b>14.2%</b> 發生在下跌後——不是恐慌型。</div>
+</div>
+<div class="inputbar"><div class="field">問麥麥任何事，例如：我上個月表現如何？</div><div class="send">➤</div></div>
+</body></html>

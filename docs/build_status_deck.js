@@ -266,6 +266,27 @@ function statusTable(s, rows, y, colW, rowH) {
     x: M, y: 6.95, w: W - 2 * M, h: 0.4, fontFace: FONT, fontSize: 12.5, bold: true, color: NAVY, margin: 0 });
 }
 
+// ============ 9b Demo 實際畫面 ============
+{
+  const s = pres.addSlide();
+  s.background = { color: NAVY_D };
+  s.addText("Demo 實際畫面：Golden Path 三階段", { x: M, y: 0.4, w: W - 2 * M, h: 0.6, fontFace: FONT, fontSize: 26, bold: true, color: WHITE, margin: 0 });
+  s.addText("視覺 mockup＝C 包實作規格｜畫面中所有數字皆來自真實資料計算", { x: M, y: 1.0, w: W - 2 * M, h: 0.35, fontFace: FONT, fontSize: 12, color: "8FA0C9", margin: 0 });
+  const shots = [
+    { f: "screen1.png", cap: "① 健檢首屏：健康分＋行為洞察", sub: "開場 10 秒抓住評審" },
+    { f: "screen2.png", cap: "② 恐慌攔截：工具鏈＋三方案", sub: "全場最重一擊（1/8 少賺 31 萬）" },
+    { f: "screen3.png", cap: "③ 確認卡→成交→決策軌跡", sub: "AI 有手，方向盤在人手上" },
+  ];
+  const iw = 2.45, ih = 5.3, gap = 0.8;
+  const x0 = (W - (iw * 3 + gap * 2)) / 2;
+  shots.forEach((sh, i) => {
+    const x = x0 + i * (iw + gap);
+    s.addImage({ path: path.join(__dirname, "mockups", sh.f), x, y: 1.45, w: iw, h: ih });
+    s.addText(sh.cap, { x: x - 0.35, y: 6.8, w: iw + 0.7, h: 0.35, fontFace: FONT, fontSize: 11.5, bold: true, color: WHITE, align: "center", margin: 0 });
+    s.addText(sh.sub, { x: x - 0.35, y: 7.12, w: iw + 0.7, h: 0.3, fontFace: FONT, fontSize: 9.5, color: GOLD, align: "center", margin: 0 });
+  });
+}
+
 // ============ 10 Golden Path 分鏡 ============
 {
   const s = pres.addSlide();
