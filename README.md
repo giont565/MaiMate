@@ -1,53 +1,260 @@
-# MaiMate — 2026 雲湧智生黑客松（MaiCoin 智慧理財命題）
+# MaiMate 麥麥 — 唯一開發文件
 
-「懂你操作史」的 AI 投資特助：AI 讀取使用者一年 10,000 筆交易紀錄找出行為盲點，
-結合 MAX 即時行情給個人化洞察，並在使用者授權下執行交易——洞察 → 對話 → 行動的閉環。
+> 2026 雲湧智生黑客松｜MaiCoin 智慧理財命題｜隊伍「第五名」
+> **這是本專案唯一的文件。** 開發地圖、架構、驗收、成果全在這份；改介面、改範圍都改這裡。
+> 決賽 8/1–8/2｜評分：創意25／可行20／商業20／AI設計15／切合10／完成10＋Lv2 Private API +5＋Kiro +5
 
-## 目錄結構
+**一句話**：別的投資工具看「市場」，MaiMate 同時看「你」——AI 讀你一年 10,000 筆交易紀錄找出行為盲點，
+結合 MAX 即時行情給個人化洞察，在你明確授權下執行交易。**洞察 → 對話 → 行動，AI 有手，方向盤在人手上。**
 
+## 0. 設計圖
+
+| ① 健檢首屏 | ② 恐慌攔截＋三方案 | ③ 確認→成交→軌跡 |
+|---|---|---|
+| ![s1](docs/mockups/screen1.png) | ![s2](docs/mockups/screen2.png) | ![s3](docs/mockups/screen3.png) |
+
+吉祥物：麥麥像素機器人（`docs/brand/`，IDLE/BLINK/BULLISH 三態，胸口 K 線）。
+mockup HTML 在 `docs/mockups/`＝C 包前端起點，畫面中所有數字皆真實資料計算。
+
+---
+
+## 1. 開發地圖
+
+### 時間軸（原則：賽前做完，決賽 30 小時只上架）
+
+| 階段 | 日期 | 目標 |
+|---|---|---|
+| 定案與就位 | ～7/22 | 全員 KYC(#3)、Kiro 設定、選包、**AWS 帳號定案**、#1 #2 開工 |
+| 核心構建週 | 7/23–27 | Golden Path 全鏈路＋RAG＋手機版；**7/27 晚自家 AWS 跑通全程** |
+| 整合排練週 | 7/28–30 | E2E、離線備援、預錄影片 v1、簡報定稿、pitch 兩輪 |
+| 凍結日 | 7/31 | code freeze、DEPLOY.md 定稿、從零部署演練、早睡 |
+| 決賽 | 8/1–8/2 | 官方環境重部署(1hr)、現場調整、最終錄影、上台 |
+
+### 四個工作包（自選，先搶先贏；每包獨佔目錄，git 不打架）
+
+| 包 | 內容（issues） | 獨佔目錄 | 估工時 |
+|---|---|---|---|
+| **A｜Agent 與方案引擎** | #1 confirm帶出、#5 模型路由、#10 Profile、#11 三方案、Bedrock 首跑 | `backend/agent/` | 4.5 天 |
+| **B｜資料服務與 RAG** | #2 Public API、#9 RAG＋KB、#12 Audit Log | `backend/integrations/` `analysis/` 語料 | 4 天 |
+| **C｜前端與品牌** | #13 手機版、三方案卡/徽章/軌跡面板、離線備援、麥麥視覺 | `frontend/` `docs/mockups/` `docs/brand/` | 4 天 |
+| **D｜整合部署與交付** | #14 部署演練、#4 Private E2E、#6 Guardrails、#8 錄影、#15 簡報、E2E 主導 | `infra/` `docs/` | 4 天 |
+
+**不打架五規則**：①地盤制（動別人目錄→開 issue）②介面契約先行（見 §3，C 包用假資料平行開發）
+③共用檔單一 owner（tools.py/loop.py 歸 A、infra 歸 D）④每日 pull --rebase 合回 main ⑤改介面先在 #dev 廣播。
+
+**Kiro 紀律**：credit 2000/人只發一次——練習≤300／開發~1000／決賽保底≥700；Autopilot 只在跑定義好的 task 時開；
+過程截圖（Specs 面板/task 執行/MCP）存 Drive 當 +5% 證據。
+
+---
+
+## 2. 完整架構
+
+實線＝P0（賽前完成）；虛線＝P1（高擬真展示）。金融數字一律由確定性程式計算，LLM 只負責理解、整合、解釋。
+
+```mermaid
+flowchart TB
+    subgraph ENTRY["入口層"]
+        U["使用者"]
+        WEB["手機版 Web（RWD）<br/>S3 + CloudFront"]
+        LINE["LINE 入口"]
+        U --> WEB
+        U -.P1.-> LINE
+    end
+    subgraph EXP["體驗層（前端 SPA）"]
+        CHAT["對話主畫面"]
+        HEALTH["行為健檢卡"]
+        CARD["下單確認卡"]
+        MOCK["離線 mock 備援"]
+    end
+    WEB --> CHAT & HEALTH
+    subgraph API["API 層（API Gateway + Lambda×4）"]
+        L1["/chat Agent迴圈"]
+        L2["/health 健檢"]
+        L3["/market 行情(快取5s)"]
+        L4["/order 下單(憑證驗證)"]
+    end
+    CHAT --> L1
+    HEALTH --> L2
+    CARD --> L4
+    subgraph AGENT["Agent 編排層（Bedrock Converse + Tool Use）"]
+        LLM["LLM 路由<br/>Haiku 日常 / Sonnet 深度"]
+        GR["Bedrock Guardrails + 程式層護欄"]
+        T1["query_user_history"]
+        T2["get_market_data"]
+        T3["get_account_balance"]
+        T4["calculate_trade_scenarios"]
+        T5["prepare_order（只產草稿）"]
+        T6["query_knowledge（RAG）"]
+        T7["profile_engine"]
+    end
+    L1 --> LLM --> T1 & T2 & T3 & T4 & T5 & T6 & T7
+    LLM --- GR
+    subgraph DATA["資料層"]
+        S3D["S3：CSV + health_report.json"]
+        KB["Bedrock KB + S3 Vectors"]
+        DDB["DynamoDB：憑證+Audit+session"]
+        MAXAPI["MAX API Public/Private"]
+        CMC["CoinMarketCap"]
+    end
+    T1 --> S3D
+    T6 --> KB
+    T2 & T3 --> MAXAPI
+    L4 -->|"execute_order（LLM 碰不到）"| MAXAPI
+    L1 & L4 --> DDB
+    T2 -.延伸.-> CMC
+    subgraph DEV["開發工具鏈（非 runtime）"]
+        KIRO["Kiro IDE（+5%）"]
+        SKILL["max-api-skill＝API文件包"]
+        MCP["max-mcp-server＝開發工具"]
+    end
 ```
-.kiro/                    Kiro steering 與 specs（加分項 +5% 的開發流程證據）
-├── steering/             product / data-schema / tech 三份紅線與約定
-└── specs/                behavior-engine / chat-agent / order-flow
-analysis/precompute.py    行為分析引擎（離線預計算 → data/health_report.json）
-backend/
-├── agent/                loop.py（Converse tool-use 迴圈）、tools.py、guardrails.py
-├── handlers/             Lambda × 4：chat / health / market / order
-└── integrations/         max_public（快取+退避）、max_private（HMAC 簽章）、thirdparty
-frontend/                 靜態 SPA（index.html + app.js，S3 直接託管、內建離線 mock）
-infra/template.yaml       AWS SAM 一鍵部署（API GW + Lambda + DynamoDB + S3）
-data/                     官方 CSV（不進版控）與 health_report.json
-docs/                     提案簡報（build_deck.js 產生器＋pptx 成品）
-```
 
-## 快速開始
+### Golden Path（決賽 Demo 主線，90 秒）
+
+「ETH 跌太多幫我全賣」→ 查持倉54%→查行情→查歷史（1/8 少賺 31 萬）→判定模式→**三方案**（賣25%/全賣/暫停，
+含損益/手續費/集中度）→ 使用者選 → **確認卡**（60s 憑證）→ 按確認 → `/order` 驗證銷毀憑證 → MAX Private 成交
+→ 健檢更新 → 點開**決策軌跡**面板。全程 Audit 留痕。任一步掛掉→離線 mock 接手；全掛→預錄影片。
+
+### 模型與成本
+
+| 工作 | 模型 | 成本 |
+|---|---|---|
+| 日常對話＋工具調度 | Claude Haiku（Bedrock） | ≈NT$0.3/次 |
+| 深度歸因＋方案解釋 | Claude Sonnet（Bedrock） | ≈NT$2.2/次 |
+| 混合平均（＋prompt caching 一折） | — | **<NT$0.6/次** |
+
+省錢三決策：S3 Vectors（避開 OpenSearch 月費萬元陷阱）／全 serverless（零閒置費）／模型分層＋快取。
+**價值錨點：此帳戶平均每筆賣出機會成本 NT$11,480——一年攔一筆衝動交易＝16 年 AI 成本。**
+全隊賽前總花費 <NT$500；千人規模基礎設施 <NT$3,000/月。單價以 AWS 主控台現價估算。
+
+### 部署策略（8/1 公布官方 AWS 環境的應對）
+
+賽前自家帳號全跑通 → 一切設定走環境變數（零硬編碼）→ 7/31 前完成從零部署演練（目標<1hr，寫成 DEPLOY.md）
+→ 決賽當天官方環境重跑腳本＝上線。
+
+---
+
+## 3. API 介面契約（套件間交接唯一依據；改介面先在 #dev 廣播）
+
+### POST /chat
+
+Request：
+```json
+{ "messages": [ {"role":"user","content":[{"text":"..."}]} ], "mode": "growth", "session_id": "uuid" }
+```
+Response：
+```json
+{
+  "reply": "AI 回覆文字",
+  "messages": [ "...完整 Converse 歷史，前端原樣保存回傳..." ],
+  "confirm": { "confirm_token": "uuid",
+    "confirmation_card": { "market":"ethtwd","side":"sell","volume_twd":35920,"ord_type":"market","price":null } },
+  "scenarios": [ { "key":"partial","label":"賣出 25%","amount_twd":35920,"fee_twd":54,
+    "post_concentration_pct":44,"behavior_note":"..." } ],
+  "tool_trail": [ {"seq":1,"tool":"get_portfolio","summary":"ETH 54%"} ]
+}
+```
+`confirm` 僅在產生下單草稿時出現；`scenarios` 僅在方案試算時出現；`tool_trail` 供前端工具鏈 chips。
+
+### GET /health?section=all|chase_index|...
+Response＝`data/health_report.json` 對應區塊（欄位定義：`.kiro/steering/data-schema.md`）。
+
+### GET /market?market=btctwd&kind=ticker|kline|depth
+Response：`{ "kind","market","fetched_at","data":{MAX 原始回應} }`
+
+### POST /order
+Request：`{ "confirm_token","session_id" }`。成功：`{ "ok":true,"order","exchange_response" }`；
+失敗 HTTP 410：`{ "ok":false,"code":"token_expired","message","retryable":false }`
+
+### GET /audit?session_id=
+Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirmed|executed","payload"}] }`
+
+---
+
+## 4. 完整驗收項目
+
+### 4.1 行為分析引擎（behavior-engine）— ✅ 全數通過（2026-07-19 真實資料驗證）
+- [x] 10,000 筆全數解析（欄位尾端空白 strip）
+- [x] 追高 65.0%／殺低 34.1%
+- [x] 機會成本總額 NT$26,598,877；最痛單筆 2025-01-08 DOGE NT$312,924
+- [x] 峰值集中 2025-12 twd 98.6%；提領僅 14.2% 於下跌後
+
+### 4.2 對話 Agent（chat-agent）
+- [ ] 個人問題必先呼叫 query_user_history 且回答引用具體數字；資料不足如實說明
+- [ ] 行情問題必呼叫 get_market_data 且附資料時間；個人×市場交叉引用
+- [ ] 要求明牌時給脈絡與數據、不給建議（紅線）
+- [ ] 下單意圖只呼叫 prepare_order；chat 回應以 confirm 欄位帶出確認卡（#1）
+- [ ] execute_order 不在 LLM 工具清單（架構已隔離，待 E2E 驗證）
+- [ ] 輸入 PII 先清洗；輸出命中明牌句式走安全回覆；迴圈 ≤8 輪
+- [ ] Haiku/Sonnet 意圖路由＋prompt caching（#5）
+
+### 4.3 三方案引擎（trade-scenarios，#11）
+- [ ] 交易意圖 → 三方案（保守/原意圖/暫停），數字全由程式計算
+- [ ] 每方案含預估金額、手續費（MAX 公告費率＋來源註記）、執行後集中度、個人行為註記
+- [ ] 標的不在持倉 → 明確錯誤；暫停版不產生訂單；方案欄位相容 prepare_order
+- [ ] 滑價聲明標注
+
+### 4.4 Profile Engine（profile-engine，#10）
+- [ ] 從 health_report 確定性規則分類三模式（cautious/growth/pro）＋附判定依據
+- [ ] 模式注入 system prompt 改變語氣與提醒強度；安全機制三模式一致
+- [ ] Demo 可切換模式：同一句「幫我全賣」三種回應肉眼可辨
+
+### 4.5 授權下單流（order-flow，#4）
+- [ ] 憑證 60 秒單次有效存 DynamoDB；過期/重放回 410 不重試
+- [ ] API Key 只開「讀取＋交易」不開「提領」（人工設定，Demo 前檢查）
+- [ ] 金鑰只從環境變數/Secrets Manager 讀（已實作，待驗證）
+- [ ] 最小額度真實成交一次 E2E
+
+### 4.6 RAG 知識庫（#9）
+- [ ] 語料：防詐（公開資源）＋教材＋工作坊資料（僅競賽用、不進 git、放 S3）
+- [ ] Bedrock KB + S3 Vectors 建置；query_knowledge 回答附出處
+- [ ] 「什麼是定期定額」「這是不是詐騙話術」能引用語料回答
+
+### 4.7 Audit Log（#12）
+- [ ] 每次工具呼叫留痕（摘要不含 PII）；訂單生命週期 draft→confirmed/expired→executed
+- [ ] GET /audit 可還原完整軌跡；前端「決策軌跡」面板；append-only
+
+### 4.8 前端（#13）
+- [ ] 手機版 RWD：對話主畫面、健檢卡收合、確認卡放大（照 docs/mockups/ 三畫面實作）
+- [ ] 三方案卡、模式徽章、軌跡面板渲染
+- [ ] API 失敗自動切離線 mock＋UI 標示（拔網路實測）
+
+### 4.9 安全與法遵（上台講法：「合規不是免責聲明，是系統設計」）
+- [ ] 不報明牌＝三層護欄（prompt＋正則＋Bedrock Guardrails #6，任一層可獨立擋住）
+- [ ] 不代操＝LLM 碰不到 execute_order＋逐筆確認
+- [ ] 不碰保管提領＝資產留在 MAX（已洗防登記）＋API 權限鎖死
+- [ ] 可問責＝Audit 全程留痕
+- 競賽 Demo 合規：本人帳戶/本人資金/最小額度 ✓｜官方資料僅競賽用不進 git ✓｜兌換碼僅本人 ✓
+- 金管會 AI 指引六原則逐條有對應（治理問責/以人為本/隱私/穩健/透明可解釋/永續）
+- 本節為工程自查非法律意見；虛擬資產專法立法中，商業化前過正式法遵
+
+### 4.10 部署與交付（#14、#8、#15）
+- [ ] 從零部署演練 <1 小時＋DEPLOY.md（含 Bedrock use case 開通步驟）
+- [ ] E2E Golden Path 全線通過；預錄影片 v1（7/30 前）＋決賽 final
+- [ ] 決賽交付：提案簡報／Live Demo 網址／錄影連結／GitHub／Lv2 證明／Kiro 證據截圖
+
+---
+
+## 5. 目前成果
+
+**已驗證的真實數據洞察**（`analysis/precompute.py` → `data/health_report.json`）：
+追高 65%（2,350 筆買入）｜殺低僅 34.1%（非恐慌型）｜年度機會成本 NT$26,598,877｜
+最痛單筆 1/8 DOGE 少賺 NT$312,924｜下跌後出金僅 14.2%｜最活躍 2025-05/08（各 416 筆）
+
+**已完成的資產**：
+- 程式骨架：Agent 迴圈/工具/護欄、Lambda×4、MAX 整合（簽章待驗）、前端 SPA、SAM 模板
+- `.kiro/`：steering×3＋specs×6（chat-agent/profile/scenarios 含 Kiro 三件套）＋MCP 設定
+- 設計：三張 Demo 畫面（HTML＋截圖）＋麥麥像素吉祥物三態
+- 簡報成品（`docs/`）：`MaiMate_提案簡報.pptx`（評審版 18 頁）＋`工作項目狀態.pptx`（18 頁，含 Kiro 教學）＋`設計與分工.pptx`（3 頁）
+- 團隊環境：repo＋Issues×15＋Slack＋Drive＋`scripts/setup.sh` 一鍵檢查
+
+## 6. 快速開始與紅線
 
 ```bash
-python3 analysis/precompute.py           # CSV → data/health_report.json
-cd infra && sam build && sam deploy --guided   # 部署後端
-# 前端：把 frontend/ 上傳至 FrontendBucket，index.html 前注入 window.API_BASE
-# MAX 金鑰：部署後在 Lambda 環境變數/Secrets Manager 設 MAX_API_KEY、MAX_API_SECRET（不進版控）
+bash scripts/setup.sh                 # 環境檢查（缺什麼它會說）
+python3 analysis/precompute.py        # CSV → health_report.json
+cd infra && sam build && sam deploy --guided
 ```
 
-## 已驗證的真實洞察（2025 全年、10,000 筆）
-
-| 指標 | 數字 |
-|---|---|
-| 追高比例（買在 7 筆均價上方） | 65.0%（2,350 筆買入） |
-| 殺低比例（賣在均價下方） | 34.1% —— 非恐慌型賣家 |
-| 年度賣出機會成本 | NT$26,598,877 |
-| 最痛單筆 | 2025-01-08 賣 6,216 DOGE @14.2，年末 64.54，少賺 NT$312,924 |
-| 峰值持倉集中 | 2025-12 TWD 98.6%（年末全數出清） |
-| TWD 提領 417 筆 | 僅 14.2% 發生於 BTC 七日下跌後 |
-
-## 評分對應
-
-創意25（行為分析差異化）/ 可行20（serverless+限制揭露）/ 商業20 / AI設計15（Agent 工具迴圈）
-/ 切合10（CSV+MAX Public/Private+第三方）/ 完成10（離線備援）＋ Lv2 Private API +5 ＋ Kiro +5。
-
-## 待辦
-
-- [ ] MAX Lv2 KYC（全隊盡快辦，Private API 加分項依賴）
-- [ ] max_public.py / max_private.py 串接
-- [ ] 前端 Dashboard + Chat + 下單確認卡
-- [ ] Guardrails、離線 mock、Demo 預錄影片
+🚫 官方 CSV 與 RAG 語料不進 git（Drive/S3）｜🚫 金鑰與兌換碼不共用不外流、只走環境變數。
+簡報產生器在 `docs/build_*.js`（node 跑一下即重出）。
