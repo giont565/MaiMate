@@ -157,37 +157,71 @@ function statusTable(s, rows, y, colW, rowH) {
   ], 1.75, [3.1, 1.5, 5.7, 1.83], 0.6);
 }
 
-// ============ 7 四工作包（定案版：地盤制） ============
+// ============ 7 工作包 × 未完成工項（A/B） ============
 {
   const s = pres.addSlide();
   s.background = { color: WHITE };
-  bigTitle(s, "四個工作包：自選，每包獨佔自己的地盤", "目錄所有權互不重疊（git 不打架）＋工時拉平＋交接只走 README §3 介面契約");
-  const header = ["工作包", "做什麼（issues）", "獨佔目錄", "工時", "適合的人"].map(t =>
-    ({ text: t, options: { bold: true, color: WHITE, fill: { color: NAVY } } }));
-  const rows = [
-    [{ text: "A｜Agent 與方案引擎", options: { bold: true, color: NAVY } },
-     "confirm帶出(#1)、模型路由(#5)、Profile(#10)、三方案(#11)、Bedrock 首跑",
-     "backend/agent/", { text: "4.5 天", options: { bold: true, color: GOLD } }, "想深玩 LLM 的人"],
-    [{ text: "B｜資料服務與 RAG", options: { bold: true, color: NAVY } },
-     "Public API 實測(#2)、RAG 語料+KB(#9)、Audit Log(#12)",
-     "backend/integrations/ + analysis/ + 語料", { text: "4 天", options: { bold: true, color: GOLD } }, "喜歡資料工程的人"],
-    [{ text: "C｜前端與品牌", options: { bold: true, color: NAVY } },
-     "手機版(#13)、三方案卡/徽章/軌跡面板、離線備援、麥麥視覺",
-     "frontend/ + mockups/ + brand/", { text: "4 天", options: { bold: true, color: GOLD } }, "重視覺體驗的人"],
-    [{ text: "D｜整合部署與交付", options: { bold: true, color: NAVY } },
-     "部署演練(#14)、Private E2E(#4)、Guardrails(#6)、錄影(#8)、簡報(#15)、E2E 主導",
-     "infra/ + docs/", { text: "4 天", options: { bold: true, color: GOLD } }, "喜歡統籌的人"],
-  ];
-  s.addTable([header, ...rows], {
-    x: M, y: 1.75, w: W - 2 * M, colW: [2.3, 4.6, 2.7, 0.9, 1.63],
-    fontFace: FONT, fontSize: 11, color: INK, valign: "middle",
-    border: { type: "solid", color: "D5DEF0", pt: 0.75 }, rowH: 0.95, margin: 0.08,
-  });
+  bigTitle(s, "工作包 × 未完成工項（1/2）：A、B", "31 條未完成工項全數入包，無漏接。🔨待做｜🧪寫好待測｜🔬純測試");
+  card(s, M, 1.65, 5.95, 5.2, ICE);
+  s.addText("A｜Agent 與方案引擎　4.5 天", { x: M + 0.3, y: 1.85, w: 5.3, h: 0.4, fontFace: FONT, fontSize: 15, bold: true, color: NAVY, margin: 0 });
+  s.addText("地盤：backend/agent/", { x: M + 0.3, y: 2.25, w: 5.3, h: 0.3, fontFace: "Courier New", fontSize: 10.5, color: MUT, margin: 0 });
+  s.addText([
+    { text: "🧪 Bedrock 迴圈首跑（全案最優先）", options: { bullet: true, bold: true, color: RED, breakLine: true } },
+    { text: "🧪 tools dispatch／護欄 單元測試", options: { bullet: true, breakLine: true } },
+    { text: "🧪 prepare/execute 單元驗證（E2E 歸 D）", options: { bullet: true, breakLine: true } },
+    { text: "🔨 #1 confirm 帶出｜#5 模型路由+caching", options: { bullet: true, breakLine: true } },
+    { text: "🔨 #10 Profile 引擎（徽章 UI 歸 C）", options: { bullet: true, breakLine: true } },
+    { text: "🔨 #11 三方案計算（卡片渲染歸 C）", options: { bullet: true, breakLine: true } },
+    { text: "🔨 註冊 B 的函式／掛 D 的 Guardrails／埋 audit 點", options: { bullet: true } },
+  ], { x: M + 0.3, y: 2.65, w: 5.4, h: 4.1, fontFace: FONT, fontSize: 11.5, color: INK, paraSpaceAfter: 8, margin: 0 });
+  card(s, M + 6.25, 1.65, 5.95, 5.2, ICE);
+  s.addText("B｜資料服務與 RAG　4 天", { x: M + 6.55, y: 1.85, w: 5.3, h: 0.4, fontFace: FONT, fontSize: 15, bold: true, color: NAVY, margin: 0 });
+  s.addText("地盤：backend/integrations/ + analysis/ + 語料", { x: M + 6.55, y: 2.25, w: 5.3, h: 0.3, fontFace: "Courier New", fontSize: 10.5, color: MUT, margin: 0 });
+  s.addText([
+    { text: "🔨 #9 RAG 語料蒐集（防詐+教材；不進 git）", options: { bullet: true, breakLine: true } },
+    { text: "🔨 #9 Bedrock KB＋S3 Vectors 建置", options: { bullet: true, breakLine: true } },
+    { text: "🔨 #9 query_knowledge 函式（交 A 註冊）", options: { bullet: true, breakLine: true } },
+    { text: "🔨 #12 audit.py＋/audit endpoint（A 埋點、C 面板）", options: { bullet: true, breakLine: true } },
+    { text: "🧪 #2 max_public 三 endpoint 實測", options: { bullet: true, breakLine: true } },
+    { text: "🧪 max_private 簽章對照 max-mcp-server 核對", options: { bullet: true, breakLine: true } },
+    { text: "🧪 thirdparty CMC 冒煙", options: { bullet: true } },
+  ], { x: M + 6.55, y: 2.65, w: 5.4, h: 4.1, fontFace: FONT, fontSize: 11.5, color: INK, paraSpaceAfter: 8, margin: 0 });
+}
+
+// ============ 7a 工作包 × 未完成工項（C/D） ============
+{
+  const s = pres.addSlide();
+  s.background = { color: WHITE };
+  bigTitle(s, "工作包 × 未完成工項（2/2）：C、D＋全員", "選包：Slack #general 回覆先搶先贏，撞包自己聊");
+  card(s, M, 1.65, 5.95, 4.55, ICE);
+  s.addText("C｜前端與品牌　4 天", { x: M + 0.3, y: 1.85, w: 5.3, h: 0.4, fontFace: FONT, fontSize: 15, bold: true, color: NAVY, margin: 0 });
+  s.addText("地盤：frontend/ + docs/mockups/ + docs/brand/", { x: M + 0.3, y: 2.25, w: 5.3, h: 0.3, fontFace: "Courier New", fontSize: 10.5, color: MUT, margin: 0 });
+  s.addText([
+    { text: "🔨 #13 手機版 RWD（照 mockups 三畫面）", options: { bullet: true, breakLine: true } },
+    { text: "🔨 三方案卡渲染（吃 README §3 schema）", options: { bullet: true, breakLine: true } },
+    { text: "🔨 模式徽章＋切換｜決策軌跡面板", options: { bullet: true, breakLine: true } },
+    { text: "🔨 麥麥視覺整合（成交切 BULLISH）", options: { bullet: true, breakLine: true } },
+    { text: "🧪 SPA 瀏覽器全流程走查", options: { bullet: true, breakLine: true } },
+    { text: "🧪 離線 mock 拔網路實測", options: { bullet: true } },
+  ], { x: M + 0.3, y: 2.65, w: 5.4, h: 3.4, fontFace: FONT, fontSize: 11.5, color: INK, paraSpaceAfter: 7, margin: 0 });
+  card(s, M + 6.25, 1.65, 5.95, 4.55, ICE);
+  s.addText("D｜整合部署與交付　4 天（多為測試/設定短項）", { x: M + 6.55, y: 1.85, w: 5.4, h: 0.4, fontFace: FONT, fontSize: 14.5, bold: true, color: NAVY, margin: 0 });
+  s.addText("地盤：infra/ + docs/", { x: M + 6.55, y: 2.25, w: 5.3, h: 0.3, fontFace: "Courier New", fontSize: 10.5, color: MUT, margin: 0 });
+  s.addText([
+    { text: "🔨 AWS 帳號＋Bedrock 開通（前置，第一件做）", options: { bullet: true, bold: true, color: RED, breakLine: true } },
+    { text: "🧪 SAM 首次部署＋Lambda×4 冒煙", options: { bullet: true, breakLine: true } },
+    { text: "🔨 #6 Guardrails 建立｜#14 部署演練+DEPLOY.md", options: { bullet: true, breakLine: true } },
+    { text: "🔬 #4 Private E2E 成交｜憑證 410｜雙層護欄測試", options: { bullet: true, breakLine: true } },
+    { text: "🔬 E2E Golden Path 主導｜從零部署計時", options: { bullet: true, breakLine: true } },
+    { text: "🔨 #8 預錄影片｜#15 簡報修正＋Kiro 證據", options: { bullet: true } },
+  ], { x: M + 6.55, y: 2.65, w: 5.4, h: 3.4, fontFace: FONT, fontSize: 11.5, color: INK, paraSpaceAfter: 7, margin: 0 });
   card(s, M, 6.4, W - 2 * M, 0.85, "FFF4E0");
   s.addText([
-    { text: "選包：Slack #general 回覆先搶先贏，撞包自己聊。", options: { bold: true, color: NAVY } },
-    { text: "共同任務（不算包內工時）：自己的 Lv2 KYC＋Key(#3)、Kiro 設定、每天合回 main。", options: { color: INK } },
-  ], { x: M + 0.3, y: 6.52, w: W - 2 * M - 0.6, h: 0.62, fontFace: FONT, fontSize: 12.5, valign: "middle", margin: 0 });
+    { text: "全員：", options: { bold: true, color: NAVY } },
+    { text: "#3 KYC＋Key、Kiro 設定、截圖存證、每天合回 main。", options: { color: INK } },
+    { text: "　跨包交接只有四條：", options: { bold: true, color: NAVY } },
+    { text: "B→A 函式｜A→C schema｜D→A Guardrails ID｜A→D 可測版本 tag。", options: { color: INK } },
+  ], { x: M + 0.3, y: 6.52, w: W - 2 * M - 0.6, h: 0.62, fontFace: FONT, fontSize: 11.5, valign: "middle", margin: 0 });
 }
 
 // ============ 7b 不打架五規則 ============

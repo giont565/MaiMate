@@ -30,14 +30,46 @@ mockup HTML 在 `docs/mockups/`＝C 包前端起點，畫面中所有數字皆�
 | 凍結日 | 7/31 | code freeze、DEPLOY.md 定稿、從零部署演練、早睡 |
 | 決賽 | 8/1–8/2 | 官方環境重部署(1hr)、現場調整、最終錄影、上台 |
 
-### 四個工作包（自選，先搶先贏；每包獨佔目錄，git 不打架）
+### 四個工作包 × 完整未完成工項對應（31 條全數入包，無漏接）
 
-| 包 | 內容（issues） | 獨佔目錄 | 估工時 |
-|---|---|---|---|
-| **A｜Agent 與方案引擎** | #1 confirm帶出、#5 模型路由、#10 Profile、#11 三方案、Bedrock 首跑 | `backend/agent/` | 4.5 天 |
-| **B｜資料服務與 RAG** | #2 Public API、#9 RAG＋KB、#12 Audit Log | `backend/integrations/` `analysis/` 語料 | 4 天 |
-| **C｜前端與品牌** | #13 手機版、三方案卡/徽章/軌跡面板、離線備援、麥麥視覺 | `frontend/` `docs/mockups/` `docs/brand/` | 4 天 |
-| **D｜整合部署與交付** | #14 部署演練、#4 Private E2E、#6 Guardrails、#8 錄影、#15 簡報、E2E 主導 | `infra/` `docs/` | 4 天 |
+標記：🔨待做｜🧪寫好待測。自選先搶先贏；每包獨佔目錄，git 不打架。
+
+**A｜Agent 與方案引擎**（地盤 `backend/agent/`，估 4.5 天）
+- 🧪 **Bedrock 迴圈首跑（全案最優先——唯一沒碰過真模型的核心路徑）**
+- 🧪 tools dispatch／程式層護欄 單元測試
+- 🧪 prepare/execute 分離單元驗證（E2E 歸 D）
+- 🔨 #1 confirm 卡帶出前端｜🔨 #5 Haiku/Sonnet 路由＋prompt caching
+- 🔨 #10 Profile 引擎（徽章 UI 歸 C）｜🔨 #11 三方案計算（卡片渲染歸 C）
+- 🔨 註冊 B 交付的 query_knowledge／掛 D 建好的 Guardrails／loop 埋 audit 點
+
+**B｜資料服務與 RAG**（地盤 `backend/integrations/` `analysis/` 語料，估 4 天）
+- 🔨 #9 RAG 語料蒐集（防詐公開資源＋教材；不進 git）
+- 🔨 #9 Bedrock KB＋S3 Vectors 建置｜🔨 #9 query_knowledge 函式（交 A 註冊）
+- 🔨 #12 audit.py＋GET /audit endpoint（A 埋點、C 面板）
+- 🧪 #2 max_public 三 endpoint 實測（ticker/kline/depth 對官方文件核對）
+- 🧪 max_private 簽章實作對照 max-mcp-server 源碼核對（真下單 E2E 歸 D）
+- 🧪 thirdparty CMC 冒煙（無金鑰自動略過路徑）
+
+**C｜前端與品牌**（地盤 `frontend/` `docs/mockups/` `docs/brand/`，估 4 天）
+- 🔨 #13 手機版 RWD 改版（照 mockups 三畫面實作）
+- 🔨 三方案卡渲染（吃 §3 scenarios schema）｜🔨 模式徽章＋Demo 切換（吃 #10）
+- 🔨 決策軌跡面板（吃 §3 /audit schema）｜🔨 麥麥視覺整合（成交切 BULLISH）
+- 🧪 SPA 瀏覽器全流程走查（現在的桌機版先走一遍）
+- 🧪 離線 mock 拔網路實測（fallback＋UI 離線標示）
+
+**D｜整合部署與交付**（地盤 `infra/` `docs/`，估 4 天，多為測試/設定短項）
+- 🔨 **AWS 帳號＋Bedrock 開通（多條線的前置，第一件做）**
+- 🧪 SAM 首次部署＋Lambda×4 冒煙（/health /market /chat /order）
+- 🔨 #6 Bedrock Guardrails 建立（A 掛載）｜🔨 #14 從零部署演練＋DEPLOY.md（<1hr）
+- 🔬 #4 Private API E2E 最小額度真實成交｜🔬 憑證過期/重放 410｜🔬 雙層護欄攔截測試
+- 🔬 E2E Golden Path 主導（全員配合）｜🔬 從零部署計時
+- 🔨 #8 預錄影片｜🔨 #15 整合簡報修正＋Kiro 證據彙整
+
+**全員共同**（不算包內工時）：#3 自己的 Lv2 KYC＋API Key、Kiro 設定、過程截圖存 Drive、每天合回 main。
+
+**跨包交接件**（只有這四條，其他互不相欠）：
+B→A：query_knowledge/audit 函式交付｜A→C：/chat 回應 schema（§3，已定義）｜
+D→A：Guardrails ID｜A→D：可測版本 tag（E2E 開跑的訊號）。
 
 **不打架五規則**：①地盤制（動別人目錄→開 issue）②介面契約先行（見 §3，C 包用假資料平行開發）
 ③共用檔單一 owner（tools.py/loop.py 歸 A、infra 歸 D）④每日 pull --rebase 合回 main ⑤改介面先在 #dev 廣播。
