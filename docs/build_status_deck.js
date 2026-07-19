@@ -183,7 +183,124 @@ function statusTable(s, rows, y, colW, rowH) {
   ], { x: M + 0.3, y: 6.02, w: W - 2 * M - 0.6, h: 0.7, fontFace: FONT, fontSize: 12.5, valign: "middle", margin: 0 });
 }
 
-// ============ 8 Kiro 部署（一次設定）============
+// ============ 8 功能 × 評分對應 ============
+{
+  const s = pres.addSlide();
+  s.background = { color: WHITE };
+  bigTitle(s, "功能 × 評分對應：你做的東西扛哪幾分", "每個工作項都有明確的得分理由——做的時候朝著驗收方向做");
+  const header = [
+    { text: "展示點（誰做的）", options: { bold: true, color: WHITE, fill: { color: NAVY } } },
+    { text: "對應評分", options: { bold: true, color: WHITE, fill: { color: NAVY } } },
+    { text: "分數怎麼拿", options: { bold: true, color: WHITE, fill: { color: NAVY } } },
+  ];
+  const rows = [
+    ["行為健檢真數字（A/B包）", "創意 25 + 商業 20", "評審給的資料挖出他們沒想到的洞察：追高65%、機會成本2,660萬——全場記憶點"],
+    ["三方案生成＋恐慌攔截（A包）", "創意 25 + AI設計 15", "「不只回答，還給可執行的選項」——別隊的 AI 是聊天，我們的是行動"],
+    ["Agent 工具鏈＋決策軌跡面板（A/B包）", "AI設計 15", "評分原文「上下文理解、主動分析數據、自動化執行交易決策」逐字對應，軌跡面板讓它看得見"],
+    ["Profile 三模式提醒強度（A/C包）", "創意 25 + 商業 20", "同一句話三種回應——個人化不是口號是 Demo"],
+    ["RAG 防詐/教材問答（B包）", "切合度 10", "官方資料源全用上：CSV+API+輿情+教材"],
+    ["確認卡＋Audit Log（A/D包）", "商業 20 + 法遵敘事", "「合規是系統設計」——對 MaiCoin 評審的信任牌"],
+    ["Private API 真實下單（D包）", "加分 +5", "Lv2 帳號＋最小額度真成交"],
+    ["Kiro spec-driven 開發（全員）", "加分 +5", ".kiro/ 目錄＋截圖證據集"],
+    ["離線備援＋預錄影片（C/D包）", "完成度 10", "現場網路掛掉照樣演完"],
+    ["成本效益＋限制揭露（簡報）", "可行性 20", "模型分工、rate limit 因應、金鑰權限——主動揭露"],
+  ];
+  s.addTable([header, ...rows.map(r => [
+    { text: r[0], options: { bold: true, color: INK } },
+    { text: r[1], options: { bold: true, color: GOLD } },
+    { text: r[2], options: { color: INK } },
+  ])], {
+    x: M, y: 1.6, w: W - 2 * M, colW: [3.5, 2.1, 6.53],
+    fontFace: FONT, fontSize: 10.5, valign: "middle",
+    border: { type: "solid", color: "D5DEF0", pt: 0.75 }, rowH: 0.49, margin: 0.06,
+  });
+}
+
+// ============ 9 Demo 畫面對應 ============
+{
+  const s = pres.addSlide();
+  s.background = { color: WHITE };
+  bigTitle(s, "Demo 畫面對應：每個區塊是誰的作品、扛哪些分");
+  // 左：手機畫面線框
+  card(s, M, 1.7, 3.6, 5.1, "F4F7FD");
+  s.addText("手機版畫面（#13 改版後）", { x: M + 0.25, y: 1.85, w: 3.1, h: 0.35, fontFace: FONT, fontSize: 11.5, bold: true, color: MUT, margin: 0 });
+  const zones = [
+    ["① 頂欄：麥麥＋模式徽章", NAVY, 0.5],
+    ["② 健檢卡（橫向滑動）", GOLD, 0.75],
+    ["③ 對話區（主畫面）", GREEN, 1.5],
+    ["④ 三方案卡 / 確認卡", RED, 0.9],
+    ["⑤ 決策軌跡（摺疊）", BLUE, 0.5],
+  ];
+  let zy = 2.25;
+  zones.forEach(([t, c, h]) => {
+    s.addShape("roundRect", { x: M + 0.25, y: zy, w: 3.1, h, rectRadius: 0.06, fill: { color: WHITE }, line: { color: c, width: 1.5 } });
+    s.addText(t, { x: M + 0.4, y: zy, w: 2.85, h, fontFace: FONT, fontSize: 11, bold: true, color: c, valign: "middle", margin: 0 });
+    zy += h + 0.12;
+  });
+  // 右：對應表
+  const header = [
+    { text: "畫面區塊", options: { bold: true, color: WHITE, fill: { color: NAVY } } },
+    { text: "背後功能（工作包）", options: { bold: true, color: WHITE, fill: { color: NAVY } } },
+    { text: "扛的分數", options: { bold: true, color: WHITE, fill: { color: NAVY } } },
+  ];
+  const rows = [
+    ["① 模式徽章", "profile-engine（A）＋前端（C）", "創意/商業"],
+    ["② 健檢卡", "行為分析（✅）＋前端（C）", "創意/商業"],
+    ["③ 對話回應", "Agent 迴圈＋模型路由（A）", "AI設計"],
+    ["④ 三方案卡", "trade-scenarios（A）＋前端（C）", "創意/AI設計"],
+    ["④ 確認卡→成交", "order 流＋Private API（D）", "加分+5/商業"],
+    ["⑤ 軌跡面板", "audit-log（B）＋前端（C）", "AI設計/法遵"],
+    ["（隱形）離線切換", "mock 備援（C 驗證）", "完成度"],
+    ["（隱形）RAG 問答", "Knowledge Base（B）", "切合度"],
+  ];
+  s.addTable([header, ...rows.map(r => [
+    { text: r[0], options: { bold: true, color: INK } },
+    { text: r[1], options: { color: INK } },
+    { text: r[2], options: { bold: true, color: GOLD } },
+  ])], {
+    x: M + 3.9, y: 1.7, w: 8.23, colW: [2.0, 4.13, 2.1],
+    fontFace: FONT, fontSize: 11, valign: "middle",
+    border: { type: "solid", color: "D5DEF0", pt: 0.75 }, rowH: 0.56, margin: 0.06,
+  });
+  s.addText("原則：畫面上沒有任何一塊是裝飾——每個區塊都對應一個功能與至少一個評分項。", {
+    x: M, y: 6.95, w: W - 2 * M, h: 0.4, fontFace: FONT, fontSize: 12.5, bold: true, color: NAVY, margin: 0 });
+}
+
+// ============ 10 Golden Path 分鏡 ============
+{
+  const s = pres.addSlide();
+  s.background = { color: WHITE };
+  bigTitle(s, "Golden Path 分鏡：90 秒，評審每一刻看到什麼");
+  const header = [
+    { text: "步驟", options: { bold: true, color: WHITE, fill: { color: NAVY } } },
+    { text: "畫面上發生的事", options: { bold: true, color: WHITE, fill: { color: NAVY } } },
+    { text: "評審看點", options: { bold: true, color: WHITE, fill: { color: NAVY } } },
+    { text: "對應評分", options: { bold: true, color: WHITE, fill: { color: NAVY } } },
+  ];
+  const rows = [
+    ["0. 開場", "健檢首屏：追高 65%、機會成本 2,660 萬", "「這數字哪來的？」→ 評審自己給的資料", "創意 25"],
+    ["1. 使用者輸入", "「ETH 跌太多，幫我全部賣掉」", "真實的恐慌場景，不是安排好的軟球", "商業 20"],
+    ["2. AI 思考", "畫面顯示工具呼叫中：查持倉→查行情→查歷史→判斷模式", "AI 不是憑感覺，先查資料——看得見的推理", "AI設計 15"],
+    ["3. 三方案", "三張卡：賣25%／全賣／暫停，各附損益・手續費・集中度", "數字由程式算，AI 只負責講人話", "創意+AI+可行性"],
+    ["4. 恐慌提醒", "「1/8 你也是這樣，那次少賺 31 萬」", "用使用者自己的歷史說服他——全場最重一擊", "創意 25"],
+    ["5. 確認→成交", "選「賣25%」→ 確認卡 → 按下確認 → 真實成交、健檢更新", "AI 有手但方向盤在人手上；真下單（Lv2）", "加分+5/商業"],
+    ["6. 收尾", "點開決策軌跡面板：完整工具呼叫與訂單生命週期", "「合規不是聲明，是系統設計」", "AI設計/法遵"],
+  ];
+  s.addTable([header, ...rows.map(r => [
+    { text: r[0], options: { bold: true, color: NAVY } },
+    { text: r[1], options: { color: INK } },
+    { text: r[2], options: { color: INK } },
+    { text: r[3], options: { bold: true, color: GOLD } },
+  ])], {
+    x: M, y: 1.6, w: W - 2 * M, colW: [1.5, 4.5, 4.3, 1.83],
+    fontFace: FONT, fontSize: 10.5, valign: "middle",
+    border: { type: "solid", color: "D5DEF0", pt: 0.75 }, rowH: 0.62, margin: 0.06,
+  });
+  s.addText("備援：任一步掛掉 → 離線 mock 接手繼續演；全掛 → 切預錄影片。演練時每步都要練過備援切換。", {
+    x: M, y: 6.6, w: W - 2 * M, h: 0.45, fontFace: FONT, fontSize: 12, color: MUT, margin: 0 });
+}
+
+// ============ 11 Kiro 部署（一次設定）============
 {
   const s = pres.addSlide();
   s.background = { color: WHITE };
