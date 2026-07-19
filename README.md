@@ -345,8 +345,12 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 ```bash
 bash scripts/setup.sh                 # 環境檢查（缺什麼它會說）
 python3 analysis/precompute.py        # CSV → health_report.json
+npm i && npm run smoke                # 前端煙測（改 frontend/ 必跑；mock API 離線可跑）
 cd infra && sam build && sam deploy --guided
 ```
+
+**開發紀律**（git 流程／零硬編碼與 API_BASE 部署檢查／UI 就地更新／工具描述＋key_findings／寫好≠測過）
+：`.kiro/steering/workflow.md`——隊員與所有 AI 開發工具一體適用，Kiro 自動載入，用其他 AI 時把該檔餵給它。
 
 🚫 官方 CSV 與 RAG 語料不進 git（Drive/S3）｜🚫 金鑰與兌換碼不共用不外流、只走環境變數。
 簡報產生器在 `docs/build_*.js`（node 跑一下即重出）。

@@ -1,0 +1,11 @@
+{
+  "name": "maimate",
+  "private": true,
+  "description": "MaiMate 開發輔助腳本（前端煙測）；簡報產生器另在 docs/ 自帶依賴",
+  "scripts": {
+    "smoke": "node scripts/smoke_frontend.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.61.1"
+  }
+}
