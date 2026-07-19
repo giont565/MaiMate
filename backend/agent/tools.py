@@ -18,7 +18,15 @@ CONFIRM_TTL_SEC = 60
 TOOLS = [
     {"toolSpec": {
         "name": "query_user_history",
-        "description": "查詢使用者的行為健檢報告。包含五大指標：chase_index（追高殺低比率）、opportunity_cost（機會成本，含 worst_single_sell 最虧單筆交易的幣種/日期/賣出價/年底價/錯失金額）、concentration（持倉集中度月度變化）、cash_flow_behavior（出入金習慣）、activity_profile（交易活動畫像含每月筆數與幣種分布）。回答任何涉及使用者個人狀況的問題前必須先呼叫。",
+        "description": (
+            "查詢使用者的行為健檢報告（由過去一年 10,000 筆交易紀錄預計算）。"
+            "回答任何涉及使用者個人狀況的問題前必須先呼叫。五大區塊："
+            "chase_index=追高殺低比率；"
+            "opportunity_cost=賣出機會成本，內含 worst_single_sell（最痛/虧最多/少賺最多的單筆，"
+            "含幣種/日期/賣出價/年底價/錯失金額——問『哪一筆虧最多/最痛』就查這裡）；"
+            "concentration=持倉集中度月度變化；cash_flow_behavior=出入金習慣；"
+            "activity_profile=交易活動畫像（每月筆數與幣種分布）。回傳一律附 key_findings 重點摘要。"
+        ),
         "inputSchema": {"json": {
             "type": "object",
             "properties": {"section": {
@@ -67,7 +75,29 @@ TOOLS = [
 
 def query_user_history(section="all"):
     report = json.loads(HEALTH_REPORT.read_text())
-    return report if section == "all" else {section: report[section]}
+    data = report if section == "all" else {section: report[section]}
+    # 無論查哪個區塊都附重點摘要：模型選錯區塊時仍拿得到關鍵數字，避免答非所問
+    chase, oc, worst = report["chase_index"], report["opportunity_cost"], report["opportunity_cost"]["worst_single_sell"]
+    peak = report["concentration"]["peak_concentration"]
+    return {
+        **data,
+        "key_findings": {
+            "追高指數": f"{chase['buy_above_ma_pct']}% 的買入發生在 7 日均價上方（全年 {chase['buy_total']} 筆買入）",
+            "年度賣出機會成本": f"NT${oc['total_missed_twd']:,.0f}（賣出後若持有至年底的少賺總額）",
+            "最痛單筆賣出": (
+                f"{worst['date']} 以 {worst['sell_price']} 賣出 {worst['currency'].upper()} "
+                f"{worst['qty']:,.2f} 顆，年底價 {worst['eoy_price']}，少賺 NT${worst['missed_twd']:,.0f}"
+            ),
+            "峰值持倉集中度": f"{peak['month']} 單一資產占比 {peak['top_pct']}%",
+            "下跌後出金比例": f"{report['cash_flow_behavior']['withdrawals_after_7d_btc_drop_pct']}%（習慣相對健康）",
+        },
+        "data_notes": (
+            "報告由交易紀錄推算，只有行為指標與機會成本（賣出後價格續漲的少賺金額），"
+            "沒有已實現損益。被問『虧最多/最痛的一筆』時：如實說明這個差異，"
+            "並直接給出 worst_single_sell 的日期、幣別、金額作為最接近的答案，"
+            "不要只請使用者自行去平台查詢。"
+        ),
+    }
 
 
 def get_market_data(market, kind):

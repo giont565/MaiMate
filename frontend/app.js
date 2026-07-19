@@ -36,36 +36,46 @@ async function loadHealth() {
 }
 
 // ---------- 行情面板 ----------
-let _marketInitialized = false;
-
-async function loadMarket() {
+// 列一次建好、之後只就地改數字：刷新不清空、不閃爍；抓失敗保留上一次的值。
+const tickEls = {}; // market -> 數值 <span>
+function initMarket() {
   const el = document.getElementById("market");
+  el.innerHTML = "";
   for (const m of MOCK.markets) {
     const name = m.replace("twd", "").toUpperCase() + "/TWD";
-    const tickId = "tick-" + m;
-    try {
-      const r = await (await fetch(`${API}/market?market=${m}&kind=ticker`)).json();
-      const last = r.data?.last ?? "—";
-      const existing = document.getElementById(tickId);
-      if (existing) {
-        existing.querySelector("span").textContent = last;
-      } else {
-        el.insertAdjacentHTML("beforeend", `<div class="tick" id="${tickId}"><b>${name}</b><span>${last}</span></div>`);
-      }
-    } catch {
-      offline();
-      if (!document.getElementById(tickId)) {
-        el.insertAdjacentHTML("beforeend", `<div class="tick" id="${tickId}"><b>${name}</b><span>—</span></div>`);
-      }
-    }
+    el.insertAdjacentHTML("beforeend", `<div class="tick"><b>${name}</b><span class="v">—</span></div>`);
+    tickEls[m] = el.lastElementChild.querySelector(".v");
   }
-  _marketInitialized = true;
+}
+
+async function loadMarket() {
+  const results = await Promise.allSettled(MOCK.markets.map(async (m) => {
+    const r = await (await fetch(`${API}/market?market=${m}&kind=ticker`)).json();
+    return { m, last: r.data?.last };
+  }));
+  let anyOk = false;
+  for (const res of results) {
+    if (res.status !== "fulfilled" || res.value.last == null) continue;
+    anyOk = true;
+    const el = tickEls[res.value.m];
+    const prev = parseFloat(el.dataset.last);
+    const cur = parseFloat(res.value.last);
+    el.textContent = res.value.last;
+    el.classList.remove("up", "down");
+    if (!Number.isNaN(prev) && !Number.isNaN(cur) && cur !== prev) el.classList.add(cur > prev ? "up" : "down");
+    el.dataset.last = res.value.last;
+  }
+  if (!anyOk) offline();
 }
 
 // ---------- 對話 ----------
-function addMsg(cls, html) {
+function esc(s) { return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+// 模型回覆常帶 markdown；氣泡內只支援粗體與換行，其餘原樣顯示
+function md(s) { return esc(s).replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>").replace(/\n/g, "<br>"); }
+
+function addMsg(cls, text) {
   const log = document.getElementById("chatlog");
-  log.insertAdjacentHTML("beforeend", `<div class="msg ${cls}">${html}</div>`);
+  log.insertAdjacentHTML("beforeend", `<div class="msg ${cls}">${md(text)}</div>`);
   log.scrollTop = log.scrollHeight;
 }
 
@@ -107,5 +117,6 @@ document.getElementById("chatform").onsubmit = async (e) => {
 };
 
 loadHealth();
+initMarket();
 loadMarket();
 setInterval(loadMarket, 10000);
