@@ -76,28 +76,44 @@ TOOLS = [
 def query_user_history(section="all"):
     report = json.loads(HEALTH_REPORT.read_text())
     data = report if section == "all" else {section: report[section]}
-    # 無論查哪個區塊都附重點摘要：模型選錯區塊時仍拿得到關鍵數字，避免答非所問
+    # 無論查哪個區塊都附重點摘要：模型選錯區塊時仍拿得到關鍵數字，避免答非所問。
+    # 用語紀律：「虧損」只能指 realized_pnl（真實賺賠）；opportunity_cost 是「少賺」，兩者不得混用。
     chase, oc, worst = report["chase_index"], report["opportunity_cost"], report["opportunity_cost"]["worst_single_sell"]
     peak = report["concentration"]["peak_concentration"]
-    return {
-        **data,
-        "key_findings": {
-            "追高指數": f"{chase['buy_above_ma_pct']}% 的買入發生在 7 日均價上方（全年 {chase['buy_total']} 筆買入）",
-            "年度賣出機會成本": f"NT${oc['total_missed_twd']:,.0f}（賣出後若持有至年底的少賺總額）",
-            "最痛單筆賣出": (
-                f"{worst['date']} 以 {worst['sell_price']} 賣出 {worst['currency'].upper()} "
-                f"{worst['qty']:,.2f} 顆，年底價 {worst['eoy_price']}，少賺 NT${worst['missed_twd']:,.0f}"
-            ),
-            "峰值持倉集中度": f"{peak['month']} 單一資產占比 {peak['top_pct']}%",
-            "下跌後出金比例": f"{report['cash_flow_behavior']['withdrawals_after_7d_btc_drop_pct']}%（習慣相對健康）",
-        },
-        "data_notes": (
-            "報告由交易紀錄推算，只有行為指標與機會成本（賣出後價格續漲的少賺金額），"
-            "沒有已實現損益。被問『虧最多/最痛的一筆』時：如實說明這個差異，"
-            "並直接給出 worst_single_sell 的日期、幣別、金額作為最接近的答案，"
-            "不要只請使用者自行去平台查詢。"
+    findings = {
+        "追高指數": f"{chase['buy_above_ma_pct']}% 的買入發生在 7 日均價上方（全年 {chase['buy_total']} 筆買入）",
+        "年度賣出機會成本（少賺，非虧損）": f"NT${oc['total_missed_twd']:,.0f}（賣出後若持有至年底的少賺總額）",
+        "最痛單筆少賺（機會成本）": (
+            f"{worst['date']} 以 {worst['sell_price']} 賣出 {worst['currency'].upper()} "
+            f"{worst['qty']:,.2f} 顆，年底價 {worst['eoy_price']}，少賺 NT${worst['missed_twd']:,.0f}"
         ),
+        "峰值持倉集中度": f"{peak['month']} 單一資產占比 {peak['top_pct']}%",
+        "下跌後出金比例": f"{report['cash_flow_behavior']['withdrawals_after_7d_btc_drop_pct']}%（習慣相對健康）",
     }
+    rp = report.get("realized_pnl")
+    if rp:
+        findings["已實現損益總計（真實賺賠）"] = (
+            f"NT${rp['total_realized_twd']:,.0f}（虧損 {rp['loss_trades']} 筆／獲利 {rp['profit_trades']} 筆，移動平均成本法）"
+        )
+        wl = rp.get("worst_single_loss")
+        if wl:
+            findings["最大單筆真實虧損"] = (
+                f"{wl['date']} 以 {wl['sell_price']} 賣出 {wl['currency'].upper()} {wl['qty']:,.2f} 顆"
+                f"（平均成本 {wl['avg_cost']}），實虧 NT${abs(wl['pnl_twd']):,.0f}"
+            )
+        notes = (
+            "兩類數字都有、意義不同，回答時必須標示是哪一種："
+            "①真實虧損/獲利＝realized_pnl（賣價 vs 平均買入成本，錢包實際賺賠）"
+            "②少賺＝opportunity_cost（賣後價格續漲的假設差額，不是虧損）。"
+            "被問『虧最多』優先給 realized_pnl.worst_single_loss，可再補充機會成本作對照。"
+        )
+    else:
+        notes = (
+            "本報告目前只有行為指標與機會成本（少賺），尚無已實現損益。"
+            "被問『虧最多/最痛的一筆』時：如實說明「這是少賺（機會成本），不是實際虧損」，"
+            "並直接給出 worst_single_sell 的日期、幣別、金額，不要只請使用者自行去平台查詢。"
+        )
+    return {**data, "key_findings": findings, "data_notes": notes}
 
 
 def get_market_data(market, kind):

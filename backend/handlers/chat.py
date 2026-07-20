@@ -16,7 +16,7 @@ def handler(event, context):
         if "text" in block:
             block["text"] = guardrails.scrub_input(block["text"])
 
-    out, confirm_data = loop.run_agent(messages)
+    out, confirm_data, tool_trail = loop.run_agent(messages)
     text = "".join(b.get("text", "") for b in out.get("content", []))
     ok, _hits = guardrails.check_output(text)
     if not ok:
@@ -24,6 +24,8 @@ def handler(event, context):
     payload = {"reply": text, "messages": messages}
     if confirm_data:
         payload["confirm"] = confirm_data
+    if tool_trail:
+        payload["tool_trail"] = tool_trail
     return _resp(200, payload)
 
 
