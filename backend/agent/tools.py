@@ -5,11 +5,14 @@
 - execute_order 僅由系統在收到前端確認 token 後觸發，不進 TOOLS 清單。
 """
 import json
+import os
 import time
 import uuid
 from pathlib import Path
 
 HEALTH_REPORT = Path(__file__).parent.parent.parent / "data" / "health_report.json"
+# RAG 知識庫（#9）：B 包建好 Bedrock KB 後設 KB_ID 環境變數，工具即自動註冊（見 DEPLOY.md）
+KB_ID = os.environ.get("KB_ID")
 
 # 下單確認 token（正式版存 DynamoDB；本地開發用記憶體）
 _pending_orders = {}
@@ -91,6 +94,40 @@ TOOLS = [
         }},
     }},
 ]
+
+
+if KB_ID:
+    TOOLS.append({"toolSpec": {
+        "name": "query_knowledge",
+        "description": (
+            "查防詐與投資教育知識庫（RAG）。使用者問知識性問題"
+            "（如「什麼是定期定額」「這是不是詐騙話術」「新手怎麼開始」）時呼叫；"
+            "回答引用結果時必須附出處。"
+        ),
+        "inputSchema": {"json": {
+            "type": "object",
+            "properties": {"query": {"type": "string", "description": "檢索問句"}},
+            "required": ["query"],
+        }},
+    }})
+
+
+def query_knowledge(query):
+    """Bedrock KB 檢索（#9）。回傳片段＋出處；KB 未建時本函式不會被註冊。"""
+    import boto3
+    rt = boto3.client("bedrock-agent-runtime",
+                      region_name=os.environ.get("BEDROCK_REGION", "us-east-1"))
+    resp = rt.retrieve(
+        knowledgeBaseId=KB_ID,
+        retrievalQuery={"text": query},
+        retrievalConfiguration={"vectorSearchConfiguration": {"numberOfResults": 4}},
+    )
+    results = [{
+        "text": (r.get("content") or {}).get("text", "")[:600],
+        "source": ((r.get("location") or {}).get("s3Location") or {}).get("uri", "unknown"),
+    } for r in resp.get("retrievalResults", [])]
+    return {"results": results,
+            "data_notes": "引用 results 回答時必須附 source 出處；results 為空就如實說知識庫查無資料。"}
 
 
 def query_user_history(section="all"):
@@ -179,6 +216,8 @@ _DISPATCH = {
     "calculate_trade_scenarios": calculate_trade_scenarios,
     "prepare_order": prepare_order,
 }
+if KB_ID:
+    _DISPATCH["query_knowledge"] = query_knowledge
 
 
 def dispatch(name, tool_input):

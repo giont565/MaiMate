@@ -42,6 +42,11 @@ sam deploy --guided     # 第一次；之後 sam deploy 即可
 - [ ] （選配）ChatFunction 環境變數：`BEDROCK_REGION`（不設預設 us-east-1）
 - [ ] （選配，先驗證再開）ChatFunction 環境變數：`ENABLE_PROMPT_CACHE=1`
       —— prompt caching 開關；開啟後對話一次確認無 ValidationException 才留著
+- [ ] （#9 KB 建好後）ChatFunction 環境變數：`KB_ID=<Bedrock KB ID>`
+      —— 設定後 query_knowledge 工具自動註冊，RAG 問答即通（ChatFunction 需補
+      `bedrock:Retrieve` IAM 權限）
+- [ ] （#6 Guardrail 建好後）ChatFunction 環境變數：`GUARDRAIL_ID=<id>`（版本非 DRAFT
+      再加 `GUARDRAIL_VERSION`）—— 設定後 converse 自動掛載，與程式層護欄疊加
 
 ## 3. 前端部署｜預估 10 分
 

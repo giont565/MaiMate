@@ -102,6 +102,20 @@ check("append-only（模組無更新/刪除介面）",
       not any(hasattr(audit, f) for f in ("delete", "update", "remove", "clear")))
 check("查無此 session 回空", audit.trail("nope") == [])
 
+print("== 條件式接點（#9 KB／#6 Guardrails）==")
+import os
+tools_mod = importlib.import_module("backend.agent.tools")
+tool_names = [t["toolSpec"]["name"] for t in tools_mod.TOOLS]
+check("KB_ID 未設 → query_knowledge 不註冊",
+      "query_knowledge" not in tool_names and "query_knowledge" not in tools_mod._DISPATCH)
+os.environ["KB_ID"] = "kb-test"
+importlib.reload(tools_mod)
+check("KB_ID 設定後 → query_knowledge 自動註冊",
+      "query_knowledge" in [t["toolSpec"]["name"] for t in tools_mod.TOOLS]
+      and "query_knowledge" in tools_mod._DISPATCH)
+del os.environ["KB_ID"]
+importlib.reload(tools_mod)  # 還原，避免影響後續測試
+
 print("== loop（模型路由 #5）==")
 import backend.agent.loop as loop
 def msg(text):

@@ -96,14 +96,21 @@ def run_agent(messages, profile=None):
         tool_list.append({"cachePoint": {"type": "default"}})
 
     model_id = pick_model(messages)
+    converse_kwargs = dict(
+        modelId=model_id,
+        system=system,
+        toolConfig={"tools": tool_list},
+        inferenceConfig={"maxTokens": 1500, "temperature": 0.3},
+    )
+    # Bedrock Guardrails（#6）：D 包在主控台建好後設 GUARDRAIL_ID 即掛載（程式層護欄仍疊加）
+    guardrail_id = os.environ.get("GUARDRAIL_ID")
+    if guardrail_id:
+        converse_kwargs["guardrailConfig"] = {
+            "guardrailIdentifier": guardrail_id,
+            "guardrailVersion": os.environ.get("GUARDRAIL_VERSION", "DRAFT"),
+        }
     for _ in range(MAX_TURNS):
-        resp = _client().converse(
-            modelId=model_id,
-            system=system,
-            messages=messages,
-            toolConfig={"tools": tool_list},
-            inferenceConfig={"maxTokens": 1500, "temperature": 0.3},
-        )
+        resp = _client().converse(messages=messages, **converse_kwargs)
         out = resp["output"]["message"]
         messages.append(out)
 

@@ -216,4 +216,7 @@ img.save(HERE / "maimate_pixel_unit.png")
 render(sprite(), 24).save(HERE / "maimate_bot.png")
 small = render(sprite(), 24).resize((128, int(128 * GH / GW)), Image.NEAREST)
 small.save(HERE / "maimate_bot_small.png")
+# BULLISH 態（成交時前端切換用：happy 眼＋胸口全綠 K 線）
+small_bullish = render(sprite("happy", ("g", "g", "g")), 24).resize((128, int(128 * GH / GW)), Image.NEAREST)
+small_bullish.save(HERE / "maimate_bot_small_bullish.png")
 print("done:", [p.name for p in HERE.glob("maimate_*.png")])

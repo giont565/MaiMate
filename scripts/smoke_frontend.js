@@ -146,6 +146,25 @@ const server = http.createServer((req, res) => {
   console.log("成交→軌跡 OK：4 步驟、訂單事件 hl×3、金額千分位");
 
   await page.screenshot({ path: "smoke_mobile.png", fullPage: true });
+
+  // 離線劇本（決賽保險）：/chat 斷線 → mock 接手走完 Golden Path（含 BULLISH 切換）
+  await page.unroute("**/chat");
+  await page.route("**/chat", (r) => r.abort());
+  await page.fill("#q", "ETH 跌太多幫我全部賣掉");
+  await page.click(".inputbar button");
+  await page.waitForSelector(".confirm");
+  const offScens = await page.$$eval(".scen", (els) => els.length);
+  if (offScens < 6) throw new Error("離線三方案卡未渲染"); // 前一輪 3 張＋離線 3 張
+  await page.click(".confirm .ok");
+  await page.waitForFunction(() => [...document.querySelectorAll(".done")].some((e) => e.textContent.includes("離線展示")));
+  const trails = await page.$$eval(".trail", (els) => els.length);
+  if (trails < 2) throw new Error("離線軌跡面板未渲染");
+  const logoSrc = await page.$eval(".topbar .logo img", (e) => e.src);
+  if (!logoSrc.includes("bullish")) throw new Error("麥麥未切 BULLISH");
+  const offlineBadge = await page.$eval("#offline", (e) => getComputedStyle(e).display);
+  if (offlineBadge === "none") throw new Error("離線標示未亮");
+  console.log("離線劇本 OK：三方案→確認→示意成交→軌跡、麥麥切 BULLISH、離線標示亮");
+
   await browser.close();
   server.close();
   console.log("全部通過 ✅（截圖 smoke_mobile.png）");

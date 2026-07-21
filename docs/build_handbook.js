@@ -128,7 +128,7 @@ function statusTable(s, rows, y, colW, rowH) {
   bigTitle(s, "前端・部署・交付物（12 項）｜前端 C／部署交付 D");
   statusTable(s, [
     ["桌機三欄 SPA", "done", "07/19 上線實測＋UX 修正（行情就地更新/氣泡渲染）", "frontend/"],
-    ["離線 mock 備援", "code", "行情斷網保值已由 npm run smoke 驗證；整站拔網路實測待做", "app.js"],
+    ["離線 mock 備援", "code", "07/21 Golden Path 離線劇本完成＋煙測（三方案→確認→軌跡）；真環境拔網路待驗", "app.js"],
     ["手機版 RWD（Golden Path 動線）", "todo", "對話主畫面、確認卡放大、麥麥視覺", "#13"],
     ["三方案卡片／模式徽章／軌跡面板", "todo", "隨 #11 #10 #12", "—"],
     ["SAM 模板", "done", "07/19 首次 deploy 成功（us-east-1 API+S3）", "infra/"],
@@ -172,7 +172,7 @@ function statusTable(s, rows, y, colW, rowH) {
     { text: "🧪 #1 confirm 後端✅待E2E｜#5 路由✅待部署", options: { bullet: true, breakLine: true } },
     { text: "🧪 #10 Profile 三模式——07/21 完成待部署實測", options: { bullet: true, breakLine: true } },
     { text: "🧪 #11 三方案引擎——07/21 完成、單元測 18 項綠", options: { bullet: true, breakLine: true } },
-    { text: "🔨 註冊 B 的 query_knowledge／掛 D 的 Guardrails（audit 埋點✅）", options: { bullet: true } },
+    { text: "✅ B/D 接點就緒：KB_ID／GUARDRAIL_ID 環境變數設定即通", options: { bullet: true } },
   ], { x: M + 0.3, y: 2.65, w: 5.4, h: 4.1, fontFace: FONT, fontSize: 11.5, color: INK, paraSpaceAfter: 8, margin: 0 });
   card(s, M + 6.25, 1.65, 5.95, 5.2, ICE);
   s.addText("B｜資料服務與 RAG　4 天", { x: M + 6.55, y: 1.85, w: 5.3, h: 0.4, fontFace: FONT, fontSize: 15, bold: true, color: NAVY, margin: 0 });
@@ -200,7 +200,7 @@ function statusTable(s, rows, y, colW, rowH) {
     { text: "🔨 #13 手機版 RWD（照 mockups 三畫面）", options: { bullet: true, breakLine: true } },
     { text: "✅ 三方案卡渲染——07/21 完成（mock 煙測）", options: { bullet: true, breakLine: true } },
     { text: "✅ 模式徽章切換｜軌跡面板——07/21 完成（mock 煙測）", options: { bullet: true, breakLine: true } },
-    { text: "🔨 麥麥視覺整合（成交切 BULLISH）", options: { bullet: true, breakLine: true } },
+    { text: "✅ 麥麥視覺整合（成交切 BULLISH）——07/21 完成", options: { bullet: true, breakLine: true } },
     { text: "🧪 SPA 瀏覽器全流程走查", options: { bullet: true, breakLine: true } },
     { text: "🧪 離線 mock 拔網路實測", options: { bullet: true } },
   ], { x: M + 0.3, y: 2.65, w: 5.4, h: 3.4, fontFace: FONT, fontSize: 11.5, color: INK, paraSpaceAfter: 7, margin: 0 });
