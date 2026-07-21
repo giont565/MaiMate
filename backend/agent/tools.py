@@ -43,7 +43,11 @@ TOOLS = [
     }},
     {"toolSpec": {
         "name": "get_market_data",
-        "description": "查 MAX 交易所即時行情：最新成交價、24h 漲跌、K 線、買賣深度。",
+        "description": (
+            "查 MAX 交易所即時行情：最新成交價、24h 漲跌、K 線、買賣深度。"
+            "kline 回傳已由程式轉成具名 OHLCV，time_utc/time_taipei 是權威時間；"
+            "禁止自行換算 Unix timestamp。要求最近 N 根時，必須逐根完整列出 data 最後 N 筆。"
+        ),
         "inputSchema": {"json": {
             "type": "object",
             "properties": {
