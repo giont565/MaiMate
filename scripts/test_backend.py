@@ -116,6 +116,23 @@ check("KB_ID 設定後 → query_knowledge 自動註冊",
 del os.environ["KB_ID"]
 importlib.reload(tools_mod)  # 還原，避免影響後續測試
 
+print("== market data（Kline 時間與 OHLCV 正規化）==")
+max_public = importlib.import_module("backend.integrations.max_public")
+sample_rows = [
+    [1784638800, "2153000.0", "2161809.8", "2147471.3", "2161809.8", "1.7552"],
+    [1784642400, "2161809.8", "2167034.7", "2157718.1", "2157718.1", "0.9123"],
+    [1784646000, "2157718.1", "2160000.0", "2155000.0", "2159000.0", "0.5000"],
+]
+candles = max_public._normalize_kline(sample_rows)
+check("Kline 固定回傳三根具名資料", len(candles) == 3
+      and set(candles[0]) == {"timestamp", "time_utc", "time_taipei", "open", "high", "low", "close", "volume"})
+check("Unix 秒數轉 UTC 正確", candles[0]["time_utc"] == "2026-07-21T13:00:00Z", candles[0])
+check("Unix 秒數轉台北時間正確",
+      candles[0]["time_taipei"] == "2026-07-21T21:00:00+08:00", candles[0])
+check("Kline 依時間由舊到新", [c["timestamp"] for c in candles] == sorted(c["timestamp"] for c in candles))
+check("OHLCV 欄位不錯位", candles[0]["open"] == "2153000.0"
+      and candles[0]["high"] == "2161809.8" and candles[0]["volume"] == "1.7552")
+
 print("== loop（模型路由 #5）==")
 import backend.agent.loop as loop
 def msg(text):
