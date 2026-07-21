@@ -47,6 +47,8 @@ TOOLS = [
             "查 MAX 交易所即時行情：最新成交價、24h 漲跌、K 線、買賣深度。"
             "kline 回傳已由程式轉成具名 OHLCV，time_utc/time_taipei 是權威時間；"
             "禁止自行換算 Unix timestamp。要求最近 N 根時，必須逐根完整列出 data 最後 N 筆。"
+            "depth 回傳已排序（asks 低→高、bids 高→低）並附 best_ask/best_bid/"
+            "spread_twd/spread_pct——價差引用這些欄位，禁止自行計算。"
         ),
         "inputSchema": {"json": {
             "type": "object",
