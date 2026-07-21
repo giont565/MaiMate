@@ -4,6 +4,23 @@
 const API = window.API_BASE || "/api";
 let messages = []; // Converse 格式對話歷史
 
+// session_id：稽核軌跡的關聯鍵（README §3；audit-log spec）
+const SESSION_ID = sessionStorage.maimate_sid || (sessionStorage.maimate_sid = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)));
+
+// 使用者模式（#10）：null=後端自動推斷；點徽章循環切換（Demo 展示「同句話三種回應」）
+const MODE_LABELS = { cautious: "安心白話", growth: "成長陪跑", pro: "專業效率" };
+const MODE_ORDER = ["cautious", "growth", "pro"];
+let modeOverride = null;
+let currentMode = "growth";
+function setBadge(mode, isOverride) {
+  currentMode = mode;
+  document.getElementById("mode-badge").textContent = MODE_LABELS[mode] + (isOverride ? "＊" : "");
+}
+document.getElementById("mode-badge").onclick = () => {
+  modeOverride = MODE_ORDER[(MODE_ORDER.indexOf(modeOverride || currentMode) + 1) % MODE_ORDER.length];
+  setBadge(modeOverride, true);
+};
+
 // 千分位格式化：fmt(2091464.5) → "2,091,464.5"；小數照原值保留（最多 maxDec 位）
 function fmt(n, maxDec = 4) {
   const num = Number(n);
@@ -117,6 +134,26 @@ function addScenarios(list) {
   scrollBottom();
 }
 
+// 決策軌跡面板（設計稿 screen3；GET /audit 契約）——成交後自動展開
+async function showTrail() {
+  try {
+    const r = await (await fetch(`${API}/audit?session_id=${SESSION_ID}`)).json();
+    if (!r.trail?.length) return;
+    const steps = r.trail.map((e) => {
+      const t = new Date(e.ts * 1000).toTimeString().slice(0, 5);
+      const hl = e.type !== "tool_call" ? " hl" : "";
+      const tag = e.type === "tool_call" ? e.payload.tool : e.type;
+      const note = e.type === "tool_call" ? (e.payload.input_summary || "")
+        : [e.payload.market, e.payload.side, e.payload.volume_twd != null ? "NT$" + fmt(e.payload.volume_twd) : "",
+           e.payload.exchange_order_id ? "#" + e.payload.exchange_order_id : ""].filter(Boolean).join(" ");
+      return `<div class="step${hl}"><i>${t}</i><em>${esc(tag)}</em> ${esc(note)}</div>`;
+    }).join("");
+    log().insertAdjacentHTML("beforeend", `
+      <div class="trail"><div class="h">🔍 決策軌跡（本次對話）<span>已寫入稽核紀錄</span></div>${steps}</div>`);
+    scrollBottom();
+  } catch { /* 軌跡載入失敗不影響主流程 */ }
+}
+
 // 下單確認卡（設計稿 screen3：表格＋滑價警語＋大按鈕）
 function addConfirmCard(card, token) {
   const id = "c" + Date.now();
@@ -134,11 +171,12 @@ function addConfirmCard(card, token) {
   const el = document.getElementById(id);
   el.querySelector(".ok").onclick = async () => {
     try {
-      const r = await (await fetch(`${API}/order`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm_token: token }) })).json();
+      const r = await (await fetch(`${API}/order`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm_token: token, session_id: SESSION_ID }) })).json();
       if (r.ok) {
         const oid = r.exchange_response?.id || r.order?.id || "";
         log().insertAdjacentHTML("beforeend", `<div class="done">✅ 已成交${oid ? `（單號 #${esc(oid)}）` : ""} — 健檢與持倉已更新</div>`);
         loadHealth();
+        showTrail(); // Golden Path 收尾：秀決策軌跡
       } else addMsg("ai", `⚠️ ${r.message || "下單未成功"}`);
     } catch { addMsg("ai", "⚠️ 送單失敗，請再試一次。"); }
     el.remove();
@@ -157,8 +195,11 @@ document.getElementById("chatform").onsubmit = async (e) => {
   addMsg("user", text);
   messages.push({ role: "user", content: [{ text }] });
   try {
-    const r = await (await fetch(`${API}/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages }) })).json();
+    const body = { messages, session_id: SESSION_ID };
+    if (modeOverride) body.mode = modeOverride;
+    const r = await (await fetch(`${API}/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json();
     messages = r.messages;
+    if (r.mode) setBadge(r.mode, !!modeOverride);
     addTrail(r.tool_trail);
     addMsg("ai", r.reply);
     addScenarios(r.scenarios);

@@ -25,6 +25,7 @@ const PRICES = { round1: { btctwd: "2091464.5", ethtwd: "60536.6", soltwd: "2469
 const CHAT = {
   reply: "**最大單筆真實虧損**：2025-03-12 賣出 ETH 實虧 NT$8,412\n（機會成本「少賺」另計：1/8 DOGE 少賺 NT$312,924）<script>alert(1)</script>",
   messages: [],
+  mode: "growth",
   tool_trail: [{ seq: 1, tool: "query_user_history", summary: "查交易史（all）" }, { seq: 2, tool: "get_market_data", summary: "查行情（ethtwd）" }],
   scenarios: [
     { key: "partial", label: "先賣 25%，留 75% 觀察", amount_twd: 35920, fee_twd: 57, post_concentration_pct: 44, behavior_note: "1/8 類似情境你全賣後少賺 NT$312,924" },
@@ -33,6 +34,13 @@ const CHAT = {
   ],
   confirm: { confirm_token: "tok-1", confirmation_card: { market: "ethtwd", side: "sell", volume_twd: 35920, ord_type: "market", price: null } },
 };
+const TRAIL = { trail: [
+  { seq: 1, ts: 1753000000, type: "tool_call", payload: { tool: "get_market_data", input_summary: "查行情（ethtwd）", status: "success" } },
+  { seq: 2, ts: 1753000010, type: "draft_created", payload: { market: "ethtwd", side: "sell", volume_twd: 35920 } },
+  { seq: 3, ts: 1753000020, type: "user_confirmed", payload: { market: "ethtwd" } },
+  { seq: 4, ts: 1753000030, type: "executed", payload: { exchange_order_id: "8837121" } },
+] };
+let chatBody = null, orderBody = null; // 攔下 request body 驗 session_id / mode
 
 const server = http.createServer((req, res) => {
   const file = path.join(ROOT, req.url === "/" ? "index.html" : req.url.split("?")[0]);
@@ -62,7 +70,9 @@ const server = http.createServer((req, res) => {
     const m = new URL(route.request().url()).searchParams.get("market");
     route.fulfill({ json: { kind: "ticker", market: m, data: { last: PRICES[marketMode][m] } } });
   });
-  await page.route("**/chat", (r) => r.fulfill({ json: CHAT }));
+  await page.route("**/chat", (r) => { chatBody = r.request().postDataJSON(); r.fulfill({ json: CHAT }); });
+  await page.route("**/order", (r) => { orderBody = r.request().postDataJSON(); r.fulfill({ json: { ok: true, order: {}, exchange_response: { id: "8837121" } } }); });
+  await page.route("**/audit*", (r) => r.fulfill({ json: TRAIL }));
 
   await page.goto(`${base}/index.html`);
   await page.waitForFunction(() => document.querySelectorAll("#market .v").length === 4
@@ -114,7 +124,26 @@ const server = http.createServer((req, res) => {
   if (pick !== 1) throw new Error("pick 高亮異常");
   const confirmTxt = await page.$eval(".confirm", (e) => e.textContent);
   if (!confirmTxt.includes("NT$35,920") || !confirmTxt.includes("確認賣出")) throw new Error("確認卡異常");
-  console.log("對話 OK：chips×2、粗體渲染、<script> escape、三方案卡（千分位＋pick）、確認卡");
+  if (!chatBody?.session_id) throw new Error("/chat 未帶 session_id");
+  console.log("對話 OK：chips×2、粗體渲染、<script> escape、三方案卡（千分位＋pick）、確認卡、session_id 帶上");
+
+  // 模式徽章切換（#10 R3）：點擊循環，下一次 /chat 帶 mode 覆寫
+  const badge0 = await page.$eval("#mode-badge", (e) => e.textContent);
+  await page.click("#mode-badge");
+  const badge1 = await page.$eval("#mode-badge", (e) => e.textContent);
+  if (badge0 === badge1 || !badge1.includes("＊")) throw new Error(`徽章切換異常：${badge0}→${badge1}`);
+  console.log(`模式徽章切換 OK：${badge0} → ${badge1}`);
+
+  // Golden Path 收尾：確認 → 成交 → 決策軌跡面板（#12 R3）
+  await page.click(".confirm .ok");
+  await page.waitForSelector(".trail");
+  if (!orderBody?.session_id || orderBody.confirm_token !== "tok-1") throw new Error("/order body 異常");
+  const doneTxt = await page.$eval(".done", (e) => e.textContent);
+  if (!doneTxt.includes("8837121")) throw new Error("成交訊息缺單號");
+  const steps = await page.$$eval(".trail .step", (els) => els.map((e) => e.textContent));
+  const hls = await page.$$eval(".trail .step.hl", (els) => els.length);
+  if (steps.length !== 4 || !steps[1].includes("NT$35,920") || hls !== 3) throw new Error(`軌跡面板異常：${steps} hl=${hls}`);
+  console.log("成交→軌跡 OK：4 步驟、訂單事件 hl×3、金額千分位");
 
   await page.screenshot({ path: "smoke_mobile.png", fullPage: true });
   await browser.close();

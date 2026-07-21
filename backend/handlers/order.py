@@ -28,15 +28,22 @@ def _pop_order(token):
 
 
 def handler(event, context):
+    from ..agent import audit
     body = json.loads(event.get("body") or "{}")
     token = body.get("confirm_token")
+    audit.set_session(body.get("session_id"))
     if not token:
         return _resp(400, {"code": "bad_request", "message": "缺少 confirm_token", "retryable": False})
     order = _pop_order(token)
     if order is None:
+        audit.log("expired", confirm_token=token)
         return _resp(410, {"code": "token_expired", "message": "確認憑證無效或已過期，請重新發起", "retryable": False})
+    audit.log("user_confirmed", confirm_token=token, market=order.get("market"),
+              side=order.get("side"), volume_twd=order.get("volume_twd"))
     from ..integrations import max_private
     result = max_private.place_order(order)
+    audit.log("executed", confirm_token=token,
+              exchange_order_id=(result or {}).get("id") if isinstance(result, dict) else None)
     return _resp(200, {"ok": True, "order": order, "exchange_response": result})
 
 

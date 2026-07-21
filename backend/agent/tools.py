@@ -56,8 +56,28 @@ TOOLS = [
         "inputSchema": {"json": {"type": "object", "properties": {}}},
     }},
     {"toolSpec": {
+        "name": "calculate_trade_scenarios",
+        "description": (
+            "使用者表達買賣意圖時**必須先呼叫本工具**產生三個帶真實數字的方案"
+            "（保守版/原意圖版/暫停版，含預估金額、手續費、執行後持倉佔比、個人行為註記）。"
+            "所有數字由程式計算，你不得自行編造方案數字。"
+            "sell 給 fraction（全賣=1.0）；buy 給 amount_twd。"
+            "使用者從方案中選定後，才用該方案的金額呼叫 prepare_order。"
+        ),
+        "inputSchema": {"json": {
+            "type": "object",
+            "properties": {
+                "market": {"type": "string", "description": "交易對，如 ethtwd"},
+                "side": {"type": "string", "enum": ["buy", "sell"]},
+                "fraction": {"type": "number", "description": "sell 用：佔持倉比例，全賣=1.0，預設 1.0"},
+                "amount_twd": {"type": "number", "description": "buy 用：TWD 金額"},
+            },
+            "required": ["market", "side"],
+        }},
+    }},
+    {"toolSpec": {
         "name": "prepare_order",
-        "description": "使用者明確表達下單意圖時呼叫。只產生確認卡片與 confirm_token，不會真正下單。",
+        "description": "使用者從三方案中明確選定後呼叫。只產生確認卡片與 confirm_token，不會真正下單。",
         "inputSchema": {"json": {
             "type": "object",
             "properties": {
@@ -126,11 +146,19 @@ def get_account_balance():
     return max_private.balances()
 
 
+def calculate_trade_scenarios(market, side, fraction=1.0, amount_twd=None):
+    from . import scenarios
+    return scenarios.calculate_trade_scenarios(market, side, fraction=fraction, amount_twd=amount_twd)
+
+
 def prepare_order(market, side, volume_twd, ord_type, price=None):
     token = str(uuid.uuid4())
     order = {"market": market, "side": side, "volume_twd": volume_twd,
              "ord_type": ord_type, "price": price, "expires_at": time.time() + CONFIRM_TTL_SEC}
     _pending_orders[token] = order
+    from . import audit
+    audit.log("draft_created", market=market, side=side, volume_twd=volume_twd,
+              ord_type=ord_type, confirm_token=token)
     return {"confirm_token": token, "confirmation_card": order,
             "notice": "已產生確認卡片，等待使用者於介面上確認後才會送出訂單。"}
 
@@ -148,6 +176,7 @@ _DISPATCH = {
     "query_user_history": query_user_history,
     "get_market_data": get_market_data,
     "get_account_balance": get_account_balance,
+    "calculate_trade_scenarios": calculate_trade_scenarios,
     "prepare_order": prepare_order,
 }
 

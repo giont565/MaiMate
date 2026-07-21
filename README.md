@@ -294,13 +294,13 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 - [ ] 輸入 PII 先清洗；輸出命中明牌句式走安全回覆；迴圈 ≤8 輪
 - [ ] Haiku/Sonnet 意圖路由＋prompt caching（#5）
 
-### 4.3 三方案引擎（trade-scenarios，#11）｜主責 A（卡片渲染：C）
+### 4.3 三方案引擎（trade-scenarios，#11）｜主責 A（卡片渲染：C）— 🧪 已實作＋單元驗證（07/21），整合測試待部署
 - [ ] 交易意圖 → 三方案（保守/原意圖/暫停），數字全由程式計算
 - [ ] 每方案含預估金額、手續費（MAX 公告費率＋來源註記）、執行後集中度、個人行為註記
 - [ ] 標的不在持倉 → 明確錯誤；暫停版不產生訂單；方案欄位相容 prepare_order
 - [ ] 滑價聲明標注
 
-### 4.4 Profile Engine（profile-engine，#10）｜主責 A（徽章與切換 UI：C）
+### 4.4 Profile Engine（profile-engine，#10）｜主責 A（徽章與切換 UI：C）— 🧪 已實作＋單元驗證（07/21），三模式實測劇本待部署
 - [ ] 從 health_report 確定性規則分類三模式（cautious/growth/pro）＋附判定依據
 - [ ] 模式注入 system prompt 改變語氣與提醒強度；安全機制三模式一致
 - [ ] Demo 可切換模式：同一句「幫我全賣」三種回應肉眼可辨
@@ -316,7 +316,7 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 - [ ] Bedrock KB + S3 Vectors 建置；query_knowledge 回答附出處
 - [ ] 「什麼是定期定額」「這是不是詐騙話術」能引用語料回答
 
-### 4.7 Audit Log（#12）｜主責 B（loop 埋點：A；面板：C）
+### 4.7 Audit Log（#12）｜主責 B（loop 埋點：A；面板：C）— 🧪 已實作＋單元驗證（07/21），DynamoDB 路徑與 Golden Path 驗收待部署
 - [ ] 每次工具呼叫留痕（摘要不含 PII）；訂單生命週期 draft→confirmed/expired→executed
 - [ ] GET /audit 可還原完整軌跡；前端「決策軌跡」面板；append-only
 
