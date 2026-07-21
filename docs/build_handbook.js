@@ -59,7 +59,7 @@ function statusTable(s, rows, y, colW, rowH) {
 {
   const s = pres.addSlide();
   s.background = { color: WHITE };
-  bigTitle(s, "總覽：07/21 四引擎完成單元驗證（三方案/Profile/Audit/路由），待部署整合");
+  bigTitle(s, "總覽：07/21 四引擎＋離線 Golden Path 劇本完成單元驗證，待 merge 部署整合");
   const stats = [
     { n: "15", l: "已完成並驗證", c: GREEN, d: "行為分析、Bedrock迴圈、部署上線、前端…" },
     { n: "12", l: "寫好但沒測過", c: GOLD, d: "三方案、Profile、Audit、路由、Private簽章…" },
@@ -151,7 +151,7 @@ function statusTable(s, rows, y, colW, rowH) {
     ["Bedrock 迴圈首次實跑", "done", "07/19 完成：Haiku 多工具對話、線上引用真實數據", "已達成"],
     ["Guardrails 雙層攔截", "test", "「推薦我買哪個幣」兩層各自單獨擋住", "#6 後"],
     ["憑證安全", "test", "token 過期/重放回 410；60 秒邊界", "#1 #4 後"],
-    ["離線備援切換", "test", "拔網路 mock 自動接手＋UI 標示", "前端部署後"],
+    ["離線備援切換", "test", "Golden Path 離線劇本＋煙測已過（07/21）；真環境拔網路實測待做", "部署後"],
     ["E2E Golden Path", "test", "全賣→三方案→確認→最小額度成交→軌跡完整", "幾乎全部後"],
     ["從零部署計時", "test", "乾淨帳號 <1 小時上線（決賽日保險）", "#14"],
   ], 1.75, [3.1, 1.5, 5.7, 1.83], 0.6);
@@ -228,23 +228,23 @@ function statusTable(s, rows, y, colW, rowH) {
 {
   const s = pres.addSlide();
   s.background = { color: WHITE };
-  bigTitle(s, "交棒地圖：哪個工項完成，交付給誰", "進來的箭頭＝你在等什麼；出去的箭頭＝誰在等你。流程圖版在 README §1");
+  bigTitle(s, "交棒地圖：哪個工項完成，交付給誰", "✅=已交棒｜🧪=就緒待部署驗證｜🔨=待做（07/21 盤點）。流程圖版在 README §1");
   const header = ["完成的工項", "交付物", "交給", "對方拿去做什麼"].map(t =>
     ({ text: t, options: { bold: true, color: WHITE, fill: { color: NAVY } } }));
   const rows = [
-    ["D：AWS 帳號＋Bedrock 開通", "帳號憑證", "A／B／D", "Bedrock 首跑｜KB 建置｜SAM 部署"],
-    ["全員：Lv2 KYC＋Key（#3）", "各自 API Key", "D", "Private API E2E（#4）"],
-    ["B：max_public 實測（#2）", "可靠的行情工具", "A", "get_market_data 放心用"],
-    ["B：簽章對照核對", "簽章確認", "D", "E2E 真下單前置"],
-    ["A：Bedrock 迴圈首跑", "跑通的迴圈", "A 自己", "解鎖 #1 #5 #10 #11 開發"],
-    ["B：query_knowledge＋audit.py", "函式", "A", "註冊進 tools＋loop 埋點"],
-    ["B：/audit endpoint", "audit schema", "C", "決策軌跡面板"],
-    ["D：Guardrails 建立（#6）", "Guardrail ID", "A", "loop 掛載"],
-    ["A：#11／#10／#1 完成", "scenarios/confirm schema（§3）", "C", "三方案卡・徽章・確認卡接真資料"],
-    ["A：核心全完成", "可測版本 tag", "D", "E2E Golden Path 開跑"],
-    ["C：手機版＋元件（#13）", "可操作前端", "D", "E2E＋離線備援驗證"],
-    ["D：E2E 全線綠燈", "綠燈", "D 自己", "預錄影片（#8）＋DEPLOY.md（#14）"],
-    ["D：影片＋部署 SOP", "決賽武器包", "全員", "8/1 上場"],
+    ["✅ D：AWS 帳號＋Bedrock 開通（07/19）", "帳號憑證", "A／B／D", "Bedrock 首跑✅｜KB 建置｜SAM 部署✅"],
+    ["🔨 全員：Lv2 KYC＋Key（#3）——最上游", "各自 API Key", "D", "Private API E2E（#4）"],
+    ["🧪 B：max_public 實測（#2）ticker✅", "可靠的行情工具", "A", "kline/depth 核對後全放心用"],
+    ["🔨 B：簽章對照核對", "簽章確認", "D", "E2E 真下單前置"],
+    ["✅ A：Bedrock 迴圈首跑（07/19）", "跑通的迴圈", "A 自己", "已解鎖：#1 #5 #10 #11 全數開發完"],
+    ["🔨 B：KB 建置（#9，語料＋Bedrock KB）", "KB_ID 環境變數", "A", "設定即通——query_knowledge 接點已就緒"],
+    ["✅ A：audit＋/audit＋面板（07/21 代 B/C 完成）", "audit schema", "C", "決策軌跡面板已接上"],
+    ["🔨 D：Guardrails 建立（#6）", "GUARDRAIL_ID 環境變數", "A", "設定即通——掛載程式已就緒"],
+    ["✅ A：#11／#10／#1 完成（07/21）", "scenarios/confirm schema（§3）", "C", "三方案卡・徽章・確認卡已接上"],
+    ["🧪 A：核心全完成", "可測版本 tag＝PR #17", "D", "merge＋重部署後 E2E Golden Path 開跑"],
+    ["🧪 C：手機版＋元件（#13）", "可操作前端（mock 煙測✅）", "D", "E2E＋真環境拔網路驗證"],
+    ["🔨 D：E2E 全線綠燈", "綠燈", "D 自己", "預錄影片（#8）＋DEPLOY.md 演練（#14）"],
+    ["🔨 D：影片＋部署 SOP", "決賽武器包", "全員", "8/1 上場"],
   ];
   s.addTable([header, ...rows.map(r => [
     { text: r[0], options: { bold: true, color: INK } },
