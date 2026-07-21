@@ -266,7 +266,10 @@ Response：
 Response＝`data/health_report.json` 對應區塊（欄位定義：`.kiro/steering/data-schema.md`）。
 
 ### GET /market?market=btctwd&kind=ticker|kline|depth
-Response：`{ "kind","market","fetched_at","data":{MAX 原始回應} }`
+Response：`{ "kind","market","fetched_at_utc","fetched_at_taipei","data":{...} }`（2026-07-21 改版）
+ticker/depth 的 `data` 為 MAX 原始回應；kline 的 `data` 已由程式正規化為具名 OHLCV（由舊到新）：
+`[{"timestamp","time_utc","time_taipei","open","high","low","close","volume"}]`
+——`time_utc`/`time_taipei` 為權威時間，消費端（含 LLM）不得自行換算 Unix timestamp。
 
 ### POST /order
 Request：`{ "confirm_token","session_id" }`。成功：`{ "ok":true,"order","exchange_response" }`；
