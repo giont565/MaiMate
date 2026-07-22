@@ -68,6 +68,16 @@ Resources:
       Events:
         Post: { Type: HttpApi, Properties: { ApiId: !Ref Api, Path: /order, Method: POST } }
 
+  AuditFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: backend.handlers.audit.handler
+      CodeUri: ../
+      Policies:
+        - DynamoDBReadPolicy: { TableName: !Ref SessionTable }
+      Events:
+        Get: { Type: HttpApi, Properties: { ApiId: !Ref Api, Path: /audit, Method: GET } }
+
   SessionTable:
     Type: AWS::Serverless::SimpleTable
     Properties:

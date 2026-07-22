@@ -3,51 +3,123 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MaiMate</title>
+<title>MaiMate 麥麥</title>
 <style>
-  :root{--navy:#16224D;--navy-d:#0D1530;--ice:#EAF0FB;--gold:#E8A13A;--green:#1F9D66;--red:#D64550;--ink:#1F2937;--mut:#6B7280}
-  *{box-sizing:border-box;font-family:"Microsoft JhengHei","PingFang TC",system-ui,sans-serif}
-  body{margin:0;background:#F4F7FD;color:var(--ink)}
-  header{background:var(--navy-d);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:12px}
-  header h1{font-size:18px;margin:0}
-  header .badge{font-size:11px;color:var(--gold)}
-  main{display:grid;grid-template-columns:300px 1fr 260px;gap:16px;padding:16px;max-width:1280px;margin:0 auto}
-  .panel{background:#fff;border-radius:14px;padding:16px;box-shadow:0 1px 4px rgba(22,34,77,.08)}
-  .panel h2{font-size:14px;margin:0 0 12px;color:var(--navy)}
-  .stat{background:var(--ice);border-radius:10px;padding:10px 14px;margin-bottom:10px}
-  .stat .n{font-size:22px;font-weight:700}
-  .stat .l{font-size:11px;color:var(--mut)}
-  #chatlog{height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
-  .msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:14px;line-height:1.6}
-  .msg.user{align-self:flex-end;background:var(--ice)}
-  .msg.ai{align-self:flex-start;background:var(--navy);color:#fff}
-  .confirm-card{border:2px solid var(--gold);background:#FFF4E0;border-radius:12px;padding:12px;font-size:13px}
-  .confirm-card button{margin-top:8px;margin-right:8px;padding:6px 18px;border:0;border-radius:8px;cursor:pointer}
-  .confirm-card .ok{background:var(--green);color:#fff}
-  .confirm-card .no{background:#ddd}
-  form{display:flex;gap:8px}
-  input{flex:1;padding:10px 14px;border:1px solid #D5DEF0;border-radius:10px;font-size:14px}
-  button[type=submit]{padding:10px 20px;background:var(--navy);color:#fff;border:0;border-radius:10px;cursor:pointer}
-  .tick{display:flex;justify-content:space-between;background:var(--ice);border-radius:10px;padding:8px 12px;margin-bottom:8px;font-size:13px}
-  .tick .v{font-variant-numeric:tabular-nums;transition:color .3s}
+  /* 視覺系統來源：docs/mockups/base.css（設計稿三畫面），改為響應式 */
+  :root{--navy:#16224D;--navy-d:#0D1530;--ice:#EAF0FB;--gold:#E8A13A;--green:#1F9D66;--red:#D64550;--ink:#1F2937;--mut:#6B7280;--bg:#F4F7FD}
+  *{box-sizing:border-box;font-family:"Noto Sans CJK TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;margin:0}
+  body{background:var(--bg);color:var(--ink)}
+
+  /* ── 頂欄 ── */
+  .topbar{background:var(--navy-d);color:#fff;padding:14px 16px 12px;display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:20}
+  .topbar .logo img{width:34px;height:37px;image-rendering:pixelated;display:block}
+  .topbar h1{font-size:17px;font-weight:700}
+  .topbar .sub{font-size:10px;color:#A9B7D9}
+  .badge{margin-left:auto;background:#22315E;border:1px solid var(--gold);color:var(--gold);font-size:10.5px;padding:3px 10px;border-radius:999px;font-weight:700;white-space:nowrap}
+  .offline{font-size:10px;color:#FF9AA2;display:none;margin-left:8px}
+
+  /* ── 版面：手機單欄，桌機（≥900px）雙欄 ── */
+  main{max-width:480px;margin:0 auto;padding:14px 14px 96px}
+  @media (min-width:900px){
+    main{max-width:1080px;display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start;padding-bottom:20px}
+    #side{position:sticky;top:76px}
+  }
+
+  .hello{font-size:15px;font-weight:700;margin:4px 2px 12px}
+  .hello span{color:var(--mut);font-weight:400;font-size:12px;display:block;margin-top:3px}
+  .sec{font-size:12px;font-weight:700;color:var(--navy);margin:10px 2px 8px}
+
+  /* 健檢 2×2 卡 */
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
+  .card{background:#fff;border-radius:16px;padding:14px;box-shadow:0 1px 6px rgba(22,34,77,.07)}
+  .card .n{font-size:22px;font-weight:800}
+  .card .l{font-size:10.5px;color:var(--mut);margin-top:3px;line-height:1.4}
+  .insight{background:#fff;border-left:4px solid var(--red);border-radius:12px;padding:11px 13px;font-size:12px;line-height:1.6;margin-bottom:10px;box-shadow:0 1px 6px rgba(22,34,77,.06)}
+  .insight b{color:var(--red)}
+  .insight.g{border-color:var(--green)} .insight.g b{color:var(--green)}
+
+  /* 行情膠囊列 */
+  .tick{display:flex;justify-content:space-between;background:#fff;border-radius:12px;padding:9px 13px;margin-bottom:8px;font-size:12.5px;box-shadow:0 1px 5px rgba(22,34,77,.05)}
+  .tick b{color:var(--navy)}
+  .tick .v{font-variant-numeric:tabular-nums;transition:color .3s;font-weight:700}
   .tick .v.up{color:var(--green)}
   .tick .v.down{color:var(--red)}
-  .offline{font-size:11px;color:var(--red);display:none}
+
+  /* ── 對話 ── */
+  #chatlog{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+  .msg{max-width:86%;padding:11px 14px;border-radius:14px;font-size:13.5px;line-height:1.65;margin-bottom:10px}
+  .msg.user{align-self:flex-end;background:var(--ice);border-bottom-right-radius:4px}
+  .msg.ai{align-self:flex-start;background:var(--navy);color:#fff;border-bottom-left-radius:4px}
+  .msg.ai b{color:var(--gold)}
+  .tools{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 10px}
+  .tool{font-size:10px;background:#fff;border:1px solid #C9D6EE;color:var(--navy);border-radius:999px;padding:3px 9px;font-weight:600}
+  .tool .ok{color:var(--green)}
+
+  /* 三方案卡（README §3 scenarios） */
+  .scen{background:#fff;border:1.5px solid #E3E9F5;border-radius:14px;padding:12px 14px;margin-bottom:9px;box-shadow:0 1px 5px rgba(22,34,77,.05)}
+  .scen.pick{border-color:var(--gold);background:#FFFDF6}
+  .scen .t{display:flex;align-items:center;font-size:13.5px;font-weight:800;color:var(--navy);margin-bottom:6px}
+  .scen .tag{margin-left:auto;font-size:9.5px;font-weight:700;border-radius:999px;padding:2px 8px;background:var(--ice);color:var(--navy)}
+  .scen.pick .tag{background:var(--gold);color:#fff}
+  .scen .row{display:flex;gap:10px;font-size:10.5px;color:var(--mut)}
+  .scen .row b{display:block;font-size:12.5px;color:var(--ink);margin-top:1px}
+  .scen .row>div{flex:1}
+  .scen .note{font-size:10.5px;color:var(--mut);margin-top:7px;line-height:1.5}
+
+  /* 下單確認卡（設計稿 screen3） */
+  .confirm{background:#FFF8EA;border:2px solid var(--gold);border-radius:16px;padding:16px;margin-bottom:12px}
+  .confirm .h{font-size:14.5px;font-weight:800;color:var(--navy);margin-bottom:10px}
+  .confirm table{width:100%;font-size:12.5px;border-collapse:collapse}
+  .confirm td{padding:5px 0;color:var(--mut)}
+  .confirm td:last-child{text-align:right;color:var(--ink);font-weight:700}
+  .confirm .warn{font-size:10.5px;color:var(--red);margin-top:8px;line-height:1.5}
+  .btns{display:flex;gap:10px;margin-top:12px}
+  .btns button{border:0;border-radius:12px;padding:12px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit}
+  .btns .ok{flex:1.4;background:var(--green);color:#fff}
+  .btns .no{flex:1;background:#E8EDF7;color:var(--ink)}
+  .done{background:#EBF9F1;border:1.5px solid var(--green);color:#116b45;border-radius:12px;padding:10px 14px;font-size:12.5px;font-weight:700;margin-bottom:12px}
+
+  /* 決策軌跡面板（設計稿 screen3） */
+  .trail{background:#fff;border-radius:14px;padding:14px;box-shadow:0 1px 6px rgba(22,34,77,.06);margin-bottom:12px}
+  .trail .h{font-size:12.5px;font-weight:800;color:var(--navy);display:flex;margin-bottom:10px}
+  .trail .h span{margin-left:auto;font-size:10px;color:var(--green);font-weight:700}
+  .step{display:flex;gap:10px;font-size:11px;color:var(--ink);margin-bottom:7px;align-items:baseline}
+  .step i{font-style:normal;color:var(--mut);font-size:10px;flex:none;width:40px}
+  .step em{font-style:normal;font-family:ui-monospace,Consolas,monospace;background:var(--ice);color:var(--navy);border-radius:6px;padding:1px 7px;font-size:10px}
+  .step.hl em{background:#FFEBC2;color:#8a5a00}
+
+  /* 底部輸入列：手機固定、桌機貼齊對話欄 */
+  .inputbar{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:10px 14px calc(14px + env(safe-area-inset-bottom));display:flex;gap:8px;border-top:1px solid #E3E9F5;z-index:20}
+  .inputbar input{flex:1;background:var(--bg);border:1px solid #D5DEF0;border-radius:999px;padding:10px 16px;font-size:13px;font-family:inherit}
+  .inputbar button{width:42px;height:42px;border-radius:999px;background:var(--navy);color:#fff;border:0;font-size:16px;cursor:pointer;flex:none}
+  @media (min-width:900px){
+    .inputbar{position:sticky;bottom:0;border:1px solid #E3E9F5;border-radius:16px;margin-top:8px}
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1>MaiMate</h1><span class="badge">懂你操作史的 AI 投資特助</span>
-  <span class="offline" id="offline">離線模式（展示資料）</span>
+<header class="topbar">
+  <div class="logo"><img src="maimate_bot_small.png" alt="麥麥"></div>
+  <div><h1>MaiMate 麥麥</h1><div class="sub">市場一直在變，麥麥一直陪你</div></div>
+  <span class="offline" id="offline">離線展示</span>
+  <span class="badge" id="mode-badge" style="cursor:pointer" title="點擊切換使用者模式（Demo）">成長陪跑</span>
 </header>
 <main>
-  <section class="panel"><h2>行為健檢</h2><div id="health"></div></section>
-  <section class="panel">
-    <h2>AI 對話</h2>
+  <aside id="side">
+    <div class="hello">早安！這是你今天的投資健檢<span>依據你 2025 全年 10,000 筆真實交易紀錄</span></div>
+    <div class="cards" id="health"></div>
+    <div class="sec">麥麥幫你看到的事</div>
+    <div id="insights"></div>
+    <div class="sec">即時行情</div>
+    <div id="market"></div>
+  </aside>
+  <section id="chatcol">
     <div id="chatlog"></div>
-    <form id="chatform"><input id="q" placeholder="問我任何事，例如：我去年表現怎麼樣？" autocomplete="off"><button type="submit">送出</button></form>
+    <form class="inputbar" id="chatform">
+      <input id="q" placeholder="問麥麥任何事，例如：我去年虧最多的是哪一筆？" autocomplete="off">
+      <button type="submit" aria-label="送出">➤</button>
+    </form>
   </section>
-  <section class="panel"><h2>即時行情</h2><div id="market"></div></section>
 </main>
 <script>window.API_BASE = "https://4vjxh3jv8d.execute-api.us-east-1.amazonaws.com";</script>
 <script src="app.js"></script>

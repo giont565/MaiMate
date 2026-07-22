@@ -14,10 +14,20 @@ API 契約、十組驗收清單、商業模式全在裡面；任何範圍/介面
 4. **execute_order 永不進 LLM 工具清單**（tools.py 的 prepare/execute 分離是安全架構，不可合併）
 5. 費率等對外數字要可查證：MAX 現貨基礎 maker 0.08%/taker 0.16%（2026-07 查證，上線前再對官網）
 
+## 開發紀律（人與 AI 一體適用）
+
+全文在 `.kiro/steering/workflow.md`（Kiro 自動載入；用其他 AI 開發時把該檔連同任務餵給它）。
+五大重點：①git 一律 clone＋每日 `pull --rebase`，禁止本地快照當 initial commit 硬併回 main
+②環境值不硬編碼，`index.html` 的 API_BASE 是唯一例外——每次重部署必須更新（列入 DEPLOY.md 清單）
+③前端輪詢就地更新不清空重建、失敗保留舊值、插 DOM 先 escape
+④工具 description 寫明區塊對應問題、查詢回傳附 key_findings＋data_notes（模型答不出先怪工具再怪 prompt）
+⑤寫好≠測過：後端 py_compile＋實跑、前端 `npm run smoke`、prompt 改動部署後用固定劇本句實測。
+
 ## 常用操作
 
 ```bash
 bash scripts/setup.sh                # 環境檢查
+npm run smoke                        # 前端煙測（改 frontend/ 必跑；首次先 npm i）
 python3 analysis/precompute.py       # CSV → data/health_report.json（真實數據源頭）
 cd docs && node build_deck.js        # 重出提案簡報（評審版，勿混入內部內容）
 cd docs && node build_handbook.js    # 重出開發手冊（隊內版）

@@ -8,13 +8,14 @@ data/*.zip
 *.pem
 samconfig.toml
 
-# 建置產物
+# 建置產物（docs 簡報產生器的暫用 npm 檔勿入 git；根目錄 package.json 是煙測用、要進版控）
 node_modules/
-package.json
-package-lock.json
+docs/**/package.json
+docs/**/package-lock.json
 __pycache__/
 *.pyc
 .aws-sam/
 docs/*.pdf
 docs/slide-*.jpg
 .DS_Store
+smoke_mobile.png

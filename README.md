@@ -224,6 +224,20 @@ MaiMate 的每個功能都直接推動這台收費機器：
 賽前自家帳號全跑通 → 一切設定走環境變數（零硬編碼）→ 7/31 前完成從零部署演練（目標<1hr，寫成 DEPLOY.md）
 → 決賽當天官方環境重跑腳本＝上線。
 
+### 產品化整合路徑（未來架構：獨立 sidecar，不塞進主程式）
+
+**一句話：MaiMate 是掛在交易所旁邊的獨立 AI 服務（sidecar），不是塞進主交易系統的模組——
+升級迭代不動核心系統，這是可行性與合規的雙重賣點。** 黑客松版與產品版是同一套後端，只換入口與帳號整合：
+
+| 階段 | 入口 | 帳號/資料 | 下單 | 主系統改動 |
+|---|---|---|---|---|
+| 黑客松（現況） | 獨立 Web（S3+CloudFront） | 官方 CSV 預計算＋使用者 API Key | MAX Private API＋逐筆確認 | 零 |
+| 產品化 | MaiCoin/MAX App 內嵌（WebView 或原生「麥麥」分頁），前端即現有 SPA | 平台 OAuth 授權取代自填 API Key；健檢改讀平台交易史 API | 不變（仍走既有 Private API＋逐筆確認） | 零——只加一個入口 |
+| B2B 白牌 | 客戶自有 App | 多租戶部署，語料/Guardrails/品牌可換 | 各交易所自有 API | 零 |
+
+邊界原則（合規敘事同 §4.9）：MaiMate 全程只做「讀資料＋產草稿＋留稽核」，execute 永遠隔離在 LLM 之外、
+由使用者逐筆確認觸發——所以它可以貼著任何交易系統跑，審計邊界天然清晰。
+
 ---
 
 ## 3. API 介面契約（套件間交接唯一依據；改介面先在 #dev 廣播）
@@ -252,7 +266,12 @@ Response：
 Response＝`data/health_report.json` 對應區塊（欄位定義：`.kiro/steering/data-schema.md`）。
 
 ### GET /market?market=btctwd&kind=ticker|kline|depth
-Response：`{ "kind","market","fetched_at","data":{MAX 原始回應} }`
+Response：`{ "kind","market","fetched_at_utc","fetched_at_taipei","data":{...} }`（2026-07-21 改版）
+ticker 的 `data` 為 MAX 原始回應；kline 的 `data` 已由程式正規化為具名 OHLCV（由舊到新）：
+`[{"timestamp","time_utc","time_taipei","open","high","low","close","volume"}]`
+——`time_utc`/`time_taipei` 為權威時間，消費端（含 LLM）不得自行換算 Unix timestamp。
+depth 的 `data` 已正規化（asks 低→高、bids 高→低）並附確定性計算欄位：
+`best_ask`/`best_bid`/`spread_twd`/`spread_pct`——價差由程式算好，LLM 不得自行計算。
 
 ### POST /order
 Request：`{ "confirm_token","session_id" }`。成功：`{ "ok":true,"order","exchange_response" }`；
@@ -280,13 +299,13 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 - [ ] 輸入 PII 先清洗；輸出命中明牌句式走安全回覆；迴圈 ≤8 輪
 - [ ] Haiku/Sonnet 意圖路由＋prompt caching（#5）
 
-### 4.3 三方案引擎（trade-scenarios，#11）｜主責 A（卡片渲染：C）
+### 4.3 三方案引擎（trade-scenarios，#11）｜主責 A（卡片渲染：C）— 🧪 已實作＋單元驗證（07/21），整合測試待部署
 - [ ] 交易意圖 → 三方案（保守/原意圖/暫停），數字全由程式計算
 - [ ] 每方案含預估金額、手續費（MAX 公告費率＋來源註記）、執行後集中度、個人行為註記
 - [ ] 標的不在持倉 → 明確錯誤；暫停版不產生訂單；方案欄位相容 prepare_order
 - [ ] 滑價聲明標注
 
-### 4.4 Profile Engine（profile-engine，#10）｜主責 A（徽章與切換 UI：C）
+### 4.4 Profile Engine（profile-engine，#10）｜主責 A（徽章與切換 UI：C）— 🧪 已實作＋單元驗證（07/21），三模式實測劇本待部署
 - [ ] 從 health_report 確定性規則分類三模式（cautious/growth/pro）＋附判定依據
 - [ ] 模式注入 system prompt 改變語氣與提醒強度；安全機制三模式一致
 - [ ] Demo 可切換模式：同一句「幫我全賣」三種回應肉眼可辨
@@ -302,7 +321,7 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 - [ ] Bedrock KB + S3 Vectors 建置；query_knowledge 回答附出處
 - [ ] 「什麼是定期定額」「這是不是詐騙話術」能引用語料回答
 
-### 4.7 Audit Log（#12）｜主責 B（loop 埋點：A；面板：C）
+### 4.7 Audit Log（#12）｜主責 B（loop 埋點：A；面板：C）— 🧪 已實作＋單元驗證（07/21），DynamoDB 路徑與 Golden Path 驗收待部署
 - [ ] 每次工具呼叫留痕（摘要不含 PII）；訂單生命週期 draft→confirmed/expired→executed
 - [ ] GET /audit 可還原完整軌跡；前端「決策軌跡」面板；append-only
 
@@ -345,8 +364,12 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 ```bash
 bash scripts/setup.sh                 # 環境檢查（缺什麼它會說）
 python3 analysis/precompute.py        # CSV → health_report.json
+npm i && npm run smoke                # 前端煙測（改 frontend/ 必跑；mock API 離線可跑）
 cd infra && sam build && sam deploy --guided
 ```
+
+**開發紀律**（git 流程／零硬編碼與 API_BASE 部署檢查／UI 就地更新／工具描述＋key_findings／寫好≠測過）
+：`.kiro/steering/workflow.md`——隊員與所有 AI 開發工具一體適用，Kiro 自動載入，用其他 AI 時把該檔餵給它。
 
 🚫 官方 CSV 與 RAG 語料不進 git（Drive/S3）｜🚫 金鑰與兌換碼不共用不外流、只走環境變數。
 簡報產生器在 `docs/build_*.js`（node 跑一下即重出）。

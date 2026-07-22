@@ -100,6 +100,66 @@ def opportunity_cost(rows):
     return {"total_missed_twd": round(total, 0), "worst_single_sell": worst}
 
 
+def realized_pnl(rows):
+    """已實現損益（移動平均成本法）：每筆賣出以「賣價 − 當時平均買入成本」計實際賺賠。
+
+    與 opportunity_cost 的分工（回答用語要分清楚）：
+      realized_pnl     = 真實虧損/獲利——錢包實際發生的賺賠
+      opportunity_cost = 少賺（機會成本）——賣後價格續漲的假設差額，不是虧損
+    期初已持有、無買入成本紀錄的部位，其賣出不計入（如實標注在 note）。
+    """
+    pos = {}  # currency -> [qty, avg_cost]
+    total = 0.0
+    worst_loss = None
+    best_gain = None
+    loss_trades = profit_trades = skipped_no_cost = 0
+    for r in rows:
+        cur = r["currency"]
+        if cur == "twd" or r["action"] not in ("buy", "sell"):
+            continue
+        qty0, cost0 = pos.get(cur, (0.0, 0.0))
+        if r["action"] == "buy":
+            add = r["change"]  # buy 的 change 為正
+            if add <= 0:
+                continue
+            qty1 = qty0 + add
+            pos[cur] = (qty1, (qty0 * cost0 + add * r["price"]) / qty1)
+            continue
+        sell_qty = -r["change"]  # sell 的 change 為負
+        if qty0 <= 0:
+            skipped_no_cost += 1
+            continue
+        matched = min(sell_qty, qty0)
+        pnl = (r["price"] - cost0) * matched
+        total += pnl
+        detail = {
+            "date": datetime.fromtimestamp(r["ts"] / 1000, tz=timezone.utc).strftime("%Y-%m-%d"),
+            "currency": cur,
+            "qty": round(matched, 6),
+            "sell_price": r["price"],
+            "avg_cost": round(cost0, 6),
+            "pnl_twd": round(pnl, 0),
+        }
+        if pnl < 0:
+            loss_trades += 1
+            if worst_loss is None or pnl < worst_loss["pnl_twd"]:
+                worst_loss = detail
+        elif pnl > 0:
+            profit_trades += 1
+            if best_gain is None or pnl > best_gain["pnl_twd"]:
+                best_gain = detail
+        pos[cur] = (qty0 - matched, cost0)
+    return {
+        "method": "moving_average_cost",
+        "total_realized_twd": round(total, 0),
+        "loss_trades": loss_trades,
+        "profit_trades": profit_trades,
+        "worst_single_loss": worst_loss,
+        "best_single_gain": best_gain,
+        "note": f"期初持倉無成本紀錄之賣出不計入（{skipped_no_cost} 筆）；成本採移動平均法",
+    }
+
+
 def concentration(rows):
     """持倉集中度：每月月底各幣市值佔比，找最高集中月份。"""
     balances = {}
@@ -170,6 +230,7 @@ def main():
         },
         "chase_index": chase_index(rows),
         "opportunity_cost": opportunity_cost(rows),
+        "realized_pnl": realized_pnl(rows),
         "concentration": concentration(rows),
         "cash_flow_behavior": cash_flow_behavior(rows),
         "activity_profile": activity_profile(rows),
