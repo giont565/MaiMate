@@ -1,6 +1,8 @@
 import unittest
+from unittest.mock import patch
 
-from backend.integrations.max_public import _normalize_depth
+from backend.integrations import max_public
+from backend.integrations.max_public import _normalize_depth, _normalize_ticker
 
 
 class NormalizeDepthTests(unittest.TestCase):
@@ -46,6 +48,28 @@ class NormalizeDepthTests(unittest.TestCase):
     def test_rejects_malformed_level(self):
         with self.assertRaises(ValueError):
             _normalize_depth({"asks": [["100"]], "bids": [["99", "1"]]})
+
+
+class MarketPeriodAndTimeTests(unittest.TestCase):
+    def setUp(self):
+        max_public._cache.clear()
+
+    def test_ticker_includes_authoritative_times(self):
+        result = _normalize_ticker({"at": 1784723456, "last": "1"})
+        self.assertEqual(result["time_utc"], "2026-07-22T12:30:56Z")
+        self.assertEqual(result["time_taipei"], "2026-07-22T20:30:56+08:00")
+
+    @patch("backend.integrations.max_public._get")
+    def test_kline_period_is_forwarded_and_reported(self, mock_get):
+        mock_get.return_value = [[1784552400, 1, 2, 0.5, 1.5, 10]]
+        result = max_public.fetch("btctwd", "kline", period=1)
+        called_url = mock_get.call_args.args[0]
+        self.assertIn("period=1", called_url)
+        self.assertEqual(result["period_minutes"], 1)
+
+    def test_rejects_period_for_non_kline(self):
+        with self.assertRaises(ValueError):
+            max_public.fetch("btctwd", "ticker", period=1)
 
 
 if __name__ == "__main__":
