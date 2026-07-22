@@ -12,6 +12,27 @@ _ADVICE_PATTERNS = [
     r"保證(獲利|賺)",
 ]
 
+# 防詐、風險教育與否定句可能引用同一組買賣字詞；這些不是對使用者下指令。
+_SAFETY_CONTEXT = re.compile(
+    r"(不要|不可|切勿|勿|不應|不|避免|拒絕|警惕|警訊|"
+    r"詐騙(?:集團|群組|話術)?(?:可能)?(?:會)?|"
+    r"對方(?:可能)?(?:會)?|假冒|自稱|聲稱|宣稱|誘導|要求)"
+    r"[^。！？\\n]{0,16}$"
+)
+
+
+def _is_safety_context(text, match):
+    """Return True when an advice-like phrase is governed by nearby safety language."""
+    sentence_start = max(
+        text.rfind("。", 0, match.start()),
+        text.rfind("！", 0, match.start()),
+        text.rfind("？", 0, match.start()),
+        text.rfind("\\n", 0, match.start()),
+    )
+    prefix = text[sentence_start + 1:match.start()]
+    return bool(_SAFETY_CONTEXT.search(prefix))
+
+
 # 輸入清洗：不讓個資進到模型上下文
 _PII_PATTERNS = [
     (re.compile(r"[A-Z][12]\d{8}"), "[身分證字號]"),
@@ -28,7 +49,14 @@ def scrub_input(text):
 
 def check_output(text):
     """回傳 (ok, hits)。ok=False 時上層改走安全回覆，不直接輸出。"""
-    hits = [p for p in _ADVICE_PATTERNS if re.search(p, text)]
+    hits = []
+    for pattern in _ADVICE_PATTERNS:
+        unsafe_matches = [
+            match for match in re.finditer(pattern, text)
+            if not _is_safety_context(text, match)
+        ]
+        if unsafe_matches:
+            hits.append(pattern)
     return (not hits, hits)
 
 
