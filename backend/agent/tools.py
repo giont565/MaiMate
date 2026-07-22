@@ -45,7 +45,8 @@ TOOLS = [
         "name": "get_market_data",
         "description": (
             "查 MAX 交易所即時行情：最新成交價、24h 漲跌、K 線、買賣深度。"
-            "kline 回傳已由程式轉成具名 OHLCV，time_utc/time_taipei 是權威時間；"
+            "ticker 與 kline 的 time_utc/time_taipei 是程式產生的權威時間，禁止自行換算；"
+            "kline 的 period 單位為分鐘；未指定時預設 60，使用者要求週期時必須原樣傳入；"
             "禁止自行換算 Unix timestamp。要求最近 N 根時，必須逐根完整列出 data 最後 N 筆。"
             "depth 回傳已排序（asks 低→高、bids 高→低）並附 best_ask/best_bid/"
             "spread_twd/spread_pct——價差引用這些欄位，禁止自行計算。"
@@ -55,6 +56,8 @@ TOOLS = [
             "properties": {
                 "market": {"type": "string", "description": "交易對，如 btctwd、ethtwd"},
                 "kind": {"type": "string", "enum": ["ticker", "kline", "depth"]},
+                "period": {"type": "integer", "minimum": 1,
+                           "description": "Kline 週期（分鐘），例如 1、5、15、30、60；僅 kind=kline 使用"},
             },
             "required": ["market", "kind"],
         }},
@@ -179,9 +182,9 @@ def query_user_history(section="all"):
     return {**data, "key_findings": findings, "data_notes": notes}
 
 
-def get_market_data(market, kind):
+def get_market_data(market, kind, period=None):
     from ..integrations import max_public
-    return max_public.fetch(market, kind)
+    return max_public.fetch(market, kind, period=period)
 
 
 def get_account_balance():
