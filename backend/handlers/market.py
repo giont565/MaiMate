@@ -8,8 +8,9 @@ def handler(event, context):
     q = event.get("queryStringParameters") or {}
     market = q.get("market", "btctwd")
     kind = q.get("kind", "ticker")
+    period = q.get("period")
     try:
-        data = max_public.fetch(market, kind)
+        data = max_public.fetch(market, kind, period=period)
         return _resp(200, data)
     except ValueError as e:
         return _resp(400, {"code": "bad_request", "message": str(e), "retryable": False})
