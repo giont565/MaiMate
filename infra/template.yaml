@@ -4,6 +4,12 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: MAX Copilot serverless stack
 
+Parameters:
+  KnowledgeBaseId:
+    Type: String
+    Default: DSIYBVI1IX
+    Description: Bedrock Knowledge Base used by the query_knowledge agent tool
+
 Globals:
   Function:
     Runtime: python3.12
@@ -28,6 +34,10 @@ Resources:
       Handler: backend.handlers.chat.handler
       CodeUri: ../
       Timeout: 60
+      Environment:
+        Variables:
+          KB_ID: !Ref KnowledgeBaseId
+          BEDROCK_REGION: !Ref AWS::Region
       Policies:
         - Statement:
             - Effect: Allow
@@ -36,6 +46,9 @@ Resources:
             - Effect: Allow
               Action: [aws-marketplace:ViewSubscriptions, aws-marketplace:Subscribe]
               Resource: "*"
+            - Effect: Allow
+              Action: [bedrock:Retrieve]
+              Resource: !Sub "arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:knowledge-base/${KnowledgeBaseId}"
         - DynamoDBCrudPolicy: { TableName: !Ref SessionTable }
       Events:
         Post: { Type: HttpApi, Properties: { ApiId: !Ref Api, Path: /chat, Method: POST } }
