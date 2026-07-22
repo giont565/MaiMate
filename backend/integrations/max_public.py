@@ -16,7 +16,7 @@ _cache = {}
 
 ENDPOINTS = {
     "ticker": "/api/v3/ticker?market={market}",
-    "kline": "/api/v3/k?market={market}&period=60&limit=48",
+    "kline": "/api/v3/k?market={market}&period={period}&limit=48",
     "depth": "/api/v3/depth?market={market}&limit=20",
 }
 
@@ -31,6 +31,20 @@ def _iso_times(timestamp):
         dt_utc.isoformat().replace("+00:00", "Z"),
         dt_utc.astimezone(TAIPEI_TZ).isoformat(),
     )
+
+
+def _normalize_ticker(ticker):
+    """Attach authoritative UTC/Taipei times without changing MAX's raw fields."""
+    if not isinstance(ticker, dict):
+        raise ValueError(f"unexpected ticker response: {ticker!r}")
+    normalized = dict(ticker)
+    if ticker.get("at") is not None:
+        _ts, utc_iso, taipei_iso = _iso_times(ticker["at"])
+        normalized.update({
+            "time_utc": utc_iso,
+            "time_taipei": taipei_iso,
+        })
+    return normalized
 
 
 def _normalize_kline(rows):
@@ -110,17 +124,29 @@ def _get(url, retries=3):
             delay *= 2
 
 
-def fetch(market, kind):
+def fetch(market, kind, period=None):
     if kind not in ENDPOINTS:
         raise ValueError(f"unknown kind: {kind}")
-    key = f"{kind}:{market}"
+    if kind == "kline":
+        try:
+            period = 60 if period is None else int(period)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("kline period must be an integer number of minutes") from exc
+        if period <= 0:
+            raise ValueError("kline period must be greater than zero")
+    elif period is not None:
+        raise ValueError("period is only supported for kline")
+
+    key = f"{kind}:{market}:{period}"
     now = time.time()
     hit = _cache.get(key)
     if hit and hit[0] > now:
         return hit[1]
 
-    data = _get(BASE + ENDPOINTS[kind].format(market=market))
-    if kind == "kline":
+    data = _get(BASE + ENDPOINTS[kind].format(market=market, period=period))
+    if kind == "ticker":
+        data = _normalize_ticker(data)
+    elif kind == "kline":
         data = _normalize_kline(data)
     elif kind == "depth":
         data = _normalize_depth(data)
@@ -129,6 +155,7 @@ def fetch(market, kind):
     result = {
         "kind": kind,
         "market": market,
+        "period_minutes": period if kind == "kline" else None,
         "fetched_at_utc": fetched.isoformat().replace("+00:00", "Z"),
         "fetched_at_taipei": fetched.astimezone(TAIPEI_TZ).isoformat(),
         "data": data,
