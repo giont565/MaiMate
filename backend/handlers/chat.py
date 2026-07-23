@@ -24,7 +24,12 @@ def handler(event, context):
     prof = profile.profile_for(mode=body.get("mode"))
     out, confirm_data, tool_trail, scenarios_data = loop.run_agent(messages, profile=prof)
     text = "".join(b.get("text", "") for b in out.get("content", []))
-    ok, _hits = guardrails.check_output(text)
+    used_knowledge_base = any(
+        item.get("tool") == "query_knowledge"
+        for item in (tool_trail or [])
+        if isinstance(item, dict)
+    )
+    ok, _hits = guardrails.check_output(text, educational=used_knowledge_base)
     if not ok:
         text = guardrails.SAFE_FALLBACK
     payload = {"reply": text, "messages": messages, "mode": prof["mode"]}
