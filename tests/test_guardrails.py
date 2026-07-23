@@ -31,6 +31,22 @@ class OutputGuardrailTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertTrue(hits)
 
+    def test_allows_generic_dca_education_from_knowledge_base(self):
+        text = "定期定額是固定時間投入固定金額。一般會建議你現在買入並長期持有。"
+        ok, hits = check_output(text, educational=True)
+        self.assertTrue(ok)
+        self.assertEqual(hits, [])
+
+    def test_blocks_specific_asset_advice_from_knowledge_base(self):
+        ok, hits = check_output("我建議你現在買入 BTC。", educational=True)
+        self.assertFalse(ok)
+        self.assertTrue(hits)
+
+    def test_blocks_guaranteed_profit_from_knowledge_base(self):
+        ok, hits = check_output("定期定額保證獲利。", educational=True)
+        self.assertFalse(ok)
+        self.assertTrue(hits)
+
 
 if __name__ == "__main__":
     unittest.main()
