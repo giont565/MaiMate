@@ -12,6 +12,14 @@ _ADVICE_PATTERNS = [
     r"保證(獲利|賺)",
 ]
 
+# 教育型回答仍不得推薦具體標的。這份清單只用於判斷「直接買賣建議」，
+# 不會攔截單純解釋定期定額中「固定金額買入」之類的中性描述。
+_SPECIFIC_ASSET = re.compile(
+    r"\b(?:BTC|ETH|SOL|DOGE|[A-Z]{2,10}/(?:TWD|USDT|USD))\b|"
+    r"(?:比特幣|以太幣|虛擬貨幣|加密貨幣|股票|個股|基金|ETF|標的)",
+    re.IGNORECASE,
+)
+
 # 防詐、風險教育與否定句可能引用同一組買賣字詞；這些不是對使用者下指令。
 _SAFETY_CONTEXT = re.compile(
     r"(不要|不可|切勿|勿|不應|不|避免|拒絕|警惕|警訊|"
@@ -33,6 +41,27 @@ def _is_safety_context(text, match):
     return bool(_SAFETY_CONTEXT.search(prefix))
 
 
+def _sentence_containing(text, match):
+    """Return the sentence containing a regex match."""
+    start = max(
+        text.rfind("。", 0, match.start()),
+        text.rfind("！", 0, match.start()),
+        text.rfind("？", 0, match.start()),
+        text.rfind("\n", 0, match.start()),
+    )
+    ends = [
+        pos for pos in (
+            text.find("。", match.end()),
+            text.find("！", match.end()),
+            text.find("？", match.end()),
+            text.find("\n", match.end()),
+        )
+        if pos >= 0
+    ]
+    end = min(ends) if ends else len(text)
+    return text[start + 1:end]
+
+
 # 輸入清洗：不讓個資進到模型上下文
 _PII_PATTERNS = [
     (re.compile(r"[A-Z][12]\d{8}"), "[身分證字號]"),
@@ -47,14 +76,25 @@ def scrub_input(text):
     return text
 
 
-def check_output(text):
-    """回傳 (ok, hits)。ok=False 時上層改走安全回覆，不直接輸出。"""
+def check_output(text, educational=False):
+    """回傳 (ok, hits)。
+
+    educational=True 只放行未指定標的的教育型敘述；保證獲利、必漲必跌，
+    以及任何帶具體標的的直接買賣建議仍會被攔截。
+    """
     hits = []
-    for pattern in _ADVICE_PATTERNS:
-        unsafe_matches = [
-            match for match in re.finditer(pattern, text)
-            if not _is_safety_context(text, match)
-        ]
+    for index, pattern in enumerate(_ADVICE_PATTERNS):
+        unsafe_matches = []
+        for match in re.finditer(pattern, text):
+            if _is_safety_context(text, match):
+                continue
+            if (
+                educational
+                and index == 0
+                and not _SPECIFIC_ASSET.search(_sentence_containing(text, match))
+            ):
+                continue
+            unsafe_matches.append(match)
         if unsafe_matches:
             hits.append(pattern)
     return (not hits, hits)
