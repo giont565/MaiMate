@@ -52,18 +52,18 @@ function statusTable(s, rows, y, colW, rowH) {
   s.addText("隊伍「第五名」團隊會議", { x: M, y: 1.6, w: 8, h: 0.4, fontFace: FONT, fontSize: 14, color: GOLD, margin: 0 });
   s.addText("MaiMate 開發手冊", { x: M, y: 2.1, w: W - 2 * M, h: 1.0, fontFace: FONT, fontSize: 46, bold: true, color: WHITE, margin: 0 });
   s.addText("狀態・分工・架構・成本・驗收・Kiro 教學——隊內唯一簡報", { x: M, y: 3.3, w: 10, h: 0.5, fontFace: FONT, fontSize: 18, color: ICE, margin: 0 });
-  s.addText("2026/07/21 更新｜決賽 8/1–8/2｜文字完整版：repo 首頁 README.md", { x: M, y: 6.4, w: 10, h: 0.4, fontFace: FONT, fontSize: 13, color: "8FA0C9", margin: 0 });
+  s.addText("2026/07/24 更新｜決賽 8/1–8/2｜文字完整版：repo 首頁 README.md", { x: M, y: 6.4, w: 10, h: 0.4, fontFace: FONT, fontSize: 13, color: "8FA0C9", margin: 0 });
 }
 
 // ============ 2 總覽 ============
 {
   const s = pres.addSlide();
   s.background = { color: WHITE };
-  bigTitle(s, "總覽：07/21 四引擎＋離線 Golden Path 劇本完成單元驗證，待 merge 部署整合");
+  bigTitle(s, "總覽：07/23 RAG 護欄二輪修正（PR #23）＋jack 交 A 包文件——重部署仍是第一件事");
   const stats = [
-    { n: "15", l: "已完成並驗證", c: GREEN, d: "行為分析、Bedrock迴圈、部署上線、前端…" },
-    { n: "12", l: "寫好但沒測過", c: GOLD, d: "三方案、Profile、Audit、路由、Private簽章…" },
-    { n: "7", l: "待做", c: RED, d: "RAG、Guardrails、KYC、影片…" },
+    { n: "17", l: "已完成並驗證", c: GREEN, d: "行為分析、Bedrock迴圈、RAG KB、query_knowledge…" },
+    { n: "13", l: "寫好但沒測過", c: GOLD, d: "三方案、Profile、Audit、路由（已 merge 待重部署驗）…" },
+    { n: "4", l: "待做", c: RED, d: "Bedrock Guardrails、KYC、影片、簡報修正" },
     { n: "5", l: "純測試項", c: BLUE, d: "E2E、雙層護欄、部署計時…" },
   ];
   stats.forEach((st, i) => {
@@ -76,7 +76,7 @@ function statusTable(s, rows, y, colW, rowH) {
   card(s, M, 4.7, W - 2 * M, 1.0, "FDF0EF");
   s.addText([
     { text: "最大隱藏風險：", options: { bold: true, color: RED } },
-    { text: "Private API 簽章仍未驗證（#4 最小成交前不算數）、/order 沒真跑過、07/21 新四引擎（三方案/Profile/Audit/路由）僅單元驗證未部署——寫好 ≠ 部署過 ≠ Golden Path 能走通。", options: { color: INK } },
+    { text: "PR #17 已 merge 但線上環境待重部署（sam deploy＋s3 sync＋兩支 Lambda 金鑰）；Private 簽章/order 真跑仍未驗；Bedrock Guardrails 未建。7/27 晚要全程跑通——重部署是本週第一件事。", options: { color: INK } },
   ], { x: M + 0.3, y: 4.85, w: W - 2 * M - 0.6, h: 0.7, fontFace: FONT, fontSize: 14, valign: "middle", margin: 0 });
   s.addText("本週原則：先讓 🧪 變 ✅（把寫好的測到能動），再開 🔨 新工。", {
     x: M, y: 6.0, w: W - 2 * M, h: 0.45, fontFace: FONT, fontSize: 15, bold: true, color: NAVY, margin: 0 });
@@ -94,7 +94,7 @@ function statusTable(s, rows, y, colW, rowH) {
     ["程式層護欄（明牌/PII）", "code", "正則可測，未寫測試", "guardrails.py"],
     ["confirm 欄位帶出前端", "code", "後端 07/19 完成上線（任務5）；待一次下單對話 E2E", "#1"],
     ["Haiku/Sonnet 路由", "code", "07/21 意圖路由完成＋單元測；caching 開關待真環境驗證", "#5"],
-    ["Bedrock Guardrails", "todo", "與程式層雙保險", "#6"],
+    ["Bedrock Guardrails", "todo", "程式層誤判修正二輪＋測試（PR #20/#23）；Bedrock 層主控台待建", "#6"],
     ["Profile Engine 簡版", "code", "07/21 三模式分類＋prompt 注入＋徽章切換完成；實測劇本待部署", "#10"],
     ["三方案生成", "code", "07/21 引擎＋工具＋前端卡完成、18 項單元測綠；整合測試待部署", "#11"],
     ["Audit Log", "code", "07/21 留痕＋/audit＋軌跡面板完成；DynamoDB 路徑待部署驗", "#12"],
@@ -110,9 +110,9 @@ function statusTable(s, rows, y, colW, rowH) {
     ["CSV 解析＋行為指標預計算", "done", "10,000 筆，真數字已驗證（追高65%等）", "analysis/"],
     ["health_report.json", "done", "五組指標齊全", "data/"],
     ["setup.sh 環境檢查", "done", "已實測", "scripts/"],
-    ["RAG 語料蒐集", "todo", "防詐/教材公開資源＋工作坊資料（授權限制）", "#9"],
-    ["Knowledge Base + S3 Vectors", "todo", "賽前建好，決賽只上架", "#9"],
-    ["query_knowledge 工具", "todo", "回答附出處", "#9"],
+    ["RAG 語料蒐集", "code", "初版語料已入 KB（護欄誤判由實測發現）；完整度待 B 確認", "#9"],
+    ["Knowledge Base + S3 Vectors", "done", "07/22 KB 建成＋SAM 參數化＋IAM（PR #21，B 包）", "#9"],
+    ["query_knowledge 工具", "done", "07/22 接上真 KB 實測；防詐語境誤判已修（PR #20）", "#9"],
     ["Lambda×4 handlers", "done", "07/19 SAM 部署上線；/chat /health /market 線上實測，/order 待 #4", "handlers/"],
     ["MAX Public API（快取+退避）", "code", "ticker 已線上實測（任務6）；kline/depth 待對文件核驗", "#2"],
     ["MAX Private API（HMAC）", "code", "簽章未驗證——對照 max-mcp-server 核對", "#4"],
@@ -178,11 +178,11 @@ function statusTable(s, rows, y, colW, rowH) {
   s.addText("B｜資料服務與 RAG　4 天", { x: M + 6.55, y: 1.85, w: 5.3, h: 0.4, fontFace: FONT, fontSize: 15, bold: true, color: NAVY, margin: 0 });
   s.addText("地盤：backend/integrations/ + analysis/ + 語料", { x: M + 6.55, y: 2.25, w: 5.3, h: 0.3, fontFace: "Courier New", fontSize: 10.5, color: MUT, margin: 0 });
   s.addText([
-    { text: "🔨 #9 RAG 語料蒐集（防詐+教材；不進 git）", options: { bullet: true, breakLine: true } },
-    { text: "🔨 #9 Bedrock KB＋S3 Vectors 建置", options: { bullet: true, breakLine: true } },
-    { text: "🔨 #9 query_knowledge 函式（交 A 註冊）", options: { bullet: true, breakLine: true } },
+    { text: "🧪 #9 RAG 語料：初版已入 KB，完整度待確認", options: { bullet: true, breakLine: true } },
+    { text: "✅ #9 Bedrock KB 建成＋SAM 參數化——07/22", options: { bullet: true, breakLine: true } },
+    { text: "✅ #9 query_knowledge 接真 KB 實測——07/22", options: { bullet: true, breakLine: true } },
     { text: "🧪 #12 audit＋/audit＋面板——07/21 完成，DynamoDB 待部署驗", options: { bullet: true, breakLine: true } },
-    { text: "🧪 #2 max_public：ticker✅ 07/19，kline/depth 待驗", options: { bullet: true, breakLine: true } },
+    { text: "✅ #2 max_public：三 endpoint 正規化＋實測（PR #18）", options: { bullet: true, breakLine: true } },
     { text: "🧪 max_private 簽章對照 max-mcp-server 核對", options: { bullet: true, breakLine: true } },
     { text: "🧪 thirdparty CMC 冒煙", options: { bullet: true } },
   ], { x: M + 6.55, y: 2.65, w: 5.4, h: 4.1, fontFace: FONT, fontSize: 11.5, color: INK, paraSpaceAfter: 8, margin: 0 });
@@ -237,11 +237,11 @@ function statusTable(s, rows, y, colW, rowH) {
     ["🧪 B：max_public 實測（#2）ticker✅", "可靠的行情工具", "A", "kline/depth 核對後全放心用"],
     ["🔨 B：簽章對照核對", "簽章確認", "D", "E2E 真下單前置"],
     ["✅ A：Bedrock 迴圈首跑（07/19）", "跑通的迴圈", "A 自己", "已解鎖：#1 #5 #10 #11 全數開發完"],
-    ["🔨 B：KB 建置（#9，語料＋Bedrock KB）", "KB_ID 環境變數", "A", "設定即通——query_knowledge 接點已就緒"],
+    ["✅ B：KB 建置（07/22，PR #21）", "KB_ID 已入 SAM 參數", "A", "query_knowledge 已接上真 KB 實測"],
     ["✅ A：audit＋/audit＋面板（07/21 代 B/C 完成）", "audit schema", "C", "決策軌跡面板已接上"],
     ["🔨 D：Guardrails 建立（#6）", "GUARDRAIL_ID 環境變數", "A", "設定即通——掛載程式已就緒"],
     ["✅ A：#11／#10／#1 完成（07/21）", "scenarios/confirm schema（§3）", "C", "三方案卡・徽章・確認卡已接上"],
-    ["🧪 A：核心全完成", "可測版本 tag＝PR #17", "D", "merge＋重部署後 E2E Golden Path 開跑"],
+    ["✅ A：核心全完成（07/22 PR #17 merge）", "main 即可測版本", "D", "重部署後 E2E Golden Path 開跑"],
     ["🧪 C：手機版＋元件（#13）", "可操作前端（mock 煙測✅）", "D", "E2E＋真環境拔網路驗證"],
     ["🔨 D：E2E 全線綠燈", "綠燈", "D 自己", "預錄影片（#8）＋DEPLOY.md 演練（#14）"],
     ["🔨 D：影片＋部署 SOP", "決賽武器包", "全員", "8/1 上場"],
