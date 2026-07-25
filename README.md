@@ -144,15 +144,17 @@ flowchart TB
         MOCK["離線 mock 備援"]
     end
     WEB --> CHAT & HEALTH
-    subgraph API["API 層（API Gateway + Lambda×4）"]
+    subgraph API["API 層（API Gateway + Lambda×5）"]
         L1["/chat Agent迴圈"]
         L2["/health 健檢"]
         L3["/market 行情(快取5s)"]
         L4["/order 下單(憑證驗證)"]
+        L5["/audit 決策軌跡"]
     end
     CHAT --> L1
     HEALTH --> L2
     CARD --> L4
+    CHAT --> L5
     subgraph AGENT["Agent 編排層（Bedrock Converse + Tool Use）"]
         LLM["LLM 路由<br/>Haiku 日常 / Sonnet 深度"]
         GR["Bedrock Guardrails + 程式層護欄"]
@@ -177,7 +179,7 @@ flowchart TB
     T6 --> KB
     T2 & T3 --> MAXAPI
     L4 -->|"execute_order（LLM 碰不到）"| MAXAPI
-    L1 & L4 --> DDB
+    L1 & L4 & L5 --> DDB
     T2 -.延伸.-> CMC
     subgraph DEV["開發工具鏈（非 runtime）"]
         KIRO["Kiro IDE（+5%）"]
@@ -318,10 +320,10 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 - [ ] 金鑰只從環境變數/Secrets Manager 讀（已實作，待驗證）
 - [ ] 最小額度真實成交一次 E2E
 
-### 4.6 RAG 知識庫（#9）｜主責 B（工具註冊：A）
-- [ ] 語料：防詐（公開資源）＋教材＋工作坊資料（僅競賽用、不進 git、放 S3）
-- [ ] Bedrock KB + S3 Vectors 建置；query_knowledge 回答附出處
-- [ ] 「什麼是定期定額」「這是不是詐騙話術」能引用語料回答
+### 4.6 RAG 知識庫（#9）｜主責 B（工具註冊：A）— ✅ 07/23 關單驗收（B 包建置＋實測）
+- [x] 語料：防詐（公開資源）＋教材＋工作坊資料（僅競賽用、不進 git、放 S3）
+- [x] Bedrock KB + S3 Vectors 建置（DSIYBVI1IX 入 SAM 參數）；query_knowledge 回答附出處
+- [x] 「什麼是定期定額」「這是不是詐騙話術」能引用語料回答（護欄誤判修正 PR #20/#23 即實測證據）
 
 ### 4.7 Audit Log（#12）｜主責 B（loop 埋點：A；面板：C）— 🧪 已實作＋單元驗證（07/21），DynamoDB 路徑與 Golden Path 驗收待部署
 - [ ] 每次工具呼叫留痕（摘要不含 PII）；訂單生命週期 draft→confirmed/expired→executed
@@ -357,7 +359,7 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 最痛單筆 1/8 DOGE 少賺 NT$312,924｜下跌後出金僅 14.2%｜最活躍 2025-05/08（各 416 筆）
 
 **已完成的資產**：
-- 程式骨架：Agent 迴圈/工具/護欄、Lambda×4、MAX 整合（簽章待驗）、前端 SPA、SAM 模板
+- 程式骨架：Agent 迴圈/工具/護欄、Lambda×5（含 /audit）、MAX 整合（簽章待驗）、前端 SPA、SAM 模板
 - `.kiro/`：steering×3＋specs×6（chat-agent/profile/scenarios 含 Kiro 三件套）＋MCP 設定
 - 設計：三張 Demo 畫面（HTML＋截圖）＋麥麥像素吉祥物三態
 - 簡報成品（`docs/`）：`MaiMate_提案簡報.pptx`（評審版 18 頁）＋`工作項目狀態.pptx`（18 頁，含 Kiro 教學）＋`設計與分工.pptx`（3 頁）

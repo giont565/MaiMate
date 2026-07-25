@@ -38,10 +38,11 @@ cd docs/brand && python3 render_pixel_bot.py   # 重出麥麥像素吉祥物
 簡報改版流程：改 build_*.js → node 重跑 → `python3 /root/.claude/skills/pptx/scripts/office/validate.py <檔>`
 （本環境 LibreOffice 渲染壞的，視覺 QA 只能靠使用者本機開）。pptx 建完記得刪 node_modules 再 commit。
 
-## 團隊與分工現況（2026-07-19）
+## 團隊與分工現況（2026-07-25 更新）
 
-- 四工作包 A/B/C/D 未指派，隊員選包中（chaocongyang-oss、jack79112、haoting777 邀請已送）
-- GitHub Issues #1–#15 對應工項；選包定案後要按包指派
+- **B 包實質認領：chaocongyang-oss**（#2/#9 完成關單；kline/depth 正規化、RAG KB=DSIYBVI1IX、護欄誤判修正兩輪，走分支+PR 紀律）
+- **A 包核心＋C 包主體：Claude 完成**（四引擎/新前端/離線劇本，已 merge 待部署驗）；jack79112 交過 A 包文件（已導向驗收/#6）；haoting777 尚無活動
+- Issues 13 張 open（#2/#9 已關）；PR #19（CI）待 merge
 - 真實數據已驗證：追高 65%、機會成本 NT$26,598,877、最痛單筆 DOGE NT$312,924（P6 級素材，別改壞）
 
 ## 待辦交接（上一個 session 留下的）
@@ -49,7 +50,9 @@ cd docs/brand && python3 render_pixel_bot.py   # 重出麥麥像素吉祥物
 - [ ] Claude Design「MaiMate」專案的三張卡還是舊版（🐣 頂欄）——DesignSync 權限流在非互動環境失敗，
       互動 session 可重試 finalize_plan+write_files（來源 `docs/mockups/ds/`）
 - [ ] ai-assistant repo 的 PR #13 是個人備份存檔（內容已被本 repo 取代），使用者決定合併或關閉
-- [ ] 全員 Lv2 KYC 與 AWS 帳號歸屬尚未定案（交棒地圖的最上游）
+- [ ] 全員 Lv2 KYC 尚未定案（#4 真實成交 E2E 的上游，最急）；AWS 帳號已定（隊長）
+- [ ] **重部署待做**（main 新功能全未上線；照 docs/DEPLOY.md，兩支 Lambda 都要 MAX 金鑰）
+- [ ] PR #19（CI）待 merge；#6 Bedrock Guardrails 主控台待建（程式接點就緒）
 
 ## 溝通慣例
 
