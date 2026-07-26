@@ -42,9 +42,16 @@ const MOCK = {
   },
   markets: ["btctwd", "ethtwd", "soltwd", "dogetwd"],
   // 離線對話劇本：依輸入意圖回對應的展示回應（數字皆來自真實 health_report）
+  // 全賣意圖的開場白隨模式切換（DEMO_SCRIPT 三模式加拍的離線備援）——
+  // 三方案數字不變（程式算的），只變說法，對應「LLM 只負責把方案講成人話」的職責分離
   chat(text) {
+    const mode = modeOverride || currentMode || "growth";
     if (/全賣|賣掉|賣出|全部賣/.test(text)) return {
-      reply: "（離線展示）我理解你想賣，先陪你看 30 秒再決定。ETH 現在佔你持倉 **54%**——要提醒你：**今年 1/8 急跌時你也全賣過**，那一次到年末少賺了 **NT$312,924**。這不是說你不能賣，是給你三個都算好數字的選項：",
+      reply: {
+        cautious: "（離線展示）別急，麥麥陪你。你想把 ETH 都賣掉——它現在佔你資產的 **54%**。想先跟你說一件事：**今年 1/8 大跌那天你也這樣全賣過**，到年底少賺了 **NT$312,924**（三十多萬）。賣或不賣都可以，我們先看三個都算好數字的選項，挑最安心的那個：",
+        growth: "（離線展示）我理解你想賣，先陪你看 30 秒再決定。ETH 現在佔你持倉 **54%**——要提醒你：**今年 1/8 急跌時你也全賣過**，那一次到年末少賺了 **NT$312,924**。這不是說你不能賣，是給你三個都算好數字的選項：",
+        pro: "（離線展示）ETH 持倉佔比 **54%**。歷史對照：**2025-01-08** 同型態恐慌全賣，機會成本 **NT$312,924**。三方案試算如下（金額／手續費／賣後集中度），選定後出確認卡：",
+      }[mode],
       tool_trail: [
         { seq: 1, tool: "get_account_balance", summary: "查持倉" },
         { seq: 2, tool: "get_market_data", summary: "查行情（ethtwd）" },
@@ -57,6 +64,11 @@ const MOCK = {
         { key: "pause", label: "先不動，設 -10% 價格提醒", behavior_note: "不產生任何訂單；到價時提醒你回來看看。" },
       ],
       confirm: { confirm_token: "offline-demo", confirmation_card: { market: "ethtwd", side: "sell", volume_twd: 35920, ord_type: "market", price: null } },
+    };
+    // RAG 防詐意圖（DEMO_SCRIPT RAG 加拍的離線備援）：教育性回覆＋出處，形狀對齊 query_knowledge
+    if (/騙|話術|保證獲利|穩賺/.test(text)) return {
+      reply: "（離線展示）幫你對照防詐語料的常見特徵：**「保證獲利」「穩賺不賠」「老師帶單」「急著拉你進群」**都是高風險紅旗——合法投資不會保證報酬。建議三不：不點陌生連結、不轉帳到個人帳戶、不下載來路不明 App；用官方管道自行查證。\n\n📚 出處：165 全民防騙網「假投資詐騙」宣導、金管會投資人保護專區",
+      tool_trail: [{ seq: 1, tool: "query_knowledge", summary: "防詐語料檢索" }],
     };
     if (/虧|賠|損/.test(text)) return {
       reply: "（離線展示）先分清楚兩件事：**真實虧損**是已實現損益（真金白銀的賺賠），**少賺**是機會成本。你 2025 年機會成本最痛的一筆：**1/8 以 14.2 賣出 DOGE 6,216 顆，年底價 64.54，少賺 NT$312,924**。",
