@@ -109,6 +109,10 @@
   @media (min-width:900px){
     .inputbar{position:sticky;bottom:0;border:1px solid #E3E9F5;border-radius:16px;margin-top:8px}
   }
+
+  /* 鍵盤焦點可見（a11y）：滑鼠點擊不顯示、鍵盤 tab 才顯示 */
+  :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .badge:focus-visible{outline-offset:3px}
 </style>
 </head>
 <body>
@@ -116,7 +120,7 @@
   <div class="logo"><img src="maimate_bot_small.png" alt="麥麥"></div>
   <div><h1>MaiMate 麥麥</h1><div class="sub">市場一直在變，麥麥一直陪你</div></div>
   <span class="offline" id="offline">離線展示</span>
-  <span class="badge" id="mode-badge" style="cursor:pointer" title="點擊切換使用者模式（Demo）">成長陪跑</span>
+  <span class="badge" id="mode-badge" role="button" tabindex="0" aria-label="切換 AI 回應模式（Demo）" style="cursor:pointer" title="點擊切換使用者模式（Demo）">成長陪跑</span>
 </header>
 <main>
   <aside id="side">

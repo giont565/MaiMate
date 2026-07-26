@@ -16,10 +16,14 @@ function setBadge(mode, isOverride) {
   currentMode = mode;
   document.getElementById("mode-badge").textContent = MODE_LABELS[mode] + (isOverride ? "＊" : "");
 }
-document.getElementById("mode-badge").onclick = () => {
+function cycleMode() {
   modeOverride = MODE_ORDER[(MODE_ORDER.indexOf(modeOverride || currentMode) + 1) % MODE_ORDER.length];
   setBadge(modeOverride, true);
-};
+}
+const _badge = document.getElementById("mode-badge");
+_badge.onclick = cycleMode;
+// 鍵盤可及（a11y）：Enter／Space 等同點擊
+_badge.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); cycleMode(); } };
 
 // 千分位格式化：fmt(2091464.5) → "2,091,464.5"；小數照原值保留（最多 maxDec 位）
 function fmt(n, maxDec = 4) {
@@ -33,7 +37,7 @@ const MOCK = {
     chase_index: { buy_above_ma_pct: 64.9, buy_total: 2350 },
     opportunity_cost: { total_missed_twd: 26598877 },
     realized_pnl: { total_realized_twd: 117482, loss_trades: 493, profit_trades: 981 },
-    concentration: { peak_concentration: { top_pct: 98.6, month: "2025-12" } },
+    concentration: { peak_concentration: { top_pct: 98.6, month: "2025-12", top_currency: "twd" } },
     cash_flow_behavior: { withdrawals_after_7d_btc_drop_pct: 14.2, twd_withdrawal_count: 417 },
   },
   markets: ["btctwd", "ethtwd", "soltwd", "dogetwd"],
@@ -123,10 +127,17 @@ function renderHero(r) {
 function renderHealth(r) {
   renderHero(r);
   const missedWan = Math.round(r.opportunity_cost.total_missed_twd / 1e4);
+  // 集中度卡：top_currency=twd 代表「資金多在現金」（保守，非風險）。明確標幣別，
+  // 免得評審把 98.6% 誤讀成危險的加密資產過度集中（實際意思相反）。
+  const pc = r.concentration.peak_concentration;
+  const isCash = String(pc.top_currency || "").toLowerCase() === "twd";
+  const concLabel = isCash
+    ? `峰值現金佔比（TWD）<br>（${pc.month}，資金多在觀望）`
+    : `峰值持倉集中度 ${String(pc.top_currency || "").toUpperCase()}<br>（${pc.month}）`;
   document.getElementById("health").innerHTML = [
     { n: r.chase_index.buy_above_ma_pct + "%", l: "追高指數<br>買在近7筆均價上方", c: "var(--red)" },
     { n: fmt(missedWan) + "萬", l: "年度賣出機會成本（少賺）<br>（NT$）", c: "var(--gold)" },
-    { n: r.concentration.peak_concentration.top_pct + "%", l: `峰值持倉集中度<br>（${r.concentration.peak_concentration.month}）`, c: "var(--navy)" },
+    { n: pc.top_pct + "%", l: concLabel, c: "var(--navy)" },
     { n: r.cash_flow_behavior.withdrawals_after_7d_btc_drop_pct + "%", l: "下跌後出金比例<br>習慣健康", c: "var(--green)" },
   ].map((c) => `<div class="card"><div class="n" style="color:${c.c}">${c.n}</div><div class="l">${c.l}</div></div>`).join("");
   document.getElementById("insights").innerHTML = `

@@ -16,7 +16,7 @@ const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; cha
 const HEALTH = { chase_index: { buy_above_ma_pct: 64.9, buy_total: 2350 },
   opportunity_cost: { total_missed_twd: 26598877 },
   realized_pnl: { total_realized_twd: 117482, loss_trades: 493, profit_trades: 981 },
-  concentration: { peak_concentration: { top_pct: 98.6, month: "2025-12" } },
+  concentration: { peak_concentration: { top_pct: 98.6, month: "2025-12", top_currency: "twd" } },
   cash_flow_behavior: { withdrawals_after_7d_btc_drop_pct: 14.2, twd_withdrawal_count: 417 } };
 
 let marketMode = "round1"; // round1 → round2（漲跌變動）→ fail（斷網）
@@ -84,7 +84,9 @@ const server = http.createServer((req, res) => {
   if (cards.length !== 4 || !cards[1].includes("2,660萬")) throw new Error(`健檢卡異常：${cards}`);
   const insights = await page.$$eval("#insights .insight", (els) => els.map((e) => e.textContent));
   if (insights.length !== 2 || !insights[0].includes("2,350")) throw new Error(`insight 異常：${insights}`);
-  console.log("健檢 2×2 卡＋insight OK（千分位）");
+  // 集中度卡：top_currency=twd 須明確標成「現金（TWD）」，不可只寫「持倉集中度」誤導成加密過度集中
+  if (!cards[2].includes("現金") || !cards[2].includes("TWD")) throw new Error(`集中度卡未標明現金/幣別：${cards[2]}`);
+  console.log("健檢 2×2 卡＋insight OK（千分位；集中度卡已標現金 TWD）");
 
   // 麥麥健康分 hero 卡（設計稿 screen1）：透明加權分＋圓環＋已實現損益（千分位）
   const hero = await page.$eval("#hero", (e) => e.textContent);
