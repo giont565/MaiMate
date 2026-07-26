@@ -94,7 +94,10 @@ const server = http.createServer((req, res) => {
   if (!/^\d{1,3}$/.test(heroScore.trim())) throw new Error(`hero 分數非數字：${heroScore}`);
   if (!hero.includes("117,482")) throw new Error(`hero 已實現損益未千分位：${hero}`);
   if (!ringBg.includes(`0 ${heroScore.trim()}%`)) throw new Error(`圓環填充未對應分數：${ringBg}`);
-  console.log(`hero 健康分卡 OK：分數 ${heroScore.trim()}、圓環對應、已實現損益千分位、公式上卡`);
+  // 圓環必須是圓（計算後尺寸）：防止 CSS 選擇器沒套上退化成橫向 bar（#hero vs .hero 類 bug）
+  const ring = await page.$eval("#hero .ring", (e) => ({ w: e.clientWidth, h: e.clientHeight, br: getComputedStyle(e).borderRadius }));
+  if (ring.w < 40 || Math.abs(ring.w - ring.h) > 2 || ring.br === "0px") throw new Error(`hero 圓環非圓形（w=${ring.w} h=${ring.h} br=${ring.br}）— CSS 未套上`);
+  console.log(`hero 健康分卡 OK：分數 ${heroScore.trim()}、圓環 ${ring.w}×${ring.h} 圓形、已實現損益千分位、公式上卡`);
 
   // 行情就地更新（千分位顯示、原始值存 dataset）
   const r1 = await page.$$eval("#market .v", (els) => els.map((e) => e.textContent));
