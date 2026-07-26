@@ -1,0 +1,149 @@
+/* Screen 1（welcome.html）煙測：
+ *   1. 首屏骨架：44px 主標／品牌 hero 圖／對話證據卡（示範資料標籤＋回覆膠囊）／CTA
+ *   2. 入口狀態機：CTA 四態文案（新用戶→續接→已完成→錯誤）＋鍵盤可及
+ *   3. 第二屏：授權→對答→開始 進度線、承諾摺疊（麥麥不會做的事）、法遵連結
+ *   4. Help bottom sheet 開合＋法律 placeholder sheet
+ *   5. 事件記錄：entry_viewed/help_opened/privacy_opened 有記、不含敏感欄位
+ *   6. 360px 不跑版；API 斷線回退 mock（離線保險）；三個導向（CTA／示範帳戶／證據卡膠囊）
+ * 用法：npm run smoke:welcome */
+const http = require("http");
+const fs = require("fs");
+const path = require("path");
+const { chromium } = require("playwright");
+
+const ROOT = path.join(__dirname, "..", "frontend");
+const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css", ".png": "image/png", ".mp4": "video/mp4" };
+
+const server = http.createServer((req, res) => {
+  const file = path.join(ROOT, req.url === "/" ? "welcome.html" : req.url.split("?")[0]);
+  fs.readFile(file, (err, buf) => {
+    if (err) { res.writeHead(404); return res.end("not found"); }
+    res.writeHead(200, { "Content-Type": MIME[path.extname(file)] || "application/octet-stream" });
+    res.end(buf);
+  });
+});
+
+(async () => {
+  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  const base = `http://127.0.0.1:${server.address().port}`;
+
+  let browser;
+  try { browser = await chromium.launch(); }
+  catch (e) {
+    if (fs.existsSync("/opt/pw-browsers/chromium")) browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+    else throw e;
+  }
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+
+  // 後端斷線劇本：entry-context 一律 abort → 必須回退離線 mock（決賽保險）
+  await page.route("**/entry-context*", (r) => r.abort());
+
+  await page.goto(`${base}/welcome.html`);
+  await page.waitForFunction(() => document.getElementById("btn-cta").textContent !== "載入中…");
+
+  // 1. 首屏骨架
+  const h2 = await page.$eval(".hero h2", (e) => e.textContent);
+  if (!h2.includes("市場一直在變")) throw new Error(`Hero 標題異常：${h2}`);
+  const heroImg = await page.$eval(".stage .avatar", (e) => ({ src: e.src, w: e.naturalWidth }));
+  if (!heroImg.src.includes("maimate_hero.png") || heroImg.w !== 290) throw new Error(`hero 圖異常：${JSON.stringify(heroImg)}`);
+  const bubTag = await page.$eval(".bubble .tag", (e) => e.textContent);
+  if (bubTag !== "示範資料") throw new Error(`證據卡標籤異常：${bubTag}`);
+  const bubMsg = await page.$eval(".bubble .msg", (e) => e.textContent);
+  if (!bubMsg.includes("DOGE") || !bubMsg.includes("NT$31")) throw new Error(`證據卡訊息異常：${bubMsg}`);
+  const pills = await page.$$eval(".bubble .pills button", (els) => els.map((e) => e.textContent));
+  if (pills.length !== 2 || pills[0] !== "好，帶我看看") throw new Error(`回覆膠囊異常：${pills}`);
+  console.log("首屏骨架 OK：44px 主標、品牌 hero 圖、證據卡（示範資料標籤＋雙膠囊）");
+
+  // 2. 證據卡「先不用」→ 麥麥溫和回覆
+  await page.click("#pill-no");
+  const reply = await page.$eval("#bubble-reply", (e) => ({ txt: e.textContent, show: getComputedStyle(e).display }));
+  if (reply.show === "none" || !reply.txt.includes("需要我的時候")) throw new Error(`「先不用」回覆異常：${JSON.stringify(reply)}`);
+  console.log("證據卡互動 OK：「先不用」收到麥麥回覆");
+
+  // 3. 入口動畫缺檔 → splash 不得卡住頁面
+  const splashOn = await page.$eval("#splash", (e) => e.classList.contains("on"));
+  if (splashOn) throw new Error("intro.mp4 不存在時 splash 不應顯示");
+  console.log("splash 缺檔自動跳過 OK");
+
+  // 4. CTA 狀態機（API 斷線→mock→新用戶）＋徽章循環＋鍵盤可及
+  const cta0 = await page.$eval("#btn-cta", (e) => e.textContent);
+  if (cta0 !== "開始和麥麥認識彼此") throw new Error(`新用戶 CTA 異常：${cta0}`);
+  await page.click("#state-badge");
+  const cta1 = await page.$eval("#btn-cta", (e) => e.textContent);
+  await page.click("#state-badge");
+  const cta2 = await page.$eval("#btn-cta", (e) => e.textContent);
+  await page.focus("#state-badge");
+  await page.keyboard.press("Enter"); // 鍵盤切到 ERROR
+  const cta3 = await page.$eval("#btn-cta", (e) => e.textContent);
+  const errCls = await page.$eval("#btn-cta", (e) => e.className);
+  const hint = await page.$eval("#cta-hint", (e) => e.textContent);
+  if (cta1 !== "繼續和麥麥認識彼此" || cta2 !== "進入我的 MaiMate" || cta3 !== "重新載入") throw new Error(`CTA 循環異常：${cta1}/${cta2}/${cta3}`);
+  if (!errCls.includes("err") || !hint.includes("暫時無法確認")) throw new Error("錯誤態樣式/文案異常");
+  await page.keyboard.press("Enter"); // 回到新用戶（重新載入→init→mock）
+  await page.waitForFunction(() => document.getElementById("btn-cta").textContent === "開始和麥麥認識彼此");
+  console.log("CTA 四態 OK：新用戶→續接→已完成→錯誤（鍵盤可切、錯誤文案對）");
+
+  // 5. 第二屏：進度線＋承諾摺疊
+  const flow = await page.$$eval(".flow .n", (els) => els.map((e) => e.textContent));
+  if (flow.join("/") !== "授權/對答/開始") throw new Error(`進度線異常：${flow}`);
+  const promiseOpen0 = await page.$eval("details.promise", (e) => e.open);
+  if (promiseOpen0) throw new Error("承諾摺疊預設不應展開");
+  await page.click("details.promise summary");
+  const promise = await page.$eval("details.promise", (e) => ({ open: e.open, txt: e.textContent, n: e.querySelectorAll("li").length }));
+  if (!promise.open || promise.n !== 4 || !promise.txt.includes("不會擅自替你下單") || !promise.txt.includes("不報明牌")) throw new Error(`承諾內容異常：${promise.n}`);
+  console.log("第二屏 OK：授權→對答→開始、承諾摺疊×4（含不下單/不報明牌）");
+
+  // 6. Help bottom sheet
+  await page.click("#btn-help");
+  await page.waitForFunction(() => document.getElementById("help-root").classList.contains("sheet-open"));
+  const helpTxt = await page.$eval("#help-root .sbody", (e) => e.textContent);
+  for (const key of ["麥麥可以幫你什麼", "麥麥不會做什麼", "我的資料如何使用", "我可以停止使用嗎", "不提供特定幣種的買賣推薦"])
+    if (!helpTxt.includes(key)) throw new Error(`Help 缺區塊：${key}`);
+  await page.click("#help-root .sfoot .btn-cta"); // 我了解了
+  const helpOpen = await page.$eval("#help-root", (e) => e.classList.contains("sheet-open"));
+  if (helpOpen) throw new Error("Help sheet 未關閉");
+  console.log("Help sheet OK：四區塊齊、「我了解了」關閉");
+
+  // 7. 法律 placeholder sheet
+  await page.click('[data-legal="隱私說明"]');
+  await page.waitForFunction(() => document.getElementById("legal-root").classList.contains("sheet-open"));
+  const legalTitle = await page.$eval("#legal-title", (e) => e.textContent);
+  if (legalTitle !== "隱私說明") throw new Error(`法律 sheet 標題異常：${legalTitle}`);
+  await page.keyboard.press("Escape");
+  const legalOpen = await page.$eval("#legal-root", (e) => e.classList.contains("sheet-open"));
+  if (legalOpen) throw new Error("Esc 未關閉法律 sheet");
+  console.log("法律 placeholder sheet OK（Esc 可關）");
+
+  // 8. 事件記錄：有記且不含 token/持倉明細
+  const events = await page.evaluate(() => localStorage.getItem("mm_events") || "[]");
+  for (const ev of ["maimate_entry_viewed", "maimate_help_opened", "maimate_privacy_opened", "maimate_demo_bubble_no"])
+    if (!events.includes(ev)) throw new Error(`事件未記錄：${ev}`);
+  if (/token|balance|volume/i.test(events)) throw new Error("事件記錄疑似含敏感欄位");
+  console.log("分析事件 OK：四事件有記、無敏感欄位");
+
+  // 9. 360px 不跑版
+  await page.setViewportSize({ width: 360, height: 800 });
+  const scrollW = await page.evaluate(() => document.documentElement.scrollWidth);
+  if (scrollW > 360) throw new Error(`360px 出現橫向捲動：scrollWidth=${scrollW}`);
+  await page.setViewportSize({ width: 390, height: 844 });
+  console.log("360px 不跑版 OK");
+
+  await page.screenshot({ path: "smoke_welcome.png", fullPage: true });
+
+  // 10. 三個導向：示範帳戶／主 CTA／證據卡「好，帶我看看」
+  await page.click("#btn-demo");
+  await page.waitForURL(/index\.html\?demo=STEADY_PLANNER/);
+  await page.goto(`${base}/welcome.html`);
+  await page.waitForFunction(() => document.getElementById("btn-cta").textContent === "開始和麥麥認識彼此");
+  await page.click("#btn-cta");
+  await page.waitForURL(/index\.html\?src=welcome/);
+  await page.goto(`${base}/welcome.html`);
+  await page.waitForFunction(() => document.getElementById("btn-cta").textContent === "開始和麥麥認識彼此");
+  await page.click("#pill-yes");
+  await page.waitForURL(/index\.html\?src=welcome/);
+  console.log("導向 OK：示範帳戶→?demo=STEADY_PLANNER；主 CTA／「好，帶我看看」→?src=welcome");
+
+  await browser.close();
+  server.close();
+  console.log("全部通過 ✅（截圖 smoke_welcome.png）");
+})().catch((e) => { console.error("FAIL:", e.message); process.exit(1); });

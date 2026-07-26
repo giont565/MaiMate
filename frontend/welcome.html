@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>麥麥 MaiMate｜市場一直在變，麥麥一直陪你</title>
+<style>
+  /* 方向 C：一屏＝角色＋一張對話證據卡＋一顆按鈕。
+     設計依據（2026-07-26 設計評審＋實例研究）：平塗深藍不用光暈；字級 44/28/17/14；
+     吉祥物 2× 整數倍放大＋pixelated＋被卡片裁切壓疊；品牌色做色塊級使用；圓角只有 16/12 兩級。 */
+  /* 品牌色依「maimate icon」規範板：MaiCoin 紅 #E64A4D、MAX 藍 #1E4DA7、深海藍 #0F172A */
+  :root{--bg:#FBFCFE;--card:#FFFFFF;--red:#E64A4D;--blue:#1E4DA7;--blue-d:#1E4DA7;--txt:#0F172A;--sub:#46557B;--mut:#6B7280;--ink:#1F2937;--ink-mut:#6B7280;--line:#E3E9F5}
+  *{box-sizing:border-box;font-family:"Noto Sans CJK TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;margin:0}
+  html,body{overflow-x:clip} /* 紅色塊刻意出血，超出視窗部分裁掉 */
+  body{background:var(--bg);color:var(--txt)}
+
+  /* ── App Header：wordmark＋紅底線 ── */
+  .topbar{padding:16px 24px 0;display:flex;align-items:center;gap:8px;position:relative;z-index:20}
+  .topbar .back{background:none;border:0;color:var(--sub);font-size:20px;cursor:pointer;padding:2px 8px 2px 0;line-height:1}
+  .topbar .wordmark{font-size:15px;font-weight:800;letter-spacing:.02em;padding-bottom:6px;border-bottom:4px solid var(--red)}
+  .topbar .spacer{margin-left:auto}
+  .devbadge{background:none;border:1px solid var(--line);color:var(--mut);font-size:10px;padding:3px 10px;border-radius:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .helpbtn{width:28px;height:28px;border-radius:12px;background:none;border:1px solid var(--line);color:var(--sub);font-size:13px;font-weight:800;cursor:pointer}
+
+  main{max-width:480px;margin:0 auto;padding:0 24px 40px}
+
+  /* ── 首屏 ── */
+  .hero{display:flex;flex-direction:column;min-height:calc(100svh - 62px);padding-top:40px}
+  .hero h2{font-size:44px;font-weight:800;line-height:1.28;letter-spacing:-.02em}
+  .hero .sub2{font-size:14px;color:var(--sub);line-height:1.75;margin-top:14px;font-weight:400}
+  .hero .fill{flex:1;min-height:24px}
+
+  /* 角色舞台：紅色塊＋2× 像素麥麥，底部被對話卡切掉 */
+  .stage{position:relative;height:230px;margin:0 -24px}
+  .stage .block{position:absolute;right:-28px;bottom:-14px;width:220px;height:190px;background:var(--red);transform:rotate(5deg);border-radius:16px}
+  .stage .avatar{position:absolute;right:34px;bottom:-56px;width:248px;height:auto;z-index:1;animation:breathe 3.4s ease-in-out infinite}
+  @keyframes breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+  @media (prefers-reduced-motion:reduce){.stage .avatar{animation:none}}
+
+  /* 對話證據卡：微傾＝手工感 */
+  .bubble{position:relative;z-index:2;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:16px;transform:rotate(-1.5deg);box-shadow:0 14px 34px rgba(22,34,77,.14)}
+  .bubble .bh{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+  .bubble .bh img{width:30px;height:auto}
+  .bubble .bh b{font-size:13px}
+  .bubble .bh time{font-size:11px;color:var(--ink-mut)}
+  .bubble .bh .tag{margin-left:auto;font-size:10px;color:var(--ink-mut);border:1px solid #E3E9F5;border-radius:12px;padding:2px 8px}
+  .bubble .msg{font-size:15px;line-height:1.7;font-weight:600}
+  .bubble .msg em{font-style:normal;color:var(--blue-d)}
+  .bubble .pills{display:flex;gap:8px;margin-top:12px}
+  .bubble .pills button{border:0;border-radius:12px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+  .bubble .pills .y{background:var(--blue-d);color:#fff}
+  .bubble .pills .n{background:#EEF2FA;color:var(--ink)}
+  .bubble .reply{display:none;font-size:12.5px;color:var(--ink-mut);margin-top:12px}
+
+  /* CTA：實心 MAX 藍 */
+  .cta-wrap{margin-top:26px}
+  .btn-cta{width:100%;border:0;border-radius:12px;padding:0;height:56px;font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;background:var(--blue);color:#fff}
+  .btn-cta.err{background:var(--red)}
+  .btn-cta:disabled{opacity:.5;cursor:default}
+  .cta-hint{text-align:center;font-size:13px;color:var(--mut);margin-top:10px;min-height:16px}
+
+  /* ── 第二屏（~0.6 屏）── */
+  .below{padding-top:96px}
+  .flow{display:flex;align-items:center;gap:0}
+  .flow .n{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--txt);flex:none}
+  .flow .n i{width:10px;height:10px;border-radius:50%;background:var(--blue);font-style:normal}
+  .flow .n:first-child i{background:var(--red)}
+  .flow .n:last-child i{background:var(--txt)}
+  .flow .ln{flex:1;height:1px;background:var(--line);margin:0 10px 26px}
+  .flow-hint{font-size:13px;color:var(--mut);margin-top:14px}
+
+  details.promise{margin-top:44px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  details.promise summary{list-style:none;cursor:pointer;display:flex;align-items:center;padding:17px 2px;font-size:14px;font-weight:700}
+  details.promise summary::-webkit-details-marker{display:none}
+  details.promise summary::after{content:"＋";margin-left:auto;color:var(--mut);font-weight:400;font-size:16px}
+  details.promise[open] summary::after{content:"－"}
+  details.promise li{font-size:13px;color:var(--mut);line-height:1.75;list-style:none;padding:0 2px 16px 0;}
+  details.promise li b{display:block;font-size:13.5px;color:var(--txt);margin-bottom:2px;font-weight:600}
+
+  .legal{display:flex;gap:14px;margin-top:22px;flex-wrap:wrap}
+  .legal a{font-size:13px;color:var(--mut);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+
+  .demo-wrap{margin-top:26px}
+  .btn-demo{background:none;border:0;padding:0;color:var(--sub);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:underline;text-underline-offset:4px}
+  .demo-note{display:inline;font-size:13px;color:var(--mut);margin-left:8px}
+
+  /* ── Bottom Sheet ── */
+  .sheet-mask{position:fixed;inset:0;background:rgba(13,21,48,.45);z-index:30;opacity:0;pointer-events:none;transition:opacity .25s}
+  .sheet{position:fixed;left:0;right:0;bottom:0;background:#fff;color:var(--txt);border-radius:16px 16px 0 0;z-index:31;max-height:85vh;transform:translateY(100%);transition:transform .3s ease;display:flex;flex-direction:column;border-top:1px solid var(--line)}
+  .sheet-open .sheet-mask{opacity:1;pointer-events:auto}
+  .sheet-open .sheet{transform:translateY(0)}
+  .sheet .grab{width:40px;height:4px;background:#D5DEF0;border-radius:12px;margin:10px auto 0}
+  .sheet .shead{display:flex;align-items:center;padding:10px 18px 12px;border-bottom:1px solid var(--line)}
+  .sheet .shead b{font-size:15px}
+  .sheet .shead .x{margin-left:auto;background:none;border:0;font-size:18px;color:var(--mut);cursor:pointer;padding:4px 8px}
+  .sheet .sbody{overflow-y:auto;padding:14px 18px 8px}
+  .sheet .intro{display:flex;gap:12px;align-items:center;margin-bottom:6px}
+  .sheet .intro img{width:40px;height:auto}
+  .sheet .intro .st{font-size:13.5px;font-weight:800}
+  .sheet .intro .sd{font-size:12px;color:var(--mut);line-height:1.65;margin-top:2px}
+  .hsec{border-top:1px solid var(--line);padding:12px 0}
+  .hsec .ht{font-size:13px;font-weight:800;margin-bottom:6px}
+  .hsec p{font-size:12px;color:var(--ink);line-height:1.7}
+  .hsec li{font-size:12px;color:var(--ink);line-height:1.8;list-style:none;padding-left:16px;position:relative}
+  .hsec li::before{content:"・";position:absolute;left:0;color:var(--mut)}
+  .hsec li b{color:var(--txt)}
+  .hsec .link{font-size:12px;color:var(--blue);text-decoration:underline;text-underline-offset:3px;cursor:pointer;display:inline-block;margin-top:6px}
+  .sheet .sfoot{padding:12px 18px calc(14px + env(safe-area-inset-bottom))}
+  .sheet .sfoot .btn-cta{height:48px;font-size:15px}
+
+  /* ── 入口動畫 splash（影片為深色世界觀，底用品牌深海藍）── */
+  .splash{position:fixed;inset:0;background:#0F172A;z-index:40;display:none;align-items:center;justify-content:center}
+  .splash.on{display:flex}
+  .splash video{width:100%;height:100%;object-fit:contain}
+  .splash .skip{position:absolute;top:calc(14px + env(safe-area-inset-top));right:14px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:12px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer}
+
+  :focus-visible{outline:2px solid var(--red);outline-offset:2px}
+
+  /* 360px 保護：主標與麥麥等比縮 */
+  @media (max-width:374px){
+    .hero h2{font-size:38px}
+    .stage .avatar{width:200px;right:22px;bottom:-46px}
+    .stage{height:190px}
+  }
+</style>
+</head>
+<body>
+
+<div class="splash" id="splash" aria-hidden="true">
+  <video id="intro-video" playsinline muted preload="auto"></video>
+  <button class="skip" id="skip-intro">跳過</button>
+</div>
+
+<header class="topbar">
+  <button class="back" id="btn-back" aria-label="返回">‹</button>
+  <span class="wordmark">麥麥 MaiMate</span>
+  <span class="spacer"></span>
+  <span class="devbadge" id="state-badge" role="button" tabindex="0" aria-label="切換入口狀態（Demo）" title="點擊切換入口狀態（Demo）">第一次見面</span>
+  <button class="helpbtn" id="btn-help" aria-label="關於麥麥 MaiMate">?</button>
+</header>
+
+<main>
+  <!-- 首屏：主標 → 角色＋對話證據卡 → CTA -->
+  <section class="hero">
+    <h2>市場一直在變<br>麥麥一直陪你</h2>
+    <p class="sub2">一起看見自己的投資節奏，走出更適合你的方向。</p>
+    <div class="fill"></div>
+
+    <div class="stage" aria-hidden="true">
+      <div class="block"></div>
+      <img class="avatar" src="maimate_hero.png" alt="">
+    </div>
+
+    <div class="bubble">
+      <div class="bh">
+        <img src="maimate_hero.png" alt=""><b>麥麥</b><time>09:41</time>
+        <span class="tag">示範資料</span>
+      </div>
+      <div class="msg">1/8 DOGE 那一波，你提前全部賣掉，少賺了約 <em>NT$31&thinsp;萬</em>。要不要一起回看當時發生了什麼？</div>
+      <div class="pills">
+        <button class="y" id="pill-yes">好，帶我看看</button>
+        <button class="n" id="pill-no">先不用</button>
+      </div>
+      <div class="reply" id="bubble-reply"></div>
+    </div>
+
+    <div class="cta-wrap">
+      <button class="btn-cta" id="btn-cta" disabled>載入中…</button>
+      <div class="cta-hint" id="cta-hint"></div>
+    </div>
+  </section>
+
+  <!-- 第二屏：進度線＋承諾摺疊＋法遵＋示範帳戶 -->
+  <section class="below">
+    <div class="flow" aria-label="設定流程：授權、對答、開始">
+      <div class="n"><i></i>授權</div><div class="ln"></div>
+      <div class="n"><i></i>對答</div><div class="ln"></div>
+      <div class="n"><i></i>開始</div>
+    </div>
+    <p class="flow-hint">由你決定分享哪些資料，隨時可以停止。</p>
+
+    <details class="promise">
+      <summary>麥麥不會做的事</summary>
+      <ul>
+        <li><b>不會擅自替你下單</b>不論市場如何變化，任何交易行動都必須由你親自確認。</li>
+        <li><b>不報明牌、不保證獲利</b>麥麥陪你理解資訊、風險與自己的選擇，不推著你做決定。</li>
+        <li><b>不會未經同意使用資料</b>只有在你授權後，才會使用相關資料提供個人化分析。</li>
+        <li><b>不會綁住你</b>資料權限、個人化分析與陪伴方式，都可以隨時調整或停止。</li>
+      </ul>
+    </details>
+
+    <div class="legal">
+      <a data-legal="資料使用方式">資料使用方式</a>
+      <a data-legal="隱私說明">隱私說明</a>
+      <a data-legal="服務使用界線">服務使用界線</a>
+    </div>
+
+    <div class="demo-wrap">
+      <button class="btn-demo" id="btn-demo">先看示範帳戶</button>
+      <span class="demo-note">不會讀取你的真實資料</span>
+    </div>
+  </section>
+</main>
+
+<div id="help-root">
+  <div class="sheet-mask" data-close="help"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="關於麥麥 MaiMate">
+    <div class="grab"></div>
+    <div class="shead"><b>關於麥麥 MaiMate</b><button class="x" data-close="help" aria-label="關閉">✕</button></div>
+    <div class="sbody">
+      <div class="intro">
+        <img src="maimate_hero.png" alt="">
+        <div>
+          <div class="st">看懂你的投資，而不是替你決定。</div>
+          <div class="sd">MaiMate 會根據你的持倉、交易歷程與投資目標，把複雜的市場資訊與投資行為整理成適合你的解釋。</div>
+        </div>
+      </div>
+      <div class="hsec">
+        <div class="ht">✦ 麥麥可以幫你什麼？</div>
+        <ul>
+          <li><b>分析你的投資習慣</b>：了解交易頻率、持有方式、資產集中度，以及可能重複出現的投資行為。</li>
+          <li><b>解釋市場與你的關係</b>：不只說明市場發生什麼，也會告訴你為什麼可能影響目前持倉。</li>
+          <li><b>把金融資訊翻成人話</b>：依你的金融知識程度調整說明方式，專有名詞可進一步查看解釋。</li>
+        </ul>
+      </div>
+      <div class="hsec">
+        <div class="ht">🛡 麥麥不會做什麼？</div>
+        <p>MaiMate 提供的是教育、資訊整理與風險提醒，不是投資決策服務。</p>
+        <ul>
+          <li>不提供特定幣種的買賣推薦</li>
+          <li>不保證任何投資收益</li>
+          <li>不會在未經確認的情況下替你下單</li>
+        </ul>
+      </div>
+      <div class="hsec">
+        <div class="ht">🔒 我的資料如何使用？</div>
+        <p>MaiMate 只會在你授權後，讀取提供個人化分析所需的資料，例如持倉、交易紀錄與問卷內容。資料只用於個人化分析與功能改善，不會向其他使用者公開你的個人交易資料。</p>
+        <span class="link" data-legal="資料使用方式">查看資料使用方式 ›</span>
+      </div>
+      <div class="hsec">
+        <div class="ht">⚙ 我可以停止使用嗎？</div>
+        <p>你可以隨時停止個人化分析、調整資料權限，或刪除 MaiMate 建立的個人化結果。</p>
+        <span class="link" data-legal="管理資料">了解如何管理資料 ›</span>
+      </div>
+    </div>
+    <div class="sfoot"><button class="btn-cta" data-close="help">我了解了</button></div>
+  </div>
+</div>
+
+<div id="legal-root">
+  <div class="sheet-mask" data-close="legal"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="說明">
+    <div class="grab"></div>
+    <div class="shead"><b id="legal-title">說明</b><button class="x" data-close="legal" aria-label="關閉">✕</button></div>
+    <div class="sbody"><div class="hsec" style="border:0"><p id="legal-body">Demo 版佔位內容：正式版將在此提供完整說明。實際的資料授權與同意，會在下一步（資料授權頁）逐項進行。</p></div></div>
+    <div class="sfoot"><button class="btn-cta" data-close="legal">我了解了</button></div>
+  </div>
+</div>
+
+<script>window.API_BASE = "https://4vjxh3jv8d.execute-api.us-east-1.amazonaws.com";</script>
+<script src="welcome.js"></script>
+</body>
+</html>

@@ -4,6 +4,7 @@
   "description": "MaiMate 開發輔助腳本：前端煙測＋開發手冊重出（提案簡報 deck 的重依賴 sharp/react 仍在 docs/ 暫裝）",
   "scripts": {
     "smoke": "node scripts/smoke_frontend.js",
+    "smoke:welcome": "node scripts/smoke_welcome.js",
     "handbook": "node docs/build_handbook.js"
   },
   "devDependencies": {
