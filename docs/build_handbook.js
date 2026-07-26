@@ -52,7 +52,7 @@ function statusTable(s, rows, y, colW, rowH) {
   s.addText("隊伍「第五名」團隊會議", { x: M, y: 1.6, w: 8, h: 0.4, fontFace: FONT, fontSize: 14, color: GOLD, margin: 0 });
   s.addText("MaiMate 開發手冊", { x: M, y: 2.1, w: W - 2 * M, h: 1.0, fontFace: FONT, fontSize: 46, bold: true, color: WHITE, margin: 0 });
   s.addText("狀態・分工・架構・成本・驗收・Kiro 教學——隊內唯一簡報", { x: M, y: 3.3, w: 10, h: 0.5, fontFace: FONT, fontSize: 18, color: ICE, margin: 0 });
-  s.addText("2026/07/24 更新｜決賽 8/1–8/2｜文字完整版：repo 首頁 README.md", { x: M, y: 6.4, w: 10, h: 0.4, fontFace: FONT, fontSize: 13, color: "8FA0C9", margin: 0 });
+  s.addText("2026/07/26 更新｜決賽 8/1–8/2｜文字完整版：repo 首頁 README.md", { x: M, y: 6.4, w: 10, h: 0.4, fontFace: FONT, fontSize: 13, color: "8FA0C9", margin: 0 });
 }
 
 // ============ 2 總覽 ============
@@ -89,7 +89,7 @@ function statusTable(s, rows, y, colW, rowH) {
   bigTitle(s, "Agent 核心（10 項）｜主責 A", "07/19 迴圈已對真模型跑通（Haiku@us-east-1）——重心轉 confirm E2E・路由・三方案");
   statusTable(s, [
     ["Converse tool-use 迴圈", "done", "07/19 線上跑通：真模型多輪工具呼叫＋引用真實數據", "agent/loop.py"],
-    ["工具定義×4＋dispatch", "done", "隨迴圈上線；已加 key_findings 摘要（答非所問保險）", "agent/tools.py"],
+    ["工具定義×5＋dispatch", "done", "隨迴圈上線；key_findings 摘要（答非所問保險）；KB_ID 設定時自動加掛 query_knowledge", "agent/tools.py"],
     ["prepare/execute 下單分離", "code", "架構完成，待端到端驗證", "tools+order"],
     ["程式層護欄（明牌/PII）", "code", "正則可測，未寫測試", "guardrails.py"],
     ["confirm 欄位帶出前端", "code", "後端 07/19 完成上線（任務5）；待一次下單對話 E2E", "#1"],
@@ -113,7 +113,7 @@ function statusTable(s, rows, y, colW, rowH) {
     ["RAG 語料蒐集", "code", "初版語料已入 KB（護欄誤判由實測發現）；完整度待 B 確認", "#9"],
     ["Knowledge Base + S3 Vectors", "done", "07/22 KB 建成＋SAM 參數化＋IAM（PR #21，B 包）", "#9"],
     ["query_knowledge 工具", "done", "07/22 接上真 KB 實測；防詐語境誤判已修（PR #20）", "#9"],
-    ["Lambda×4 handlers", "done", "07/19 SAM 部署上線；/chat /health /market 線上實測，/order 待 #4", "handlers/"],
+    ["Lambda×5 handlers（×4 上線）", "done", "07/19 SAM×4 部署；/chat /health /market 線上實測；/audit 已寫好待重部署，/order 待 #4", "handlers/"],
     ["MAX Public API（快取+退避）", "code", "ticker 已線上實測（任務6）；kline/depth 待對文件核驗", "#2"],
     ["MAX Private API（HMAC）", "code", "簽章未驗證——對照 max-mcp-server 核對", "#4"],
     ["CoinMarketCap 延伸", "code", "無金鑰自動略過，未測", "thirdparty.py"],
@@ -267,7 +267,7 @@ function statusTable(s, rows, y, colW, rowH) {
   bigTitle(s, "交接不打架的五條規則");
   const rules = [
     ["1", "地盤制", "每包只 commit 自己的目錄。要動別人的地盤 → 開 issue 給對方包，不直接改", NAVY],
-    ["2", "介面契約先行", "四支 API 格式寫死在 README §3——C 包照契約用假資料先做，不用等後端", GOLD],
+    ["2", "介面契約先行", "五支 API 格式寫死在 README §3——C 包照契約用假資料先做，不用等後端", GOLD],
     ["3", "共用檔單一 owner", "tools.py／loop.py 歸 A；B 寫好函式由 A 註冊。infra 歸 D。誰的檔誰合", GREEN],
     ["4", "每日回合", "每天至少一次 pull --rebase ＋合回 main。衝突當天解，不隔夜", BLUE],
     ["5", "改介面要廣播", "要改 README §3 先在 #dev 說，受影響的包點頭才動", RED],
@@ -433,7 +433,7 @@ function statusTable(s, rows, y, colW, rowH) {
   ];
   const rows = [
     ["Bedrock 模型（Haiku/Sonnet）", "依 token 計價＋prompt caching 一折", "≈NT$300（約500次測試對話）", "<NT$100", "依用量：重度用戶≈NT$60/人"],
-    ["Lambda ×4＋API Gateway", "依請求數；免費額度 100 萬次/月", "≈NT$0（免費額度內）", "≈NT$0", "<NT$500"],
+    ["Lambda ×5＋API Gateway", "依請求數；免費額度 100 萬次/月", "≈NT$0（免費額度內）", "≈NT$0", "<NT$500"],
     ["DynamoDB（憑證/審計/session）", "on-demand 依讀寫", "≈NT$0", "≈NT$0", "<NT$300"],
     ["S3＋CloudFront（前端/資料）", "儲存＋流量", "<NT$30", "<NT$30", "<NT$500"],
     ["Knowledge Base＋S3 Vectors", "embedding 一次性＋向量儲存", "<NT$50（語料小）", "查詢零頭", "<NT$700"],
@@ -630,7 +630,7 @@ function statusTable(s, rows, y, colW, rowH) {
   card(s, M + 6.25, 1.55, 5.9, 5.2, "22315E");
   s.addText("已完成的資產", { x: M + 6.6, y: 1.8, w: 5.2, h: 0.45, fontFace: FONT, fontSize: 16, bold: true, color: GOLD, margin: 0 });
   s.addText([
-    { text: "程式骨架：Agent 迴圈/護欄、Lambda×4、MAX 整合、前端 SPA、SAM", options: { bullet: true, breakLine: true } },
+    { text: "程式骨架：Agent 迴圈/護欄、Lambda×5、MAX 整合、前端 SPA、SAM", options: { bullet: true, breakLine: true } },
     { text: ".kiro/：steering×3＋specs×6＋MCP 設定（+5% 證據）", options: { bullet: true, breakLine: true } },
     { text: "設計：三張 Demo 畫面＋麥麥像素吉祥物三態", options: { bullet: true, breakLine: true } },
     { text: "簡報：提案簡報（評審版）＋本手冊", options: { bullet: true, breakLine: true } },
