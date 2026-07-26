@@ -13,8 +13,9 @@ const { chromium } = require("playwright");
 const ROOT = path.join(__dirname, "..", "frontend");
 const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css", ".png": "image/png" };
 
-const HEALTH = { chase_index: { buy_above_ma_pct: 65, buy_total: 2350 },
+const HEALTH = { chase_index: { buy_above_ma_pct: 64.9, buy_total: 2350 },
   opportunity_cost: { total_missed_twd: 26598877 },
+  realized_pnl: { total_realized_twd: 117482, loss_trades: 493, profit_trades: 981 },
   concentration: { peak_concentration: { top_pct: 98.6, month: "2025-12" } },
   cash_flow_behavior: { withdrawals_after_7d_btc_drop_pct: 14.2, twd_withdrawal_count: 417 } };
 
@@ -85,6 +86,16 @@ const server = http.createServer((req, res) => {
   if (insights.length !== 2 || !insights[0].includes("2,350")) throw new Error(`insight 異常：${insights}`);
   console.log("健檢 2×2 卡＋insight OK（千分位）");
 
+  // 麥麥健康分 hero 卡（設計稿 screen1）：透明加權分＋圓環＋已實現損益（千分位）
+  const hero = await page.$eval("#hero", (e) => e.textContent);
+  const heroScore = await page.$eval("#hero .ring i b", (e) => e.textContent);
+  const ringBg = await page.$eval("#hero .ring", (e) => e.getAttribute("style") || "");
+  if (!hero.includes("投資健康分")) throw new Error(`hero 卡缺標題：${hero}`);
+  if (!/^\d{1,3}$/.test(heroScore.trim())) throw new Error(`hero 分數非數字：${heroScore}`);
+  if (!hero.includes("117,482")) throw new Error(`hero 已實現損益未千分位：${hero}`);
+  if (!ringBg.includes(`0 ${heroScore.trim()}%`)) throw new Error(`圓環填充未對應分數：${ringBg}`);
+  console.log(`hero 健康分卡 OK：分數 ${heroScore.trim()}、圓環對應、已實現損益千分位、公式上卡`);
+
   // 行情就地更新（千分位顯示、原始值存 dataset）
   const r1 = await page.$$eval("#market .v", (els) => els.map((e) => e.textContent));
   if (r1.join("/") !== "2,091,464.5/60,536.6/2,469.5/2.3509") throw new Error(`round1 格式異常：${r1}`);
@@ -124,6 +135,10 @@ const server = http.createServer((req, res) => {
   if (pick !== 1) throw new Error("pick 高亮異常");
   const confirmTxt = await page.$eval(".confirm", (e) => e.textContent);
   if (!confirmTxt.includes("NT$35,920") || !confirmTxt.includes("確認賣出")) throw new Error("確認卡異常");
+  // 落差 2（screen3）：手續費取方案真值 fee_twd；市價單數量誠實標「依成交價定」，不編造
+  if (!confirmTxt.includes("NT$57")) throw new Error(`確認卡缺方案真實手續費：${confirmTxt}`);
+  if (!confirmTxt.includes("依成交價定")) throw new Error(`確認卡市價數量標示缺失：${confirmTxt}`);
+  await page.screenshot({ path: "smoke_confirm.png", fullPage: true }); // 確認卡＋三方案卡當下畫面（screen2+3）
   if (!chatBody?.session_id) throw new Error("/chat 未帶 session_id");
   console.log("對話 OK：chips×2、粗體渲染、<script> escape、三方案卡（千分位＋pick）、確認卡、session_id 帶上");
 
