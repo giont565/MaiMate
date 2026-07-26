@@ -5,44 +5,22 @@
  *   - 問卷結果只調整語氣/深度/排序，不做投資人格或能力評分
  *   - 事件只記事件名＋questionId，不記答案內容、持倉、金額
  *   - Screen 2/3 不提前顯示分析結果（分析屬 Screen 4/5）
- * JSDoc typedef 即規格的 TypeScript interface（零建置棧對應物，欄位一對一）。
+ * 共用 Store、事件與 JSDoc 型別位於 onboarding-core.js。
  */
 "use strict";
-
-/** @typedef {'portfolio'|'transactions'|'fundingHistory'|'interactionPersonalization'} DataScope */
-/** @typedef {{consentVersion:string, requiredScopes:DataScope[], optionalScopes:DataScope[], grantedScopes:DataScope[], source:'demo'|'internal', grantedAt:string, revokedAt?:string}} ConsentRecord */
-/** @typedef {{questionnaireVersion:string, experienceLevel:'beginner'|'exploring'|'habitual'|'advanced', investmentGoals:string[], holdingHorizon:'short'|'mediumShort'|'mediumLong'|'long'|'flexible', volatilityResponse:'investigate'|'followPlan'|'reduceExposure'|'anxiousChecking'|'unsure', helpPriorities:string[], communicationStyle:'guided'|'concise'|'analytical', status:'inProgress'|'completed'|'skipped', completedAt?:string}} OnboardingProfile */
-/** @typedef {{currentScreen:number, consent?:ConsentRecord, profile?:OnboardingProfile, portfolioSource?:'mock'|'internalApi', draft?:{qIndex:number, answers:Object, optional:Object}}} OnboardingState */
-
-/* ── Mock Analytics Service（Demo：console＋localStorage；只記事件名/questionId）── */
-function track(name, meta) {
-  try {
-    const log = JSON.parse(localStorage.getItem("mm_events") || "[]");
-    const e = { e: name, t: new Date().toISOString() };
-    if (meta && meta.questionId) e.q = meta.questionId; // 只准 questionId，不記答案內容
-    log.push(e);
-    localStorage.setItem("mm_events", JSON.stringify(log.slice(-100)));
-  } catch (_) {}
-  console.log("[track]", name, meta || "");
-}
-
-/* ── OnboardingStore：狀態保存唯一入口（匿名 Demo Session，關瀏覽器可續）── */
-const OnboardingStore = {
-  KEY: "mm_onboarding",
-  /** @returns {OnboardingState} */
-  read() { try { return JSON.parse(localStorage.getItem(this.KEY)) || {}; } catch (_) { return {}; } },
-  /** @param {Partial<OnboardingState>} patch */
-  write(patch) {
-    const s = Object.assign(this.read(), patch);
-    localStorage.setItem(this.KEY, JSON.stringify(s)); // undefined 欄位會被 JSON 丟棄＝刪除
-    return s;
-  },
-};
 
 const MOCK = window.MM_ONBOARDING_MOCK;
 /** @type {DataScope[]} */ const REQUIRED_SCOPES = ["portfolio", "transactions"];
 /** @type {DataScope[]} */ const OPTIONAL_SCOPES = ["fundingHistory", "interactionPersonalization"];
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+const clearedAnalysisState = () => ({
+  analysisJob: undefined,
+  profileResult: undefined,
+  profileFeedback: undefined,
+  overallFeedback: undefined,
+  effectiveProfile: undefined,
+  profileConfirmationReminder: undefined,
+});
 
 /* Demo 展示用連線情境（右上徽章切換；fail 時 Mock 授權/儲存會失敗，供評審看錯誤流程） */
 let netMode = "ok";
@@ -95,7 +73,7 @@ const OnboardingProfileService = {
     await delay(700);
     if (netMode === "fail") throw new Error("MOCK_SAVE_FAILED");
     const profile = Object.assign({}, p, { status: "completed", completedAt: new Date().toISOString() });
-    OnboardingStore.write({ profile, currentScreen: 4 });
+    OnboardingStore.write(Object.assign({ profile, currentScreen: 4 }, clearedAnalysisState()));
     return profile;
   },
   /** 略過＝中性預設，不阻擋後續 Demo，之後可在設定頁重填 */
@@ -107,7 +85,7 @@ const OnboardingProfileService = {
       volatilityResponse: "unsure", helpPriorities: [], communicationStyle: "guided",
       status: "skipped",
     };
-    OnboardingStore.write({ profile, currentScreen: 4 });
+    OnboardingStore.write(Object.assign({ profile, currentScreen: 4 }, clearedAnalysisState()));
     return profile;
   },
 };
@@ -157,6 +135,11 @@ function grantedScopesFromUI() {
   return scopeInputs().filter((i) => i.checked).map((i) => /** @type {DataScope} */(i.dataset.scope));
 }
 
+function sameScopes(left, right) {
+  return Array.isArray(left) && Array.isArray(right) &&
+    left.length === right.length && left.every((scope) => right.includes(scope));
+}
+
 function renderConsentCTA() {
   const btn = document.getElementById("btn-consent");
   const hint = document.getElementById("consent-hint");
@@ -167,9 +150,12 @@ function renderConsentCTA() {
   if (!requiredOK) {
     btn.textContent = "同意授權，繼續認識我";
     hint.textContent = "需要開啟必要項目，麥麥才有辦法認識你的投資足跡。";
-  } else if (st.consent && !st.consent.revokedAt) {
+  } else if (st.consent && !st.consent.revokedAt && sameScopes(grantedScopesFromUI(), st.consent.grantedScopes)) {
     btn.textContent = "已完成授權，繼續";
     hint.textContent = "";
+  } else if (st.consent && !st.consent.revokedAt) {
+    btn.textContent = "儲存授權設定";
+    hint.textContent = "儲存後會依新的資料範圍重新整理投資樣貌。";
   } else {
     btn.textContent = "同意授權，繼續認識我";
     hint.textContent = "";
@@ -182,7 +168,7 @@ function renderConsent() {
   // 還原選擇：已授權 → 依 grantedScopes；未授權 → 依草稿（預設：入出金開、使用紀錄關）
   scopeInputs().forEach((i) => {
     if (i.dataset.required) { i.checked = true; return; }
-    if (st.consent && !st.consent.revokedAt) i.checked = st.consent.grantedScopes.includes(i.dataset.scope);
+    if (st.consent && !st.consent.revokedAt && Array.isArray(st.consent.grantedScopes)) i.checked = st.consent.grantedScopes.includes(i.dataset.scope);
     else if (st.draft && st.draft.optional && i.dataset.scope in st.draft.optional) i.checked = st.draft.optional[i.dataset.scope];
   });
   renderConsentCTA();
@@ -197,20 +183,26 @@ scopeInputs().forEach((i) => i.addEventListener("change", () => {
 }));
 
 async function grantConsent(record, portfolioSource) {
-  OnboardingStore.write({ consent: record, portfolioSource, currentScreen: 3 });
+  OnboardingStore.write(Object.assign({ consent: record, portfolioSource, currentScreen: 3 }, clearedAnalysisState()));
+  OnboardingStore.ensureDemoSession();
 }
 
 document.getElementById("btn-consent").onclick = async () => {
   const btn = document.getElementById("btn-consent");
   const hint = document.getElementById("consent-hint");
   const st = OnboardingStore.read();
-  if (st.consent && !st.consent.revokedAt) { location.hash = "#/profile"; return; } // 已授權（含 Demo Data）不重複要求
+  const selectedScopes = grantedScopesFromUI();
+  if (st.consent && !st.consent.revokedAt && sameScopes(selectedScopes, st.consent.grantedScopes)) {
+    location.hash = "#/profile";
+    return;
+  }
   document.getElementById("err-consent").classList.remove("on");
   btn.disabled = true;
   btn.textContent = "正在建立安全的只讀連結⋯";
   track("onboarding_required_scope_confirmed");
   try {
-    const record = await AccountAuthorizationService.authorize(grantedScopesFromUI());
+    const record = await AccountAuthorizationService.authorize(selectedScopes);
+    if (st.consent && st.consent.source === "demo") record.source = "demo";
     await grantConsent(record, "mock"); // Demo 版一律 mock 資料；正式版 'internalApi'
     track("onboarding_consent_granted");
     btn.classList.add("ok");
@@ -350,8 +342,7 @@ async function finishQuestionnaire() {
     await OnboardingProfileService.saveProfile(profile);
     OnboardingStore.write({ draft: undefined }); // 完成後清草稿，重新整理不會回到第一題
     track("onboarding_questionnaire_completed");
-    /* TODO(Screen 4)：完成後應前往資料分析處理頁；Screen 4 完成前先接現有首頁（真正的 AI 分析在後端，前端不假裝已完成） */
-    location.href = "index.html?src=onboarding";
+    location.hash = "#/analyzing";
   } catch (_) {
     // 儲存失敗：答案全部保留（answers/draft 未動），只提示重新送出
     btn.disabled = false;
@@ -367,7 +358,7 @@ document.getElementById("btn-skip").onclick = async () => {
   track("onboarding_questionnaire_skipped");
   await OnboardingProfileService.skipQuestionnaire();
   OnboardingStore.write({ draft: undefined });
-  location.href = "index.html?src=onboarding"; // 略過不阻擋後續 Demo；之後可在設定頁重填
+  location.hash = "#/analyzing"; // 略過不阻擋分析；之後可在設定頁重填
 };
 
 function renderProfile() {
@@ -390,35 +381,102 @@ function renderProfile() {
 /* ═══ 路由與共用 ═══ */
 function route() {
   const h = location.hash || "#/consent";
-  const st = OnboardingStore.read();
-  // Route Guard：未完成資料授權（也沒選 Demo Data）不得進問卷
-  if (h === "#/profile" && !(st.consent && !st.consent.revokedAt)) { location.replace("#/consent"); return; }
-  const isProfile = h === "#/profile";
-  document.getElementById("view-consent").hidden = isProfile;
-  document.getElementById("view-profile").hidden = !isProfile;
-  document.getElementById("page-title").textContent = isProfile ? "讓麥麥更懂你" : "設定 MaiMate";
-  document.getElementById("step-badge").textContent = isProfile ? "3 / 8" : "2 / 8";
-  if (isProfile) renderProfile(); else renderConsent();
+  let st = OnboardingStore.read();
+  // PR #28 舊狀態尚無 demoSession：只遷移「缺少」的 Session；已過期者仍交由 Screen 4 明確處理。
+  if (st.portfolioSource === "mock" && !st.demoSession && st.consent && !st.consent.revokedAt) {
+    OnboardingStore.ensureDemoSession();
+    st = OnboardingStore.read();
+  }
+  const known = ["#/consent", "#/profile", "#/analyzing", "#/profile-result"];
+  if (!known.includes(h)) { location.replace("#/consent"); return; }
+  const hasConsent = Boolean(
+    st.consent &&
+    st.consent.consentVersion &&
+    !st.consent.revokedAt &&
+    Array.isArray(st.consent.grantedScopes) &&
+    REQUIRED_SCOPES.every((scope) => st.consent.grantedScopes.includes(scope))
+  );
+  const questionnaireReady = Boolean(
+    st.profile &&
+    st.profile.questionnaireVersion &&
+    (st.profile.status === "completed" || st.profile.status === "skipped")
+  );
+  const hasValidSession = Boolean(
+    st.demoSession &&
+    st.demoSession.id &&
+    st.demoSession.dataVersion &&
+    Number.isFinite(Date.parse(st.demoSession.createdAt)) &&
+    !OnboardingStore.isDemoSessionExpired(st.demoSession)
+  );
+  if (h === "#/profile-result" && !hasValidSession) { location.replace("welcome.html"); return; }
+  if (h !== "#/consent" && !hasConsent) { location.replace("#/consent"); return; }
+  if ((h === "#/analyzing" || h === "#/profile-result") && !questionnaireReady) { location.replace("#/profile"); return; }
+  if (h === "#/profile-result") {
+    if (!st.analysisJob) { location.replace("#/analyzing"); return; }
+    if (st.analysisJob.status === "queued" || st.analysisJob.status === "running") { location.replace("#/analyzing"); return; }
+    if (st.profileResult && st.analysisJob.status === "succeeded" &&
+        (st.profileResult.analysisJobId !== st.analysisJob.id || st.analysisJob.dataVersion !== st.demoSession.dataVersion)) {
+      location.replace("#/analyzing");
+      return;
+    }
+  }
+
+  const views = {
+    "#/consent": "view-consent",
+    "#/profile": "view-profile",
+    "#/analyzing": "view-analyzing",
+    "#/profile-result": "view-profile-result",
+  };
+  Object.values(views).forEach((id) => { document.getElementById(id).hidden = id !== views[h]; });
+  const page = {
+    "#/consent": ["設定 MaiMate", "2 / 8"],
+    "#/profile": ["讓麥麥更懂你", "3 / 8"],
+    "#/analyzing": ["認識你的投資樣貌", "4 / 8"],
+    "#/profile-result": ["你的投資樣貌", "5 / 8"],
+  }[h];
+  document.getElementById("page-title").textContent = page[0];
+  document.getElementById("step-badge").textContent = page[1];
+  const onResult = h === "#/profile-result";
+  document.getElementById("header-profile-basis").hidden = !onResult;
+  document.getElementById("net-badge").hidden = onResult;
+  document.getElementById("btn-help").hidden = onResult;
+  if (h !== "#/analyzing") window.MM_ANALYSIS_UI.stopTimers();
+  if (h === "#/profile") renderProfile();
+  else if (h === "#/consent") renderConsent();
+  else if (h === "#/analyzing") window.MM_ANALYSIS_UI.renderAnalyzing();
+  else window.MM_ANALYSIS_UI.renderProfileResult();
   window.scrollTo(0, 0);
 }
-window.addEventListener("hashchange", route);
+window.addEventListener("hashchange", (event) => {
+  let previousHash = "";
+  try { previousHash = new URL(event.oldURL).hash; } catch (_) {}
+  if (previousHash === "#/profile-result" && location.hash === "#/analyzing") {
+    window.MM_ANALYSIS_UI.prepareCompletedReview();
+  }
+  route();
+});
 
 document.getElementById("btn-back").onclick = () => {
   if (location.hash === "#/profile") location.hash = "#/consent";
+  else if (location.hash === "#/profile-result") window.MM_ANALYSIS_UI.returnToAnalysis();
+  else if (location.hash === "#/analyzing") location.hash = "#/profile";
   else location.href = "welcome.html";
 };
 
 /* Bottom Sheet：資料使用說明 */
-function openSheet() { document.getElementById("usage-root").classList.add("sheet-open"); }
-function closeSheet() { document.getElementById("usage-root").classList.remove("sheet-open"); }
+function openSheet() { window.MM_ANALYSIS_UI.openUsageSheet(); }
 document.querySelectorAll("[data-usage]").forEach((el) => el.addEventListener("click", openSheet));
-document.getElementById("btn-help").onclick = openSheet;
-document.querySelectorAll("[data-close]").forEach((el) => el.addEventListener("click", closeSheet));
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSheet(); });
+document.getElementById("btn-help").onclick = () => {
+  if (!window.MM_ANALYSIS_UI.openContextHelp()) openSheet();
+};
 
 /* Demo 用連線情境切換（評審展示錯誤流程；與 Screen 1 state-badge 同手法） */
 const _nb = document.getElementById("net-badge");
-function cycleNet() { netMode = netMode === "ok" ? "fail" : "ok"; _nb.textContent = netMode === "ok" ? "連線正常" : "連線會失敗（demo）"; }
+function cycleNet() {
+  netMode = netMode === "ok" ? "fail" : "ok";
+  _nb.textContent = netMode === "ok" ? "連線正常" : "連線會失敗（demo）";
+  window.MM_ANALYSIS_UI.setNetworkMode(netMode);
+}
 _nb.onclick = cycleNet;
 _nb.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); cycleNet(); } };
 

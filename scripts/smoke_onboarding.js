@@ -43,6 +43,11 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem("mm_
   await page.waitForFunction(() => location.hash === "#/consent");
   const guardView = await page.$eval("#view-consent", (e) => !e.hidden);
   if (!guardView) throw new Error("Route Guard 後未顯示授權頁");
+  await page.evaluate(() => {
+    const events = JSON.parse(localStorage.getItem("mm_events") || "[]");
+    events.push({ e: "legacy_event", q: "experienceLevel", t: "legacy-time", answer: "must-be-removed" });
+    localStorage.setItem("mm_events", JSON.stringify(events));
+  });
   console.log("5 Route Guard OK：未授權直進 #/profile 被導回 #/consent");
 
   // ── 1. 必要授權未勾選 → 主按鈕 disabled（畫面骨架順檢）
@@ -176,8 +181,8 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem("mm_
   if (!st.draft || st.draft.answers.experienceLevel !== "beginner") throw new Error("送出失敗後草稿答案遺失");
   await page.click("#net-badge");                                 // 恢復
   await page.click("#btn-resave2");
-  await page.waitForURL(/index\.html\?src=onboarding/);
-  console.log("11 送出失敗 OK：答案保留（draft 仍在）→ 重新送出成功 → index.html?src=onboarding");
+  await page.waitForFunction(() => location.hash === "#/analyzing");
+  console.log("11 送出失敗 OK：答案保留（draft 仍在）→ 重新送出成功 → #/analyzing");
 
   // ── 12b. 完成後刷新/回訪不回第一題；profile 落地
   await page.goto(`${base}/onboarding.html#/profile`);
@@ -194,6 +199,9 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem("mm_
   for (const ev of ["onboarding_consent_viewed", "onboarding_optional_scope_changed", "onboarding_consent_granted",
     "onboarding_questionnaire_started", "onboarding_question_answered", "onboarding_questionnaire_completed"])
     if (!events.includes(ev)) throw new Error(`事件未記錄：${ev}`);
+  const parsedEvents = JSON.parse(events);
+  for (const event of parsedEvents)
+    if (Object.keys(event).some((key) => !["e", "q"].includes(key))) throw new Error("事件記錄保留舊格式或未允許欄位");
   if (/beginner|longTermGrowth|concise|token|balance|372000|BTC/i.test(events)) throw new Error("事件記錄疑似含答案內容或金融明細");
   console.log("事件 OK：6 類事件有記；無答案內容/金融明細");
 
@@ -205,14 +213,14 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem("mm_
   st = await store(page);
   if (!st.consent || st.consent.source !== "demo") throw new Error("Demo Session 的 ConsentRecord 異常");
   await page.click("#btn-skip");
-  await page.waitForURL(/index\.html\?src=onboarding/);
+  await page.waitForFunction(() => location.hash === "#/analyzing");
   st = await store(page);
   if (!st.profile || st.profile.status !== "skipped") throw new Error("略過後 questionnaireStatus 應為 skipped");
   // 已選 Demo Data 後回到授權頁：不再重複要求授權
   await page.goto(`${base}/onboarding.html#/consent`);
   const ctaTxt = await page.$eval("#btn-consent", (e) => e.textContent);
   if (!ctaTxt.includes("已完成授權")) throw new Error(`已授權回訪 CTA 異常：${ctaTxt}`);
-  console.log("2+10 Demo Data OK：範例資料→#/profile；略過→skipped→仍前進；回訪不重複要求授權");
+  console.log("2+10 Demo Data OK：範例資料→#/profile；略過→#/analyzing；回訪不重複要求授權");
 
   // ── 13. 375px 無水平捲動（375×812 與 390×844 為主要尺寸）
   for (const w of [375, 390]) {

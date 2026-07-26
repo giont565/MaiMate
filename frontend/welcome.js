@@ -5,11 +5,17 @@
  */
 "use strict";
 
-/* ── 分析事件（僅事件名＋時間，禁止 token/持倉/明細）── */
+/* ── 分析事件（僅事件名，禁止時間、token、持倉與明細）── */
 function track(name) {
   try {
-    const log = JSON.parse(localStorage.getItem("mm_events") || "[]");
-    log.push({ e: name, t: new Date().toISOString() });
+    const stored = JSON.parse(localStorage.getItem("mm_events") || "[]");
+    const log = (Array.isArray(stored) ? stored : []).flatMap((item) => {
+      if (!item || item.e == null || String(item.e).length === 0) return [];
+      const clean = { e: String(item.e) };
+      if (item.q != null && String(item.q).length > 0) clean.q = String(item.q);
+      return [clean];
+    });
+    log.push({ e: String(name) });
     localStorage.setItem("mm_events", JSON.stringify(log.slice(-100)));
   } catch (_) {}
   console.log("[track]", name);

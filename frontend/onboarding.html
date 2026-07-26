@@ -3,22 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>設定 MaiMate｜資料授權與補充問卷</title>
+<title>設定 MaiMate｜認識你的投資樣貌</title>
 <style>
-  /* Screen 2＋3：hash 路由 #/consent（資料授權）、#/profile（補充問卷）
+  /* Screen 2–5：hash 路由 #/consent、#/profile、#/analyzing、#/profile-result
      設計 token 完全沿用 Screen 1（welcome.html）：字級 44/28/17/14、圓角 16/12、平塗品牌色 */
   :root{--bg:#FBFCFE;--card:#FFFFFF;--red:#E64A4D;--blue:#1E4DA7;--txt:#0F172A;--sub:#46557B;--mut:#6B7280;--ink:#1F2937;--ink-mut:#6B7280;--line:#E3E9F5;--tint:#EEF3FC}
   *{box-sizing:border-box;font-family:"Noto Sans CJK TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;margin:0}
   html,body{overflow-x:clip}
   body{background:var(--bg);color:var(--txt)}
 
-  .topbar{padding:16px 24px 0;display:flex;align-items:center;gap:8px;position:relative;z-index:20}
-  .topbar .back{background:none;border:0;color:var(--sub);font-size:20px;cursor:pointer;padding:2px 8px 2px 0;line-height:1;min-width:32px;min-height:32px}
+  .topbar{padding:8px 16px 0;display:flex;align-items:center;gap:4px;position:relative;z-index:20}
+  .topbar .back{background:none;border:0;color:var(--sub);font-size:24px;cursor:pointer;padding:0;line-height:1;min-width:44px;min-height:44px}
   .topbar .ptitle{font-size:15px;font-weight:800;letter-spacing:.02em}
   .topbar .spacer{margin-left:auto}
-  .devbadge{background:none;border:1px solid var(--line);color:var(--mut);font-size:10px;padding:3px 10px;border-radius:12px;font-weight:700;cursor:pointer;white-space:nowrap}
-  .stepbadge{font-size:11px;color:var(--sub);font-weight:800;border:1px solid var(--line);border-radius:12px;padding:3px 10px}
-  .helpbtn{width:28px;height:28px;border-radius:12px;background:none;border:1px solid var(--line);color:var(--sub);font-size:13px;font-weight:800;cursor:pointer}
+  .devbadge{background:none;border:1px solid var(--line);color:var(--mut);font-size:10px;padding:3px 9px;border-radius:12px;font-weight:700;cursor:pointer;white-space:nowrap;min-height:44px}
+  .stepbadge{font-size:12px;color:var(--sub);font-weight:800;border:1px solid var(--line);border-radius:12px;padding:3px 10px}
+  .helpbtn{width:44px;height:44px;border-radius:12px;background:none;border:1px solid var(--line);color:var(--sub);font-size:13px;font-weight:800;cursor:pointer}
+  .header-basis{min-height:44px;border:0;background:none;color:var(--blue);font-size:12.5px;font-weight:800;padding:0 8px;cursor:pointer;white-space:nowrap}
 
   main{max-width:480px;margin:0 auto;padding:0 24px 40px}
 
@@ -123,16 +124,150 @@
   .snote{font-size:13px;color:var(--mut);line-height:1.75;margin-top:14px}
   .btn-revise{display:block;margin:6px auto 0;background:none;border:0;padding:10px;color:var(--sub);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:underline;text-underline-offset:4px}
 
+  /* ── Screen 4：資料分析處理 ── */
+  .analysis-hero{display:flex;align-items:flex-end;gap:12px;margin-top:22px}
+  .analysis-hero .copy{flex:1;min-width:0}
+  .analysis-hero img{width:104px;height:auto;flex:none}
+  .analysis-hero h2,.result-hero h2{font-size:28px;font-weight:800;line-height:1.32;letter-spacing:-.01em;text-wrap:balance}
+  .analysis-hero p,.result-hero p{font-size:14px;color:var(--sub);line-height:1.75;margin-top:10px}
+  .analysis-hero .boundary{font-size:13px;color:var(--mut);margin-top:7px}
+  @media (prefers-reduced-motion:no-preference){.analysis-hero img{animation:breathe 3.4s ease-in-out infinite}}
+  .analysis-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:8px 16px;margin-top:20px}
+  .analysis-stage{display:grid;grid-template-columns:28px 1fr;gap:11px;padding:14px 0;border-top:1px solid var(--line)}
+  .analysis-stage:first-child{border-top:0}
+  .stage-mark{width:24px;height:24px;border-radius:12px;border:2px solid var(--line);display:grid;place-items:center;color:var(--blue);font-size:13px;font-weight:900;margin-top:1px}
+  .analysis-stage.running .stage-mark{border-color:var(--blue);background:var(--tint)}
+  .analysis-stage.completed .stage-mark{border-color:var(--blue);background:var(--blue);color:#fff}
+  .analysis-stage.failed .stage-mark{border-color:#B98A40;background:#FFF7E8;color:#7A5721}
+  @media (prefers-reduced-motion:no-preference){.analysis-stage.running .stage-mark{animation:softPulse 1.5s ease-in-out infinite}}
+  @keyframes softPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.9);opacity:.65}}
+  .stage-copy b{font-size:14px;line-height:1.5}
+  .stage-copy p{font-size:12.5px;color:var(--mut);line-height:1.65;margin-top:2px}
+  .analysis-meta{display:flex;align-items:center;gap:10px;margin-top:12px}
+  .analysis-progress{height:5px;flex:1;background:var(--line);border-radius:12px;overflow:hidden}
+  .analysis-progress i{display:block;height:100%;width:0;background:var(--blue);transition:width .25s ease}
+  .analysis-percent{font-size:12px;font-weight:800;color:var(--blue);min-width:34px;text-align:right}
+  .scope-note{background:var(--tint);border-radius:12px;padding:12px 14px;font-size:12.5px;color:var(--sub);line-height:1.7;margin-top:16px}
+  .analysis-away{font-size:12.5px;color:var(--mut);text-align:center;line-height:1.65;margin-top:12px}
+  .analysis-state{display:none;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 16px;margin-top:18px}
+  .analysis-state.on{display:block}
+  .analysis-state h3{font-size:17px}
+  .analysis-state p{font-size:13px;color:var(--sub);line-height:1.75;margin-top:7px}
+  .state-actions{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+  .state-actions button{min-height:46px;border-radius:12px;font:700 14px inherit;cursor:pointer}
+  .state-actions .primary{border:0;background:var(--blue);color:#fff}
+  .state-actions .secondary{border:1px solid var(--line);background:#fff;color:var(--txt)}
+  .state-actions .linkish{border:0;background:none;color:var(--sub);text-decoration:underline;text-underline-offset:3px}
+
+  /* ── Screen 5：投資樣貌結果 ── */
+  #view-profile-result{padding-bottom:150px}
+  .result-state{margin-top:22px}
+  .result-hero{display:grid;grid-template-columns:1fr 96px;align-items:end;gap:10px;margin-top:20px}
+  .result-hero img{width:96px;height:auto}
+  .hero-title-line{display:block}
+  @media (prefers-reduced-motion:no-preference){.result-hero img{animation:breathe 3.4s ease-in-out infinite}}
+  .profile-headline{background:var(--tint);border-left:4px solid var(--blue);border-radius:12px;padding:14px;margin-top:16px;font-size:17px;font-weight:800;line-height:1.55}
+  .summary-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 16px;margin-top:18px}
+  .summary-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .summary-card h3,.section-title{font-size:17px;line-height:1.45}
+  .demo-label{flex:none;background:var(--tint);color:var(--blue);border-radius:12px;padding:5px 9px;font-size:12px;font-weight:800}
+  .summary-copy{font-size:14px;color:var(--sub);line-height:1.75;margin-top:10px}
+  .profile-tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .profile-tag{background:var(--tint);color:var(--blue);border-radius:12px;padding:8px 11px;font-size:12.5px;font-weight:800}
+  .summary-purpose{border-top:1px solid var(--line);font-size:12.5px;color:var(--mut);line-height:1.7;margin-top:14px;padding-top:12px}
+  .data-chips{display:flex;gap:8px;overflow-x:auto;padding:3px 0 5px;margin-top:14px;scrollbar-width:none}
+  .data-chips::-webkit-scrollbar{display:none}
+  .data-chip{flex:none;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 12px;color:var(--sub);font-size:12.5px;font-weight:700}
+  .dimension-heading{margin-top:22px}
+  .dimension-heading p{font-size:12.5px;color:var(--mut);line-height:1.7;margin-top:5px}
+  .dimension-list{display:flex;flex-direction:column;gap:10px;margin-top:20px}
+  .dimension{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  .dimension-toggle{width:100%;min-height:88px;border:0;background:#fff;padding:15px 16px;display:grid;grid-template-columns:34px 1fr 24px;gap:10px;text-align:left;color:var(--txt);cursor:pointer}
+  .dim-icon{width:30px;height:30px;border-radius:12px;background:var(--tint);color:var(--blue);display:grid;place-items:center;font-size:11px;font-weight:900;margin-top:2px}
+  .dimension-toggle .dim-title{font-size:13px;color:var(--blue);font-weight:800}
+  .dimension-toggle .dim-desc{font-size:16px;font-weight:800;line-height:1.5;margin-top:3px}
+  .dimension-toggle .dim-summary{font-size:12px;color:var(--mut);font-weight:500;line-height:1.55;margin-top:4px}
+  .dimension-toggle .chev{font-size:18px;color:var(--mut);align-self:center;transition:transform .2s}
+  .dimension-toggle[aria-expanded="true"] .chev{transform:rotate(180deg)}
+  .dimension-body{display:grid;grid-template-rows:0fr;border-top:0 solid var(--line);padding:0 16px;transition:grid-template-rows .2s ease,padding .2s ease,border-top-width .2s ease}
+  .dimension-body.on{grid-template-rows:1fr;border-top-width:1px;padding:15px 16px 17px}
+  .dimension-body-inner{min-height:0;overflow:hidden}
+  .data-source-title{font-size:12px;color:var(--mut);font-weight:800;margin-bottom:8px}
+  .evidence-list{display:flex;flex-direction:column;gap:8px}
+  .evidence{display:grid;grid-template-columns:1fr auto;gap:4px 12px;background:var(--tint);border-radius:12px;padding:10px 12px;font-size:12.5px}
+  .evidence span{color:var(--sub)}
+  .evidence b{text-align:right}
+  .evidence small{grid-column:1/-1;color:var(--mut);font-size:11px}
+  .dim-explain{font-size:13px;color:var(--sub);line-height:1.75;margin-top:13px}
+  .feedback-block{border:0;border-top:1px solid var(--line);min-inline-size:0;margin:14px 0 0;padding:13px 0 0}
+  .feedback-block legend{font-size:13px;font-weight:800;margin-bottom:9px}
+  .feedback-options{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .feedback-options button{min-height:44px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--txt);font-size:12.5px;font-weight:700;cursor:pointer}
+  .feedback-options button[aria-pressed="true"]{border-color:var(--blue);background:var(--tint);color:var(--blue)}
+  .feedback-status{font-size:12px;color:var(--mut);min-height:18px;margin-top:8px}
+  .feedback-status.error{color:#7A5721}
+  .content-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 16px;margin-top:16px}
+  .content-card h3{font-size:17px}
+  .observation-list,.support-list{display:flex;flex-direction:column;gap:11px;margin-top:13px}
+  .observation{font-size:13px;color:var(--sub);line-height:1.7;padding-left:16px;position:relative}
+  .observation::before{content:"";position:absolute;left:0;top:.65em;width:6px;height:6px;border-radius:50%;background:var(--blue)}
+  .source-labels{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
+  .source-label{font-size:12px;color:var(--mut);border:1px solid var(--line);border-radius:12px;padding:2px 7px}
+  .attention-item{border-top:1px solid var(--line);padding-top:11px}
+  .attention-item:first-child{border-top:0;padding-top:0}
+  .attention-item summary{font-size:13px;color:var(--sub);line-height:1.7;font-weight:700;cursor:pointer;min-height:44px;display:flex;align-items:center}
+  .attention-item summary::after{content:"⌄";margin-left:auto;padding-left:10px;color:var(--blue);font-size:16px;transition:transform .2s}
+  .attention-item[open] summary::after{transform:rotate(180deg)}
+  .attention-item p{font-size:12.5px;color:var(--mut);line-height:1.7;padding:2px 0 8px}
+  .support-item{background:var(--tint);border-radius:12px;padding:12px}
+  .support-item b{display:block;font-size:13.5px}
+  .support-item p{font-size:12.5px;color:var(--sub);line-height:1.65;margin-top:4px}
+  .overall-card p{font-size:13px;color:var(--sub);line-height:1.7;margin-top:7px}
+  .overall-options{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+  .overall-options button{min-height:48px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--txt);font-size:12.5px;font-weight:700;cursor:pointer}
+  .overall-options button[aria-pressed="true"]{border-color:var(--blue);background:var(--tint);color:var(--blue)}
+  .footer-note{background:var(--tint);border-radius:16px;padding:15px 16px;margin-top:16px}
+  .footer-note p{font-size:12.5px;color:var(--sub);line-height:1.7}
+  .footer-links{display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:8px}
+  .footer-links button{min-height:44px;border:0;background:none;color:var(--blue);font-size:12px;font-weight:800;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+  .result-sticky{position:fixed;left:50%;bottom:0;transform:translateX(-50%);z-index:18;width:min(480px,100%);background:var(--bg);border-top:1px solid var(--line);padding:8px 24px calc(6px + env(safe-area-inset-bottom))}
+  .result-sticky .btn-cta{height:50px;font-size:15px}
+  .result-secondary-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+  .result-secondary-row.single{grid-template-columns:1fr}
+  .result-secondary-row button{min-height:44px;border:0;background:none;color:var(--sub);font-size:12.5px;font-weight:800;cursor:pointer}
+  .result-secondary-row .secondary-action{text-decoration:underline;text-underline-offset:3px}
+  .result-secondary-row .later{color:var(--mut)}
+  .result-load-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 16px}
+  .result-load-card h2{font-size:22px;line-height:1.4}
+  .result-load-card p{font-size:13px;color:var(--sub);line-height:1.75;margin-top:7px}
+  .result-load-actions{display:flex;flex-direction:column;gap:8px;margin-top:15px}
+  .result-load-actions button{min-height:48px;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer}
+  .result-load-actions .primary{border:0;background:var(--blue);color:#fff}
+  .result-load-actions .secondary{border:1px solid var(--line);background:#fff;color:var(--txt)}
+  .form-error{font-size:12.5px;color:#7A5721;line-height:1.6;min-height:20px;text-align:center;margin-top:8px}
+  .result-sticky .form-error:empty{display:none}
+  .correction-options{display:flex;flex-direction:column;gap:8px}
+  .correction-options button{min-height:44px;border:1px solid var(--line);border-radius:12px;background:#fff;text-align:left;padding:10px 12px;font-size:13px;color:var(--txt);cursor:pointer}
+  .correction-options button[aria-pressed="true"]{border-color:var(--blue);background:var(--tint)}
+  .correction-label{display:block;font-size:13px;font-weight:800;margin:15px 0 7px}
+  .correction-note{width:100%;min-height:88px;border:1px solid var(--line);border-radius:12px;padding:11px 12px;resize:vertical;font:13px/1.6 inherit;color:var(--txt)}
+  .char-count{font-size:11px;color:var(--mut);text-align:right;margin-top:4px}
+  .sheet-secondary{width:100%;height:44px;border:0;background:none;color:var(--sub);font-size:13px;font-weight:800;cursor:pointer;margin-top:4px}
+  @media (prefers-reduced-motion:reduce){
+    .analysis-progress i,.dimension-toggle .chev,.dimension-body,.attention-item summary::after{transition:none}
+    .analysis-stage.running .stage-mark{animation:none}
+  }
+
   /* Bottom Sheet（沿用 Screen 1）*/
   .sheet-mask{position:fixed;inset:0;background:rgba(13,21,48,.45);z-index:30;opacity:0;pointer-events:none;transition:opacity .25s}
-  .sheet{position:fixed;left:0;right:0;bottom:0;background:#fff;color:var(--txt);border-radius:16px 16px 0 0;z-index:31;max-height:85vh;transform:translateY(100%);transition:transform .3s ease;display:flex;flex-direction:column;border-top:1px solid var(--line)}
+  .sheet{position:fixed;left:50%;bottom:0;width:min(480px,100%);background:#fff;color:var(--txt);border-radius:16px 16px 0 0;z-index:31;max-height:85vh;transform:translate(-50%,100%);visibility:hidden;transition:transform .3s ease,visibility 0s .3s;display:flex;flex-direction:column;border:1px solid var(--line);border-bottom:0}
   .sheet-open .sheet-mask{opacity:1;pointer-events:auto}
-  .sheet-open .sheet{transform:translateY(0)}
+  .sheet-open .sheet{transform:translate(-50%,0);visibility:visible;transition:transform .3s ease}
   @media (prefers-reduced-motion:reduce){.sheet,.sheet-mask{transition:none}}
   .sheet .grab{width:40px;height:4px;background:#D5DEF0;border-radius:12px;margin:10px auto 0}
   .sheet .shead{display:flex;align-items:center;padding:10px 18px 12px;border-bottom:1px solid var(--line)}
   .sheet .shead b{font-size:15px}
-  .sheet .shead .x{margin-left:auto;background:none;border:0;font-size:18px;color:var(--mut);cursor:pointer;padding:4px 8px}
+  .sheet .shead .x{margin-left:auto;background:none;border:0;font-size:18px;color:var(--mut);cursor:pointer;padding:0;min-width:44px;min-height:44px}
   .sheet .sbody{overflow-y:auto;padding:14px 18px 8px}
   .sheet .sbody p{font-size:13px;color:var(--ink);line-height:1.8;margin-bottom:12px}
   .sheet .sfoot{padding:12px 18px calc(14px + env(safe-area-inset-bottom))}
@@ -145,6 +280,8 @@
     .guide .gavatar{width:88px}
     .phead h2{font-size:24px}
     .assure .grid{grid-template-columns:1fr}
+    .analysis-hero h2,.result-hero h2{font-size:24px}
+    .analysis-hero img{width:88px}
   }
 </style>
 </head>
@@ -154,6 +291,7 @@
   <button class="back" id="btn-back" aria-label="返回">‹</button>
   <span class="ptitle" id="page-title">設定 MaiMate</span>
   <span class="spacer"></span>
+  <button class="header-basis" id="header-profile-basis" hidden>分析依據</button>
   <span class="devbadge" id="net-badge" role="button" tabindex="0" aria-label="切換連線情境（Demo）" title="點擊切換連線情境（Demo）">連線正常</span>
   <span class="stepbadge" id="step-badge" aria-label="整體流程進度">2 / 8</span>
   <button class="helpbtn" id="btn-help" aria-label="查看資料使用說明">?</button>
@@ -302,24 +440,206 @@
       </div>
     </div>
   </section>
+
+  <!-- ═══ Screen 4：資料分析處理 ═══ -->
+  <section id="view-analyzing" hidden>
+    <div class="analysis-hero">
+      <div class="copy">
+        <h2>麥麥正在整理你的投資足跡</h2>
+        <p>我會把你的持倉、交易紀錄和剛剛的回答放在一起看，整理出目前最值得了解的習慣與特徵。</p>
+        <p class="boundary">這不是績效評分，也不會替你做投資決定。</p>
+      </div>
+      <img src="maimate_hero.png" alt="">
+    </div>
+
+    <div id="analysis-running">
+      <div class="analysis-meta" aria-label="分析進度">
+        <div class="analysis-progress"><i id="analysis-progress-fill"></i></div>
+        <span class="analysis-percent" id="analysis-progress-value">0%</span>
+      </div>
+      <div class="analysis-card" id="analysis-stages" aria-live="polite"></div>
+      <div class="scope-note" id="analysis-scope-note">分析只會使用你已授權的資料。</div>
+      <p class="analysis-away" id="analysis-away-note">你可以先離開，回來時會接著顯示目前進度。</p>
+    </div>
+
+    <div class="analysis-state" id="analysis-complete" role="status">
+      <h3>整理好了，我們一起看看。</h3>
+      <p>以下是根據目前資料整理出的起點，你可以確認或修正。</p>
+      <div class="state-actions"><button class="primary" id="btn-view-result">查看我的投資樣貌</button></div>
+    </div>
+
+    <div class="analysis-state" id="analysis-error" role="alert">
+      <h3 id="analysis-error-title">這次沒有整理完成</h3>
+      <p id="analysis-error-copy">你的原始資料沒有被變更，可以重新分析，或先使用展示結果繼續體驗。</p>
+      <div class="state-actions">
+        <button class="primary" id="btn-analysis-retry">重新分析</button>
+        <button class="secondary" id="btn-analysis-fallback">使用展示結果</button>
+        <button class="linkish" id="btn-analysis-back">返回上一頁</button>
+      </div>
+    </div>
+
+    <div class="analysis-state" id="session-expired" role="alert">
+      <h3>這次展示連線已過期</h3>
+      <p>重新建立範例資料後，就能再次整理投資樣貌。</p>
+      <div class="state-actions"><button class="primary" id="btn-session-reset">重新建立範例資料</button></div>
+    </div>
+  </section>
+
+  <!-- ═══ Screen 5：投資樣貌結果 ═══ -->
+  <section id="view-profile-result" hidden>
+    <div class="result-state" id="profile-result-loading" role="status">
+      <div class="result-load-card">
+        <h2>正在載入你的投資樣貌</h2>
+        <p>分析已經保留，麥麥正在把結果帶回來。</p>
+      </div>
+    </div>
+    <div class="result-state" id="profile-result-load-error" role="alert" hidden>
+      <div class="result-load-card">
+        <h2>這次沒有載入完成</h2>
+        <p>你的分析結果仍然保留，可以重新載入。</p>
+        <div class="result-load-actions">
+          <button class="primary" id="btn-profile-reload">重新載入</button>
+          <button class="secondary" id="btn-profile-error-back">返回分析頁</button>
+        </div>
+      </div>
+    </div>
+    <div class="result-state" id="profile-result-missing" role="alert" hidden>
+      <div class="result-load-card">
+        <h2 id="profile-missing-title">結果還沒準備好</h2>
+        <p id="profile-missing-copy">分析工作已完成，但這次沒有取得結果。你可以重新建立展示結果，不會重新分析原始資料。</p>
+        <div class="result-load-actions">
+          <button class="primary" id="btn-profile-rebuild">重新建立結果</button>
+          <button class="secondary" id="btn-profile-missing-back">返回分析頁</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="profile-result-content" hidden>
+      <div class="result-hero">
+        <div>
+          <h2 id="result-hero-title"><span class="hero-title-line">這是麥麥</span><span class="hero-title-line">目前看到的你</span></h2>
+          <p id="result-intro">不是分數，也不是定型。這是根據目前資料整理出的起點，之後會隨著你的使用慢慢更新。</p>
+        </div>
+        <img src="maimate_hero.png" alt="">
+      </div>
+      <div class="profile-headline" id="profile-headline"></div>
+
+      <section class="summary-card" aria-labelledby="profile-summary-title">
+        <div class="summary-card-head">
+          <h3 id="profile-summary-title">你的投資樣貌摘要</h3>
+          <span class="demo-label">示範資料</span>
+        </div>
+        <p class="summary-copy" id="profile-summary-copy"></p>
+        <div class="profile-tags" id="profile-tags" aria-label="投資樣貌摘要標籤"></div>
+        <p class="summary-purpose">這些結果只用來調整 MaiMate 的說明與提醒方式。</p>
+      </section>
+
+      <div class="data-chips" id="profile-data-chips" aria-label="分析資料摘要"></div>
+
+      <div class="dimension-heading">
+        <h3 class="section-title">從四個面向一起看</h3>
+        <p>展開每個面向，可以查看資料依據並告訴麥麥是否符合你。</p>
+      </div>
+      <div class="dimension-list" id="profile-dimensions"></div>
+
+      <section class="content-card" aria-labelledby="stable-title">
+        <h3 id="stable-title">目前看見的穩定習慣</h3>
+        <div class="observation-list" id="stable-patterns"></div>
+      </section>
+
+      <section class="content-card" aria-labelledby="attention-title">
+        <h3 id="attention-title">值得多留意的地方</h3>
+        <div class="observation-list" id="attention-points"></div>
+      </section>
+
+      <section class="content-card" aria-labelledby="support-title">
+        <h3 id="support-title">麥麥會先這樣陪你</h3>
+        <div class="support-list" id="support-plan"></div>
+      </section>
+
+      <section class="content-card overall-card" id="overall-feedback-card" aria-labelledby="overall-title">
+        <h3 id="overall-title">這份樣貌接近你嗎？</h3>
+        <p>你可以直接確認，也可以先調整其中幾個面向。之後仍能在設定中修改。</p>
+        <div class="overall-options" id="overall-options" role="group" aria-labelledby="overall-title">
+          <button type="button" data-overall="accurate" aria-pressed="false">很接近</button>
+          <button type="button" data-overall="mostlyAccurate" aria-pressed="false">大致接近</button>
+          <button type="button" data-overall="needsRevision" aria-pressed="false">還需要調整</button>
+          <button type="button" data-overall="unsure" aria-pressed="false">目前不確定</button>
+        </div>
+        <div class="feedback-status" id="overall-feedback-status" aria-live="polite"></div>
+      </section>
+
+      <aside class="footer-note" role="note">
+        <p>投資樣貌用於調整 MaiMate 的解釋與提醒方式，不代表投資能力、績效或獲利預測。</p>
+        <div class="footer-links">
+          <button type="button" id="footer-profile-basis">查看分析依據</button>
+          <button type="button" data-usage>資料使用方式</button>
+          <button type="button" id="footer-consent-settings">修改授權設定</button>
+        </div>
+      </aside>
+    </div>
+
+    <div class="result-sticky" id="profile-result-actions" hidden>
+      <button class="btn-cta" id="btn-profile-confirm">這很像我，進入 MaiMate</button>
+      <div class="result-secondary-row">
+        <button class="secondary-action" id="btn-profile-adjust">調整我的樣貌</button>
+        <button class="later" id="btn-profile-later">稍後再確認</button>
+      </div>
+      <div class="form-error" id="profile-action-error" role="alert"></div>
+    </div>
+  </section>
 </main>
 
 <!-- 資料使用說明 Bottom Sheet -->
 <div id="usage-root">
-  <div class="sheet-mask" data-close="usage"></div>
-  <div class="sheet" role="dialog" aria-modal="true" aria-label="資料使用說明">
+  <div class="sheet-mask" data-close-sheet="usage"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="資料使用說明" aria-hidden="true" tabindex="-1">
     <div class="grab"></div>
-    <div class="shead"><b>資料使用說明</b><button class="x" data-close="usage" aria-label="關閉">✕</button></div>
+    <div class="shead"><b>資料使用說明</b><button class="x" data-close-sheet="usage" aria-label="關閉">✕</button></div>
     <div class="sbody">
       <p>MaiMate 會使用你授權的資料，分析持倉分布、交易習慣與市場事件之間的關聯。MaiMate 不保證獲利，也不會將分析結果視為你的投資能力或投資績效評分。</p>
       <p>正式產品的資料保存期間、撤回方式與隱私權條款，將依 MaiCoin／MAX 正式規範實作。Demo 版僅使用範例資料。</p>
     </div>
-    <div class="sfoot"><button class="btn-cta" data-close="usage">我了解了</button></div>
+    <div class="sfoot"><button class="btn-cta" data-close-sheet="usage">我了解了</button></div>
+  </div>
+</div>
+
+<!-- Screen 5 分析依據 Bottom Sheet -->
+<div id="basis-root">
+  <div class="sheet-mask" data-close-sheet="basis"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="這份樣貌怎麼整理出來的？" aria-hidden="true" tabindex="-1">
+    <div class="grab"></div>
+    <div class="shead"><b>這份樣貌怎麼整理出來的？</b><button class="x" data-close-sheet="basis" aria-label="關閉">✕</button></div>
+    <div class="sbody" id="basis-content"></div>
+    <div class="sfoot"><button class="btn-cta" data-close-sheet="basis">我了解了</button></div>
+  </div>
+</div>
+
+<!-- Screen 5 單一面向修正 Bottom Sheet -->
+<div id="correction-root">
+  <div class="sheet-mask" data-close-sheet="correction"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="correction-sheet-title" aria-hidden="true" tabindex="-1">
+    <div class="grab"></div>
+    <div class="shead"><b id="correction-sheet-title">你覺得哪裡需要調整？</b><button class="x" data-close-sheet="correction" aria-label="關閉">✕</button></div>
+    <div class="sbody">
+      <div class="correction-options" id="correction-options" role="group" aria-labelledby="correction-sheet-title"></div>
+      <label class="correction-label" for="correction-note">補充說明（選填）</label>
+      <textarea class="correction-note" id="correction-note" maxlength="200" placeholder="只會作為樣貌修正，不會被當成買賣指令。"></textarea>
+      <div class="char-count">還可輸入 <span id="correction-count">200</span> 字</div>
+      <div class="form-error" id="correction-error" role="alert"></div>
+    </div>
+    <div class="sfoot">
+      <button class="btn-cta" id="btn-save-correction">儲存調整</button>
+      <button class="sheet-secondary" type="button" data-close-sheet="correction">先不修改</button>
+    </div>
   </div>
 </div>
 
 <script>window.API_BASE = "https://4vjxh3jv8d.execute-api.us-east-1.amazonaws.com";</script>
 <script src="mocks/onboarding.js"></script>
+<script src="onboarding-core.js"></script>
+<script src="investment-analysis.js"></script>
+<script src="onboarding-analysis.js"></script>
 <script src="onboarding.js"></script>
 </body>
 </html>

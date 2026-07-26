@@ -22,4 +22,4 @@ __pycache__/
 docs/*.pdf
 docs/slide-*.jpg
 .DS_Store
-smoke_mobile.png
+smoke_*.png

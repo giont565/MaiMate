@@ -40,6 +40,11 @@ const server = http.createServer((req, res) => {
 
   await page.goto(`${base}/welcome.html`);
   await page.waitForFunction(() => document.getElementById("btn-cta").textContent !== "載入中…");
+  await page.evaluate(() => {
+    const events = JSON.parse(localStorage.getItem("mm_events") || "[]");
+    events.push({ e: "legacy_event", q: "experienceLevel", t: "legacy-time", metadata: "must-be-removed" });
+    localStorage.setItem("mm_events", JSON.stringify(events));
+  });
 
   // 1. 首屏骨架
   const h2 = await page.$eval(".hero h2", (e) => e.textContent);
@@ -114,12 +119,17 @@ const server = http.createServer((req, res) => {
   if (legalOpen) throw new Error("Esc 未關閉法律 sheet");
   console.log("法律 placeholder sheet OK（Esc 可關）");
 
-  // 8. 事件記錄：有記且不含 token/持倉明細
+  // 8. 事件記錄：只保留事件名，不含時間或敏感欄位
   const events = await page.evaluate(() => localStorage.getItem("mm_events") || "[]");
   for (const ev of ["maimate_entry_viewed", "maimate_help_opened", "maimate_privacy_opened", "maimate_demo_bubble_no"])
     if (!events.includes(ev)) throw new Error(`事件未記錄：${ev}`);
+  const parsedEvents = JSON.parse(events);
+  for (const event of parsedEvents)
+    if (Object.keys(event).some((key) => !["e", "q"].includes(key))) throw new Error("Screen 1 Analytics 出現未允許欄位");
+  const cleanedLegacy = parsedEvents.find((event) => event.e === "legacy_event");
+  if (!cleanedLegacy || cleanedLegacy.q !== "experienceLevel") throw new Error("Screen 1 Analytics 清洗舊格式時遺失允許的 questionId");
   if (/token|balance|volume/i.test(events)) throw new Error("事件記錄疑似含敏感欄位");
-  console.log("分析事件 OK：四事件有記、無敏感欄位");
+  console.log("分析事件 OK：四事件有記，且只含事件名／既有 questionId");
 
   // 9. 360px 不跑版
   await page.setViewportSize({ width: 360, height: 800 });
