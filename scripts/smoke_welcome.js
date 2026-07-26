@@ -130,18 +130,18 @@ const server = http.createServer((req, res) => {
 
   await page.screenshot({ path: "smoke_welcome.png", fullPage: true });
 
-  // 10. 三個導向：示範帳戶／主 CTA／證據卡「好，帶我看看」
+  // 10. 三個導向：示範帳戶／主 CTA／證據卡「好，帶我看看」（後兩者接 Screen 2 資料授權頁）
   await page.click("#btn-demo");
   await page.waitForURL(/index\.html\?demo=STEADY_PLANNER/);
   await page.goto(`${base}/welcome.html`);
   await page.waitForFunction(() => document.getElementById("btn-cta").textContent === "開始和麥麥認識彼此");
   await page.click("#btn-cta");
-  await page.waitForURL(/index\.html\?src=welcome/);
+  await page.waitForURL(/onboarding\.html#\/consent/);
   await page.goto(`${base}/welcome.html`);
   await page.waitForFunction(() => document.getElementById("btn-cta").textContent === "開始和麥麥認識彼此");
   await page.click("#pill-yes");
-  await page.waitForURL(/index\.html\?src=welcome/);
-  console.log("導向 OK：示範帳戶→?demo=STEADY_PLANNER；主 CTA／「好，帶我看看」→?src=welcome");
+  await page.waitForURL(/onboarding\.html#\/consent/);
+  console.log("導向 OK：示範帳戶→?demo=STEADY_PLANNER；主 CTA／「好，帶我看看」→onboarding.html#/consent");
 
   await browser.close();
   server.close();

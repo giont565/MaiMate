@@ -5,6 +5,7 @@
   "scripts": {
     "smoke": "node scripts/smoke_frontend.js",
     "smoke:welcome": "node scripts/smoke_welcome.js",
+    "smoke:onboarding": "node --check frontend/onboarding.js && node --check frontend/mocks/onboarding.js && node scripts/smoke_onboarding.js",
     "handbook": "node docs/build_handbook.js"
   },
   "devDependencies": {

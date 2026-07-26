@@ -115,7 +115,7 @@ if (_st) _st.innerHTML = STEPS.map((s, i) =>
 
 /* 對話證據卡（C 版）：兩顆回覆膠囊——「好」走主流程、「先不用」收到麥麥一句溫和回應 */
 const _py = document.getElementById("pill-yes"), _pn = document.getElementById("pill-no");
-if (_py) _py.onclick = () => { track("maimate_demo_bubble_yes"); location.href = "index.html?src=welcome"; };
+if (_py) _py.onclick = () => { track("maimate_demo_bubble_yes"); location.href = "onboarding.html#/consent"; };
 if (_pn) _pn.onclick = () => {
   track("maimate_demo_bubble_no");
   const r = document.getElementById("bubble-reply");
@@ -142,11 +142,11 @@ document.addEventListener("keydown", e => {
 });
 
 /* ── CTA／Demo 導向 ── */
-/* TODO(Screen 2)：READY_NEW_USER/RESUME 應前往資料授權頁；Screen 2 完成前先接現有首頁 index.html */
+/* 新用戶/續接 → 資料授權頁（onboarding.html Screen 2）；已完成 onboarding → 直接進首頁 */
 document.getElementById("btn-cta").onclick = async () => {
   if (entryState === "ERROR") { track("maimate_entry_reload_clicked"); return init(); }
   track("maimate_primary_cta_clicked");
-  location.href = "index.html?src=welcome";
+  location.href = entryState === "READY_COMPLETED" ? "index.html?src=welcome" : "onboarding.html#/consent";
 };
 document.getElementById("btn-demo").onclick = async () => {
   track("maimate_demo_cta_clicked");
