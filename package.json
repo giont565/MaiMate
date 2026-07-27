@@ -3,6 +3,11 @@
   "private": true,
   "description": "MaiMate 開發輔助腳本：前端煙測＋開發手冊重出（提案簡報 deck 的重依賴 sharp/react 仍在 docs/ 暫裝）",
   "scripts": {
+    "test": "npm run test:backend && npm run test:python && npm run smoke",
+    "test:backend": "python3 scripts/test_backend.py",
+    "test:python": "python3 -m unittest discover -s tests -v",
+    "validate:sam": "sam validate --template-file infra/template.yaml --lint",
+    "build:sam": "sam build --template-file infra/template.yaml",
     "smoke": "node scripts/smoke_frontend.js",
     "smoke:welcome": "node scripts/smoke_welcome.js",
     "smoke:onboarding": "node --check frontend/onboarding-core.js && node --check frontend/investment-analysis.js && node --check frontend/onboarding-analysis.js && node --check frontend/onboarding.js && node --check frontend/mocks/onboarding.js && node scripts/smoke_onboarding.js",
