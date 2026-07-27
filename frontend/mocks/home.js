@@ -120,7 +120,9 @@ window.MM_HOME_MOCK = Object.freeze({
       startDate: "2026-01-08T00:00:00+08:00",
       endDate: "2026-01-09T23:59:59+08:00",
       relatedAssets: ["DOGE"],
-      marketChangeSummary: "DOGE 在兩天內約變動 -7.4%（示範市場情境）。",
+      // 實際文字由 SimilarMomentAdapter 依 transactionRefs 的成交價現算後覆蓋；
+      // 這裡不寫死百分比，避免與 mocks/onboarding.js 的交易紀錄對不上。
+      marketChangeSummary: "",
     },
     transactionRefs: [
       "2026-01-08T22:55:00+08:00",

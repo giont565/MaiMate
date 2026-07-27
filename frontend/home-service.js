@@ -467,6 +467,43 @@ const AttributionAdapter = Object.freeze({
   },
 });
 
+/** 交易節奏標題／摘要一律由實際筆數決定 */
+function mmHomeRhythmTitle(transactions) {
+  const recent = Number(transactions.recent30Count);
+  const previous = Number(transactions.previous30Count);
+  if (!Number.isFinite(recent) || !Number.isFinite(previous)) return "交易節奏還需要更多紀錄";
+  if (recent > previous) return "最近的交易次數比前一個月多";
+  if (recent < previous) return "最近的交易次數比前一個月少";
+  return "近期交易節奏沒有明顯增加";
+}
+
+/** 由實際交易時間推出「1 月 8 日至 9 日」這類期間標籤 */
+function mmHomeDateRangeLabel(times) {
+  const dates = times.map((time) => new Date(time)).filter((date) => !Number.isNaN(date.getTime()));
+  if (!dates.length) return "當時";
+  const first = dates[0];
+  const last = dates[dates.length - 1];
+  const label = (date) => (date.getMonth() + 1) + " 月 " + date.getDate() + " 日";
+  if (first.getMonth() === last.getMonth() && first.getDate() === last.getDate()) return label(first);
+  return first.getMonth() === last.getMonth()
+    ? label(first) + "至 " + last.getDate() + " 日"
+    : label(first) + "至 " + label(last);
+}
+
+/** 歷史相似時刻的價格變化：直接由示範帳戶的成交價算，不接受寫死的百分比 */
+function mmHomeHistoricalPriceChange(times) {
+  const raw = window.MM_ONBOARDING_MOCK && window.MM_ONBOARDING_MOCK.demoTransactions;
+  if (!Array.isArray(raw)) return null;
+  const matched = times.map((time) => raw.find((item) => item.time === time)).filter(Boolean);
+  if (matched.length < 2) return null;
+  const symbols = new Set(matched.map((item) => item.symbol));
+  if (symbols.size !== 1) return null;
+  const first = Number(matched[0].price);
+  const last = Number(matched[matched.length - 1].price);
+  if (!Number.isFinite(first) || !Number.isFinite(last) || first === 0) return null;
+  return { symbol: matched[0].symbol, first, last, ratio: (last - first) / first };
+}
+
 const SimilarMomentAdapter = Object.freeze({
   read(transactionMetrics) {
     const source = window.MM_HOME_MOCK && window.MM_HOME_MOCK.similarMomentInput;
@@ -483,8 +520,10 @@ const SimilarMomentAdapter = Object.freeze({
       const time = Date.parse(item.time);
       return time >= currentStart && time <= currentEnd;
     });
+    // 日期一律從實際交易紀錄推導，不寫死（換一份示範資料也要跟著對）
+    const periodLabel = mmHomeDateRangeLabel(historical.map((item) => item.time));
     const userBehaviorThen = [
-      "1 月 8 日至 9 日共有 " + historical.length + " 筆 " + symbols.join("、") + " 交易紀錄。",
+      periodLabel + "共有 " + historical.length + " 筆 " + symbols.join("、") + " 交易紀錄。",
     ];
     if (directions.has("buy") && directions.has("sell")) {
       userBehaviorThen.push("當時紀錄同時包含賣出與買入。");
@@ -492,11 +531,18 @@ const SimilarMomentAdapter = Object.freeze({
     const userBehaviorNow = currentTrades.length
       ? ["這次市場情境期間共有 " + currentTrades.length + " 筆交易紀錄。"]
       : ["這次市場情境期間尚未出現新增交易。"];
+    // 當時的價格變化改由成交價現算，覆蓋 mock 字串（避免與交易紀錄不一致）
+    const historicalContext = window.MM_HOME_CORE.clone(source.historicalContext);
+    const priceChange = mmHomeHistoricalPriceChange(source.transactionRefs);
+    historicalContext.marketChangeSummary = priceChange
+      ? priceChange.symbol + " 在 " + periodLabel + " 的成交價由 " + priceChange.first + " 變為 " +
+        priceChange.last + "（約 " + mmHomePercent(priceChange.ratio, 1) + "，示範帳戶紀錄）。"
+      : "當時的價格變化沒有足夠紀錄可以推算。";
     return {
       id: String(source.id),
       title: String(source.title),
       currentContext: window.MM_HOME_CORE.clone(source.currentContext),
-      historicalContext: window.MM_HOME_CORE.clone(source.historicalContext),
+      historicalContext,
       similarities: source.similarities.slice(),
       differences: source.differences.slice(),
       userBehaviorThen,
@@ -608,7 +654,8 @@ function mmHomeRuleNarrative(facts) {
         mmHomePercent(primaryMarket.changeRatio, 1) + "，且約占目前資產 " +
         mmHomePercent(portfolio.topAssetRatio) + "；這裡只整理關聯，不提供買賣指令。",
     },
-    planAlignmentSummary: "可確認的交易節奏沒有明顯增加；持有時間仍需要更多資料才能完整對照。",
+    planAlignmentSummary: mmHomeRhythmTitle(transactions).replace("最近的交易次數", "可確認的交易次數") +
+      "；持有時間仍需要更多資料才能完整對照。",
     attributionSummary: "依目前示範資料估算，帳戶變化主要來自市場價格與主要持倉的組合影響。",
     similarMomentSummary: "兩次情境只有部分可比；資產與變動幅度不同，這次目前沒有新增交易。",
     contextualQuestions: [
@@ -956,7 +1003,8 @@ function mmHomeBuildResponse(state) {
       id: "behavior-allocation",
       label: topWeightChange == null
         ? "主要持倉目前約占 " + mmHomePercent(portfolio.topAssetRatio)
-        : "主要持倉比前期快照提高 " + Math.round(topWeightChange * 100) + " 個百分點",
+        : "主要持倉比前期快照" + (topWeightChange >= 0 ? "提高 " : "降低 ") +
+          Math.abs(Math.round(topWeightChange * 100)) + " 個百分點",
       trend: topWeightChange == null ? "unknown" : topWeightChange > 0.005 ? "increased" : "stable",
     },
     {
@@ -1160,7 +1208,8 @@ function mmHomeBuildResponse(state) {
     {
       id: "insight_trading_rhythm",
       type: "tradingRhythmChange",
-      title: "近期交易節奏沒有明顯增加",
+      // 標題跟著實際筆數走，不預設「沒有增加」（換資料就會說反話）
+      title: mmHomeRhythmTitle(transactions),
       summary: "最近 30 天 " + transactions.recent30Count + " 筆、前一個 30 天 " +
         transactions.previous30Count + " 筆交易；現有 " +
         transactions.count + " 筆紀錄平均每月約 " + transactions.averagePerMonth + " 筆。",

@@ -371,9 +371,18 @@ function fallbackResult(job, data, generatedBy) {
       dataSufficient: volatility.volatilityBehavior !== "insufficientData",
     },
   ];
+  /* Hero 一句話也要跟著實際指標走：原本寫死「偶爾調整持倉／配置較集中」，
+   * 換一份資料就會和下方 dimension 卡自相矛盾。 */
+  const concentrated = topPct != null && topPct >= 40;
   const headline = coverage.coverage === "limited"
     ? "麥麥先整理出一個初步樣貌"
-    : "你目前偶爾調整持倉，也把較多配置放在主要關注的資產。";
+    : (tradingDataSufficient
+        ? (concentrated
+            ? "你目前偶爾調整持倉，也把較多配置放在主要關注的資產。"
+            : "你目前偶爾調整持倉，配置分布相對平均。")
+        : (concentrated
+            ? "目前紀錄還不多，可以先看出配置較集中在主要持倉。"
+            : "目前紀錄還不多，配置分布看起來相對平均。"));
   const createdAt = new Date().toISOString();
   const summary = [
     tradingDataSufficient
@@ -381,7 +390,9 @@ function fallbackResult(job, data, generatedBy) {
       : coverage.transactionCount
         ? "目前只有 " + coverage.transactionCount + " 筆可用交易紀錄，還無法穩定整理交易頻率；"
         : "目前沒有可用的交易紀錄，交易節奏仍是未知；",
-    topPct == null ? "持倉資料尚未授權或目前不可用。" : "最大持倉約占 " + topPct + "%，配置較集中於主要持倉。",
+    topPct == null
+      ? "持倉資料尚未授權或目前不可用。"
+      : "最大持倉約占 " + topPct + "%，" + (concentrated ? "配置較集中於主要持倉。" : "配置分布相對平均。"),
     "持有時間與波動反應仍需要更多資料才能判斷。",
   ].join("");
   const stablePatterns = [];
