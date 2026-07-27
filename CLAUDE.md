@@ -38,11 +38,12 @@ cd docs/brand && python3 render_pixel_bot.py   # 重出麥麥像素吉祥物
 簡報改版流程：改 build_*.js → node 重跑 → `python3 /root/.claude/skills/pptx/scripts/office/validate.py <檔>`
 （本環境 LibreOffice 渲染壞的，視覺 QA 只能靠使用者本機開）。pptx 建完記得刪 node_modules 再 commit。
 
-## 團隊與分工現況（2026-07-25 更新）
+## 團隊與分工現況（2026-07-27 更新）
 
 - **B 包實質認領：chaocongyang-oss**（#2/#9 完成關單；kline/depth 正規化、RAG KB=DSIYBVI1IX、護欄誤判修正兩輪，走分支+PR 紀律）
-- **A 包核心＋C 包主體：Claude 完成**（四引擎/新前端/離線劇本，已 merge 待部署驗）；jack79112 交過 A 包文件（已導向驗收/#6）；haoting777 尚無活動
-- Issues 13 張 open（#2/#9 已關）；PR #19（CI）待 merge
+- **C 包收尾認領：haoting777**（07/26 交 #26 hero 健康分卡＋#28 Onboarding 五屏，兩 PR open、四組煙測 07/27 代驗全綠；另開 #27 要求重跑 health_report 補 realized_pnl——需隊長跑 CSV）
+- **A 包核心＋C 包主體：Claude 完成**（四引擎/新前端/離線劇本＋加拍備援，已 merge 或在 PR #25）；jack79112 交過 A 包文件（已導向驗收/#6）
+- Issues 14 張 open（#2/#9 已關、#27 新增）；**四 PR 待 merge：#19（CI）/#25（docs＋加拍）/#26/#28**——#25 與 #26 撞 app.js，建議 #19→#26→#28 先 merge、#25 最後由 Claude rebase
 - 真實數據已驗證：追高 65%、機會成本 NT$26,598,877、最痛單筆 DOGE NT$312,924（P6 級素材，別改壞）
 
 ## 待辦交接（上一個 session 留下的）

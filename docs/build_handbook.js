@@ -52,14 +52,14 @@ function statusTable(s, rows, y, colW, rowH) {
   s.addText("隊伍「第五名」團隊會議", { x: M, y: 1.6, w: 8, h: 0.4, fontFace: FONT, fontSize: 14, color: GOLD, margin: 0 });
   s.addText("MaiMate 開發手冊", { x: M, y: 2.1, w: W - 2 * M, h: 1.0, fontFace: FONT, fontSize: 46, bold: true, color: WHITE, margin: 0 });
   s.addText("狀態・分工・架構・成本・驗收・Kiro 教學——隊內唯一簡報", { x: M, y: 3.3, w: 10, h: 0.5, fontFace: FONT, fontSize: 18, color: ICE, margin: 0 });
-  s.addText("2026/07/26 更新｜決賽 8/1–8/2｜文字完整版：repo 首頁 README.md", { x: M, y: 6.4, w: 10, h: 0.4, fontFace: FONT, fontSize: 13, color: "8FA0C9", margin: 0 });
+  s.addText("2026/07/27 更新｜決賽 8/1–8/2｜文字完整版：repo 首頁 README.md", { x: M, y: 6.4, w: 10, h: 0.4, fontFace: FONT, fontSize: 13, color: "8FA0C9", margin: 0 });
 }
 
 // ============ 2 總覽 ============
 {
   const s = pres.addSlide();
   s.background = { color: WHITE };
-  bigTitle(s, "總覽：07/23 RAG 護欄二輪修正（PR #23）＋jack 交 A 包文件——重部署仍是第一件事");
+  bigTitle(s, "總覽：07/26 haoting777 交 C 包兩 PR（hero 卡＋Onboarding 五屏，煙測已代驗全綠）——四 PR 待 merge");
   const stats = [
     { n: "17", l: "已完成並驗證", c: GREEN, d: "行為分析、Bedrock迴圈、RAG KB、query_knowledge…" },
     { n: "13", l: "寫好但沒測過", c: GOLD, d: "三方案、Profile、Audit、路由（已 merge 待重部署驗）…" },
@@ -76,7 +76,7 @@ function statusTable(s, rows, y, colW, rowH) {
   card(s, M, 4.7, W - 2 * M, 1.0, "FDF0EF");
   s.addText([
     { text: "最大隱藏風險：", options: { bold: true, color: RED } },
-    { text: "PR #17 已 merge 但線上環境待重部署（sam deploy＋s3 sync＋兩支 Lambda 金鑰）；Private 簽章/order 真跑仍未驗；Bedrock Guardrails 未建。7/27 晚要全程跑通——重部署是本週第一件事。", options: { color: INK } },
+    { text: "今天就是 7/27：線上 wco1xm8zvl 仍是舊版，四 PR（#19 CI／#25 docs＋加拍／#26 hero／#28 Onboarding）全數待 merge。今晚唯一要事＝merge＋重部署＋E2E；#25 與 #26 撞 app.js，merge 順序見日報。距 7/31 code freeze 剩 4 天。", options: { color: INK } },
   ], { x: M + 0.3, y: 4.85, w: W - 2 * M - 0.6, h: 0.7, fontFace: FONT, fontSize: 14, valign: "middle", margin: 0 });
   s.addText("本週原則：先讓 🧪 變 ✅（把寫好的測到能動），再開 🔨 新工。", {
     x: M, y: 6.0, w: W - 2 * M, h: 0.45, fontFace: FONT, fontSize: 15, bold: true, color: NAVY, margin: 0 });
@@ -128,9 +128,9 @@ function statusTable(s, rows, y, colW, rowH) {
   bigTitle(s, "前端・部署・交付物（12 項）｜前端 C／部署交付 D");
   statusTable(s, [
     ["桌機三欄 SPA", "done", "07/19 上線實測＋UX 修正（行情就地更新/氣泡渲染）", "frontend/"],
-    ["離線 mock 備援", "code", "07/21 Golden Path 離線劇本完成＋煙測（三方案→確認→軌跡）；真環境拔網路待驗", "app.js"],
-    ["手機版 RWD（Golden Path 動線）", "todo", "對話主畫面、確認卡放大、麥麥視覺", "#13"],
-    ["三方案卡片／模式徽章／軌跡面板", "todo", "隨 #11 #10 #12", "—"],
+    ["離線 mock 備援", "code", "07/21 Golden Path 劇本＋07/26 加拍備援（三模式開場白/RAG 防詐）皆煙測綠；真環境拔網路待驗", "app.js"],
+    ["手機版 RWD（Golden Path 動線）", "todo", "haoting777 #26 hero 卡＋#28 Onboarding 五屏 open 中（07/27 煙測代驗全綠）；merge＋部署驗收待做", "#13"],
+    ["三方案卡片／模式徽章／軌跡面板", "code", "07/21 完成＋mock 煙測綠（本表 07/27 補正歸類）；部署後真資料驗收待做", "—"],
     ["SAM 模板", "done", "07/19 首次 deploy 成功（us-east-1 API+S3）", "infra/"],
     ["自家 AWS 帳號＋Bedrock 開通", "done", "隊長帳號出線，Bedrock 已開通（07/19）", "—"],
     ["從零部署演練＋DEPLOY.md", "code", "DEPLOY.md 已出稿（07/21，含檢查清單與速查表）；<1hr 計時演練待做", "#14"],
@@ -197,7 +197,7 @@ function statusTable(s, rows, y, colW, rowH) {
   s.addText("C｜前端與品牌　4 天", { x: M + 0.3, y: 1.85, w: 5.3, h: 0.4, fontFace: FONT, fontSize: 15, bold: true, color: NAVY, margin: 0 });
   s.addText("地盤：frontend/ + docs/mockups/ + docs/brand/", { x: M + 0.3, y: 2.25, w: 5.3, h: 0.3, fontFace: "Courier New", fontSize: 10.5, color: MUT, margin: 0 });
   s.addText([
-    { text: "🔨 #13 手機版 RWD（照 mockups 三畫面）", options: { bullet: true, breakLine: true } },
+    { text: "🔨 #13 RWD：haoting #26 hero 卡＋#28 Onboarding 待 merge", options: { bullet: true, breakLine: true } },
     { text: "✅ 三方案卡渲染——07/21 完成（mock 煙測）", options: { bullet: true, breakLine: true } },
     { text: "✅ 模式徽章切換｜軌跡面板——07/21 完成（mock 煙測）", options: { bullet: true, breakLine: true } },
     { text: "✅ 麥麥視覺整合（成交切 BULLISH）——07/21 完成", options: { bullet: true, breakLine: true } },
@@ -242,7 +242,7 @@ function statusTable(s, rows, y, colW, rowH) {
     ["🔨 D：Guardrails 建立（#6）", "GUARDRAIL_ID 環境變數", "A", "設定即通——掛載程式已就緒"],
     ["✅ A：#11／#10／#1 完成（07/21）", "scenarios/confirm schema（§3）", "C", "三方案卡・徽章・確認卡已接上"],
     ["✅ A：核心全完成（07/22 PR #17 merge）", "main 即可測版本", "D", "重部署後 E2E Golden Path 開跑"],
-    ["🧪 C：手機版＋元件（#13）", "可操作前端（mock 煙測✅）", "D", "E2E＋真環境拔網路驗證"],
+    ["🧪 C：手機版＋元件（#13，haoting #26/#28 開發中）", "可操作前端（mock 煙測✅）", "D", "PR merge → E2E＋真環境拔網路驗證"],
     ["🔨 D：E2E 全線綠燈", "綠燈", "D 自己", "預錄影片（#8）＋DEPLOY.md 演練（#14）"],
     ["🔨 D：影片＋部署 SOP", "決賽武器包", "全員", "8/1 上場"],
   ];
