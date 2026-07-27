@@ -156,12 +156,29 @@
       evidence.push(evidenceRef("ev_attribution", "market", "今日帳戶變化中與市場價格有關的比重",
         pct(marketShare.contributionRatio), attribution.periodEnd));
     }
+    /* 三段式：先回答 → 今天的資料（歸因＋交易節奏）→ 因此的結論。
+     * 每個數字都先進 evidence 才准出現在文字裡（guardDraft 會逐一核對）。 */
+    const tx = AgentTools.transactions();
+    if (tx) {
+      evidence.push(evidenceRef("ev_recent30", "transactions", "最近 30 天交易", tx.recent30Count + " 筆"));
+      evidence.push(evidenceRef("ev_avg", "transactions", "過去 12 個月平均每月", tx.averagePerMonth + " 筆"));
+    }
     const directAnswer = "因為 " + top + " 約占你目前資產的 " + topPct +
       "，它的價格變化會比其他單一資產更明顯地反映在整體帳戶上。";
-    const explanation = "可以把帳戶想成一個籃子。占比越大的資產，移動時越容易帶動整個籃子的變化。" +
-      (marketShare ? "今天的資料顯示，帳戶變化中約 " + pct(marketShare.contributionRatio) + " 與市場價格變動有關。" : "");
+    const paragraphs = ["可以把帳戶想成一個籃子。占比越大的資產，移動時越容易帶動整個籃子的變化。"];
+    if (marketShare || tx) {
+      const parts = [];
+      if (marketShare) parts.push("今天的資料顯示，帳戶變化中約 " + pct(marketShare.contributionRatio) + " 與 " + top + " 的市場變動有關");
+      if (tx) parts.push("最近 30 天共有 " + tx.recent30Count + " 筆交易，沒有明顯高於你平常每月約 " + tx.averagePerMonth + " 筆的節奏");
+      paragraphs.push(parts.join("；") + "。");
+    }
+    if (marketShare && tx) paragraphs.push("因此，今天的變化主要來自市場與配置，而不是近期交易增加。");
+    const explanation = paragraphs.join("\n\n");
+    const usedTools = ["portfolio"];
+    if (marketShare) usedTools.push("attribution", "market");
+    if (tx) usedTools.push("transactions");
     return {
-      tools: marketShare ? ["portfolio", "attribution", "market"] : ["portfolio"],
+      tools: usedTools,
       answer: { directAnswer, explanation },
       blocks: [
         block("metric", {
@@ -176,7 +193,7 @@
       evidence,
       limitations: ["帳戶變化來源為依目前資料估算，不等同正式會計損益歸因。"],
       followUps: [
-        { id: "q_allocation_change", text: "我的" + top + "占比最近有提高嗎？" },
+        { id: "q_allocation_change", text: "我的 " + top + " 占比最近有提高嗎？" },
         { id: "q_attribution_split", text: "今天主要是市場影響，還是我的交易？" },
         { id: "q_concentration_basics", text: "什麼是資產集中？" },
       ],
@@ -394,15 +411,21 @@
   }
 
   /* ── 語氣模式：同樣的數字，不同的深度（規格 §9）── */
+  /* 版面風格只影響「說明深度與區塊數量」，不影響數字與證據：
+   * 證據一律完整保留——文字裡出現的每個數字都必須查得到來源，
+   * 截斷證據會讓數字一致性檢查誤判，也讓使用者查不到依據。 */
   function applyCommunicationStyle(draft, style) {
     const result = Object.assign({}, draft);
     if (style === "concise") {
-      result.answer = { directAnswer: draft.answer.directAnswer, explanation: "" };
+      // 先給重點：保留結論與「今天的資料」那段，收起比喻與延伸說明
+      const paragraphs = String(draft.answer.explanation || "").split("\n\n");
+      result.answer = {
+        directAnswer: draft.answer.directAnswer,
+        explanation: paragraphs.length > 1 ? paragraphs.slice(1).join("\n\n") : paragraphs[0] || "",
+      };
       result.blocks = draft.blocks.slice(0, 1);
-      result.evidence = draft.evidence.slice(0, 2);
     } else if (style === "guided") {
       result.blocks = draft.blocks.slice(0, 1);
-      result.evidence = draft.evidence.slice(0, 3);
     } // analytical：全部保留
     result.followUps = draft.followUps.slice(0, style === "concise" ? 2 : 4);
     return result;
@@ -429,10 +452,11 @@
     blocks.push(block("summary", { directAnswer: draft.answer.directAnswer }));
     if (draft.answer.explanation) blocks.push(block("text", { text: draft.answer.explanation }));
     draft.blocks.forEach((item) => blocks.push(item));
-    if (draft.evidence.length) blocks.push(block("evidence", { items: draft.evidence }));
+    // 順序＝本次參考 → 資料限制 → 你也可以接著問 → 深入了解
+    if (draft.evidence.length) blocks.push(block("evidence", { items: draft.evidence, sources: draft.tools.slice() }));
     if (draft.limitations.length) blocks.push(block("dataScopeNotice", { items: draft.limitations }));
-    if (draft.insightLinks.length) blocks.push(block("insightLink", { links: draft.insightLinks }));
     if (draft.followUps.length) blocks.push(block("followUpQuestions", { questions: draft.followUps }));
+    if (draft.insightLinks.length) blocks.push(block("insightLink", { links: draft.insightLinks }));
     if (mode === "limited") {
       blocks.unshift(block("dataScopeNotice", { items: ["目前未使用個人帳戶資料，以下是一般性的說明。"] }));
     }

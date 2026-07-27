@@ -43,6 +43,9 @@
   .bubble-user{align-self:flex-end;max-width:86%;background:var(--blue);color:#fff;border-radius:16px 16px 4px 16px;
     padding:11px 14px;font-size:14.5px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
   .card-ai{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px 14px}
+  .card-ai .who-row{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+  .card-ai .who-row img{width:24px;height:auto}
+  .card-ai .who-row b{font-size:12.5px;color:var(--sub)}
   .card-ai .direct{font-size:16px;font-weight:800;line-height:1.6}
   .card-ai .text{margin-top:8px;font-size:13.5px;color:var(--sub);line-height:1.8;white-space:pre-wrap}
   .blk{margin-top:12px;border-top:1px solid var(--line);padding-top:11px}
@@ -74,7 +77,15 @@
   .msg-acts button{min-height:44px;border:0;background:none;color:var(--sub);font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;padding:0 8px;border-radius:12px}
   .msg-acts button[aria-pressed="true"]{color:var(--blue);background:var(--tint)}
 
+  /* 本次參考卡 */
+  .ref-card{background:var(--tint);border:1px solid #DCE6F8;border-radius:12px;padding:12px}
+  .ref-card .bt{margin-bottom:6px}
+  .ref-card .notice-list li{color:var(--sub);font-size:12.5px}
+  .ref-link{margin-top:8px;border:0;background:none;color:var(--blue);font-size:12.5px;font-weight:800;
+    cursor:pointer;font-family:inherit;min-height:44px;padding:0;display:block}
+
   /* 追問／洞察連結 */
+  .fu-label{width:100%;font-size:12px;color:var(--mut);font-weight:700;margin-bottom:1px}
   .followups{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
   .followups button{min-height:44px;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:0 13px;
     font-size:12.5px;font-weight:700;color:var(--txt);cursor:pointer;font-family:inherit}

@@ -102,14 +102,27 @@ const ALLOWED_EVENT_KEYS = ["e", "q", "src", "intent", "tool", "style", "status"
     kv: document.querySelectorAll(".card-ai .kv").length,
     notice: Boolean(document.querySelector(".notice-list")),
     follow: document.querySelectorAll(".followups button").length,
-    tools: document.querySelector(".tool-done summary") ? document.querySelector(".tool-done summary").textContent : "",
+    refCard: document.querySelector(".ref-card") ? document.querySelector(".ref-card").textContent : "",
+    fuLabel: document.querySelector(".fu-label") ? document.querySelector(".fu-label").textContent : "",
+    insightLabel: document.querySelector(".insight-links .bt") ? document.querySelector(".insight-links .bt").textContent : "",
+    order: [...document.querySelector(".card-ai:last-of-type").children].map((e) => e.className).join("|"),
   }));
   if (!blocks.direct || blocks.kv < 3 || !blocks.notice || !blocks.follow) throw new Error(`結構化區塊缺漏：${JSON.stringify(blocks)}`);
-  if (!blocks.tools.includes("已參考")) throw new Error("工具狀態未收合成使用者語言");
+  if (!blocks.refCard.includes("本次參考") || !blocks.refCard.includes("持倉摘要") || !blocks.refCard.includes("查看依據"))
+    throw new Error(`「本次參考」卡異常：${blocks.refCard.slice(0, 80)}`);
+  if (blocks.fuLabel !== "你也可以接著問：") throw new Error(`追問標題異常：${blocks.fuLabel}`);
+  if (blocks.insightLabel !== "深入了解") throw new Error(`深入了解標題異常：${blocks.insightLabel}`);
+  // 版面順序：本次參考 → 資料限制 → 你也可以接著問 → 深入了解 → 有幫助
+  const seq = blocks.order.split("|");
+  const idx = (cls) => seq.findIndex((item) => item.includes(cls));
+  if (!(idx("blk") < idx("followups") && idx("followups") < idx("insight-links") && idx("insight-links") < idx("msg-acts")))
+    throw new Error(`區塊順序不符規格畫面：${blocks.order}`);
+  if (!answer.includes("68%")) throw new Error("回答未帶入帳戶變化歸因比重");
+  if (!/最近 30 天共有 \d/.test(answer)) throw new Error("回答未帶入交易節奏");
   console.log(`7/8/11/13 回答 OK：52%/72%/4 項 皆來自工具、結構化區塊齊（${blocks.kv} 列指標、${blocks.follow} 個追問）、無工具原名`);
 
   // ── 12. Evidence Sheet：顯示資料來源與時間，不顯示完整明細
-  await page.click(".card-ai .blk button");
+  await page.click(".card-ai .ref-link");
   await page.waitForFunction(() => document.getElementById("evidence-root").classList.contains("sheet-open"), null, { timeout: 8000 });
   const evidence = await page.$eval("#evidence-body", (e) => e.textContent);
   if (!evidence.includes("持倉摘要") || !evidence.includes("52%")) throw new Error(`依據內容異常：${evidence.slice(0, 120)}`);

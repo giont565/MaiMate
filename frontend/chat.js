@@ -84,18 +84,28 @@
       wrap.append(card);
       return wrap;
     },
+    /* 本次參考：直接把用到的資料列出來（規格畫面的「本次參考」卡），
+     * 細節（數值與更新時間）留在「查看依據」的 Sheet 裡。 */
     evidence: (payload) => {
       const wrap = el("div", "blk");
-      const button = el("button", "", "查看依據（" + payload.items.length + " 項）");
+      const card = el("div", "ref-card");
+      card.append(el("div", "bt", "本次參考"));
+      const list = el("ul", "notice-list");
+      const sources = (payload.sources || []).length
+        ? payload.sources.map((tool) => MOCK.toolDoneLabels[tool] || tool)
+        : payload.items.map((item) => sourceTypeLabel(item.sourceType));
+      Array.from(new Set(sources)).forEach((label) => list.append(el("li", "", label)));
+      card.append(list);
+      const button = el("button", "ref-link", "查看依據 ›");
       button.type = "button";
-      button.className = "";
-      button.style.cssText = "border:0;background:none;color:var(--blue);font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;min-height:44px;padding:0";
       button.onclick = () => openEvidence(payload.items);
-      wrap.append(button);
+      card.append(button);
+      wrap.append(card);
       return wrap;
     },
     insightLink: (payload) => {
       const wrap = el("div", "insight-links");
+      wrap.append(el("div", "bt", "深入了解"));
       payload.links.forEach((link) => {
         const button = el("button", "", link.title + " ›");
         button.type = "button";
@@ -116,6 +126,7 @@
     },
     followUpQuestions: (payload) => {
       const wrap = el("div", "followups");
+      wrap.append(el("div", "fu-label", "你也可以接著問："));
       payload.questions.forEach((question) => {
         const button = el("button", "", question.text);
         button.type = "button";
@@ -155,6 +166,12 @@
     }
     const card = el("div", "card-ai");
     card.dataset.messageId = message.id;
+    const who = el("div", "who-row");
+    const avatar = document.createElement("img");
+    avatar.src = "maimate_hero.png";
+    avatar.alt = "";
+    who.append(avatar, el("b", "", "麥麥"));
+    card.append(who);
     if (!CORE.validateBlocks(message.blocks)) {
       card.append(el("div", "direct", "這則回答沒有通過內容檢查，麥麥先不顯示它。"));
       byId("chatlog").append(card);
@@ -164,7 +181,9 @@
       const render = blockRenderers[blk.type];
       if (render) card.append(render(blk.payload));
     });
-    if (message.toolExecutionIds && message.toolExecutionIds.length) {
+    // 沒有「本次參考」卡時（例如安全邊界回覆），才用收合列表交代用過的資料
+    const hasRefCard = message.blocks.some((blk) => blk.type === "evidence");
+    if (!hasRefCard && message.toolExecutionIds && message.toolExecutionIds.length) {
       const details = el("details", "tool-done");
       details.append(el("summary", "", "已參考 " + message.toolExecutionIds.length + " 類資料"));
       const list = el("ul");
