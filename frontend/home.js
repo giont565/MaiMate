@@ -71,7 +71,9 @@
   function formatPercentValue(value) {
     const number = Number(value);
     if (!Number.isFinite(number)) return "—";
-    return Math.round(number <= 1 ? number * 100 : number) + "%";
+    // 保留一位小數：報告寫 98.6%，畫面不得四捨五入成 99%（整數不補 .0）
+    const percent = Math.round((number <= 1 ? number * 100 : number) * 10) / 10;
+    return (Number.isInteger(percent) ? percent : percent.toFixed(1)) + "%";
   }
 
   function formatTime(value) {
@@ -516,8 +518,13 @@
     const section = moduleCard(module);
     section.id = "account-snapshot-card";
     appendHeading(section, payload.title || "你的帳戶概況");
-    const assetCount = snapshotValue(payload, ["assetCount", "holdingAssetCount"], "—");
-    const mainAsset = snapshotValue(payload, ["topAsset", "primaryAsset", "mainAsset", "largestHoldingAsset"], "—");
+    const assetCount = snapshotValue(payload, ["assetCount", "holdingAssetCount"], null);
+    // 上游沒有各幣種明細時 assetCount 會是 null → 顯示 assetCountLabel（「報告未提供」），不補假數字
+    const assetCountText = assetCount == null
+      ? snapshotValue(payload, ["assetCountLabel"], "—")
+      : assetCount + " 項";
+    // 最大持有優先用顯示名稱（例如「現金（TWD）」）；只給代號讀起來會誤導
+    const mainAsset = snapshotValue(payload, ["topAssetLabel", "topAsset", "primaryAsset", "mainAsset", "largestHoldingAsset"], "—");
     const mainRatio = snapshotValue(payload, ["topAssetRatio", "primaryAssetRatio", "mainAssetRatio", "largestHoldingRatio"], null);
     const latestTradeDays = snapshotValue(payload, ["lastTransactionDaysAgo"], null);
     const latestTrade = snapshotValue(
@@ -526,10 +533,10 @@
       latestTradeDays == null ? "—" : Number(latestTradeDays) === 0 ? "今天" : latestTradeDays + " 天前"
     );
     const items = [
-      ["持有資產", assetCount === "—" ? "—" : assetCount + " 項"],
-      ["主要持倉", mainAsset],
-      ["主要持倉占比", mainRatio == null ? "—" : formatPercentValue(mainRatio)],
-      ["最近一次交易", latestTrade],
+      ["持有資產", assetCountText],
+      ["最大持有", mainAsset],
+      ["最大持有占比", mainRatio == null ? "—" : formatPercentValue(mainRatio)],
+      ["最近一期買賣", latestTrade],
     ];
     const grid = create("div", "snapshot-grid");
     grid.id = "account-snapshot-grid";

@@ -160,6 +160,17 @@ function collectKeys(value, target) {
       `Greeting 時段錯誤：${JSON.stringify(periods)}`);
     console.log("2–3 Demo／Greeting OK：固定 Persona，同一 Profile Model，三時段正確");
 
+    /* 期望值一律由真實帳戶（frontend/mocks/account.js ← data/health_report.json）現推，
+     * 不再寫死；換一份報告時煙測會跟著換，不會退回抄舊數字。 */
+    const account = await page.evaluate(() => window.MM_ACCOUNT);
+    const topRatioText = String(Math.round(account.holdings.topPct * 10) / 10) + "%";
+    const primaryMarketAsset = await page.evaluate(() => MM_HOME_MOCK.marketContext.primaryAsset);
+    const marketChangeText = await page.evaluate(() => {
+      const asset = MM_HOME_SERVICES.adapters.market.read().assets
+        .find((item) => item.symbol === MM_HOME_MOCK.marketContext.primaryAsset);
+      return Math.round(asset.changeRatio * 1000) / 10 + "%";
+    });
+
     const response = await page.evaluate(() => MM_HOME_UI.getResponse());
     const module = (type) => response.modules.find((item) => item.type === type);
     const today = module("todayRelevant");
@@ -168,43 +179,67 @@ function collectKeys(value, target) {
     const similar = module("similarMoment");
     const snapshot = module("accountSnapshot");
     assert(today && plan && attribution && similar && snapshot, "首頁核心模組缺漏");
-    assert(today.payload.relatedAssets[0] === "BTC", "Today Relevant 未連結主要持倉");
-    assert(today.payload.explanation.includes("-1.8%") && today.payload.explanation.includes("52%"),
-      "Today Relevant 未同時包含市場與持倉證據");
-    assert(today.payload.evidence.some((item) => item.id === "today-recent-trades" && item.value === "1 筆") &&
-      today.payload.evidence.some((item) => item.id === "today-previous-trades" && item.value === "1 筆"),
-    "Today Relevant 未包含近期與前期行為證據");
+    assert(today.payload.relatedAssets[0] === account.holdings.topCurrency.toUpperCase(),
+      "Today Relevant 未連結最大持有標的（真實帳戶為現金 TWD）");
+    assert(today.payload.explanation.includes(marketChangeText) && today.payload.explanation.includes(topRatioText),
+      `Today Relevant 未同時包含市場與持倉證據：${today.payload.explanation}`);
+    /* 市場那格必須講示範行情的主要資產，不得寫成「TWD 今日變動」（現金沒有行情）。 */
+    const marketEvidence = today.payload.evidence.find((item) => item.id === "today-market-change");
+    assert(marketEvidence && marketEvidence.label.startsWith(primaryMarketAsset) &&
+      !marketEvidence.label.startsWith(account.holdings.topCurrency.toUpperCase()),
+    `Today 市場證據仍掛在最大持有上（現金沒有行情）：${marketEvidence && marketEvidence.label}`);
+    assert(today.payload.evidence.some((item) => item.id === "today-recent-trades" &&
+        item.value === account.trades.latestMonthCount + " 筆" && item.label.includes(account.trades.latestMonth)) &&
+      today.payload.evidence.some((item) => item.id === "today-previous-trades" &&
+        item.value === account.trades.previousMonthCount + " 筆" && item.label.includes(account.trades.previousMonth)),
+    `Today Relevant 未包含以「月」為單位的近期／前期行為證據：${JSON.stringify(today.payload.evidence)}`);
     assert(today.payload.impactLevels.market === "medium" &&
       today.payload.impactLevels.allocation === "high" &&
       today.payload.impactLevels.behavior === "low", "Today impact level 錯誤");
     assert(today.payload.generatedBy === "rulesAndAi", "合法 Structured Output 未通過驗證");
 
     assert(plan.payload.status !== "aligned" || !plan.payload.summary.includes("分數"), "Plan Alignment 不應成為評分");
-    assert(plan.payload.recentBehaviorItems.some((item) => item.label.includes("最近 30 天 1 筆") &&
-      item.label.includes("前一個 30 天 1 筆")), "Plan Alignment 沒有真實行為對照");
+    assert(plan.payload.recentBehaviorItems.some((item) =>
+      item.label.includes(account.trades.latestMonth) && item.label.includes(account.trades.latestMonthCount + " 筆") &&
+      item.label.includes(account.trades.previousMonth) && item.label.includes(account.trades.previousMonthCount + " 筆")),
+    `Plan Alignment 沒有真實行為對照：${JSON.stringify(plan.payload.recentBehaviorItems)}`);
     assert(plan.payload.recentBehaviorItems.some((item) => item.label.includes("持有時間仍需更多")),
       "持有資料不足時仍下了結論");
 
-    const ratios = attribution.payload.contributors.map((item) => item.contributionRatio);
-    assert(attribution.payload.attributionType === "estimated", "歸因沒有標示 estimated");
-    assert(Math.abs(ratios.reduce((sum, value) => sum + value, 0) - 1) < 1e-9, "歸因比例未加總為 1");
-    assert(ratios.map((value) => Math.round(value * 100)).join("/") === "68/21/7/4",
-      `歸因比例錯誤：${ratios}`);
+    /* health_report.json 沒有各幣種持倉明細＝拆不出帳戶變化來源，必須走「資料不足」。 */
+    assert(attribution.payload.unavailable === true && !attribution.payload.contributors,
+      `報告缺明細時仍產生歸因比例：${JSON.stringify(attribution.payload)}`);
 
-    assert(similar.payload.historicalContext.startDate.startsWith("2026-01-08"), "相似時刻未使用 1 月真實紀錄");
-    assert(similar.payload.userBehaviorThen.join("").includes("2 筆"), "相似時刻沒有對上 1/8–1/9 兩筆交易");
-    assert(!similar.payload.userBehaviorThen.join("").includes("4 次"), "相似時刻虛構四次交易");
+    const worstSell = account.opportunityCost.worstSell;
+    assert(similar.payload.historicalContext.startDate.startsWith(worstSell.date),
+      `相似時刻未使用報告裡唯一有明細的那筆賣出：${similar.payload.historicalContext.startDate}`);
+    const behaviorThen = similar.payload.userBehaviorThen.join("");
+    assert(behaviorThen.includes(worstSell.currency.toUpperCase()) &&
+      behaviorThen.includes(String(worstSell.sell_price)) &&
+      behaviorThen.includes(Math.round(worstSell.missed_twd).toLocaleString("en-US")),
+    `相似時刻沒有對上 ${worstSell.date} 的賣出紀錄：${behaviorThen}`);
+    assert(!/\d+\s*筆/.test(behaviorThen), `報告沒有逐筆明細，相似時刻不得宣稱交易筆數：${behaviorThen}`);
 
-    assert(snapshot.payload.assetCount === 4 && snapshot.payload.topAsset === "BTC" &&
-      snapshot.payload.topAssetRatio === 0.52 && snapshot.payload.topTwoAssetsRatio === 0.72 &&
-      snapshot.payload.lastTransactionDaysAgo === 16, `Account Snapshot 與 Screen 5 不一致：${JSON.stringify(snapshot.payload)}`);
+    assert(snapshot.payload.topAsset === account.holdings.topCurrency.toUpperCase() &&
+      snapshot.payload.topAssetRatio === account.holdings.topPct / 100 &&
+      snapshot.payload.topAssetLabel.includes("現金"),
+    `Account Snapshot 最大持有與報告不一致：${JSON.stringify(snapshot.payload)}`);
+    /* 報告沒有各幣種明細與最後交易日期 → 一律 null，畫面顯示「報告未提供」而不是補值。 */
+    assert(snapshot.payload.assetCount === null && snapshot.payload.topTwoAssetsRatio === null &&
+      snapshot.payload.lastTransactionAt === null && snapshot.payload.lastTransactionDaysAgo === null &&
+      snapshot.payload.latestTransactionLabel.includes(account.trades.latestMonth),
+    `Account Snapshot 把報告沒有的欄位補成了假值：${JSON.stringify(snapshot.payload)}`);
     const fullText = await page.locator("body").innerText();
-    ["78%", "96 天", "1.6 倍", "最近 30 天共有 3 次"].forEach((forbidden) => {
+    /* 前四項是規格範例的虛構數字；後四項是舊示範帳戶（BTC 52%／前兩項 72%／30 天單位）的殘留。 */
+    ["78%", "96 天", "1.6 倍", "最近 30 天", "52%", "72%", "0.7 筆", "16 天前"].forEach((forbidden) => {
       assert(!fullText.includes(forbidden), `首頁出現不相符示範數字：${forbidden}`);
     });
-    assert(!/投資健康分|雷達圖|排行榜|保守型|積極型|FOMO|恐慌型/.test(fullText),
+    assert(fullText.includes(topRatioText) && fullText.includes(account.trades.latestMonth),
+      "首頁沒有顯示真實帳戶的持倉占比或資料月份");
+    assert(!/投資健康分|雷達圖|排行榜|保守型|積極型|FOMO|恐慌型|韭菜|衝動/.test(fullText),
       "首頁出現禁止的分數／人格／心理標籤");
-    console.log("4–8 核心價值 OK：市場＋持倉＋行為、Plan 對照、估算歸因、1 月回放、8／52／72 truth-first");
+    console.log(`4–8 核心價值 OK：市場＋持倉＋行為、Plan 對照、歸因資料不足、${worstSell.date} 回放、` +
+      `${topRatioText}／${account.trades.latestMonthCount} 筆 truth-first`);
 
     /* 9. Cache、Analytics 與金融資料邊界。 */
     const persisted = await state(page);

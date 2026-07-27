@@ -79,9 +79,11 @@ window.MM_CHAT_MOCK = {
   emptyState: {
     title: "今天想從哪裡開始？",
     subtitle: "問麥麥市場、持倉、交易習慣或金融名詞都可以。決定始終在你手上。",
+    /* 起手式不預設使用者持有哪一種資產（真實帳戶的資金主要停在現金）；
+     * 具體標的一律由 Adapter 現算後才出現在回答裡。 */
     quickQuestions: [
-      { id: "q_today_relevant", text: "今天有哪些市場變化和我的持倉有關？" },
-      { id: "q_portfolio_impact", text: "為什麼 BTC 會影響我的帳戶比較多？" },
+      { id: "q_today_relevant", text: "今天有哪些市場變化和我有關？" },
+      { id: "q_portfolio_impact", text: "目前的資金分布對我的帳戶有什麼影響？" },
       { id: "q_trading_rhythm", text: "我最近的交易節奏有變快嗎？" },
       { id: "q_concentration_basics", text: "什麼是資產集中？" },
     ],

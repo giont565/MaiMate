@@ -51,11 +51,21 @@ function validState(overrides) {
     },
     demoSession: {
       id: "obs_demo_smoke",
-      dataVersion: "steady-planner-existing-8-v1",
+      dataVersion: DEMO_DATA_VERSION,
       createdAt: new Date(now).toISOString(),
       expiresAt: new Date(now + 86400000).toISOString(),
     },
   }, overrides || {});
+}
+
+/* 版本字串與帳戶數字一律從頁面現讀（onboarding-core.js／mocks/account.js），
+ * 寫死在煙測裡會在換資料時整批失效。 */
+let DEMO_DATA_VERSION = "health-report-2025-v1";
+let ACCOUNT = null;
+
+async function readFixtures(page) {
+  DEMO_DATA_VERSION = await page.evaluate(() => MM_DEMO_DATA_VERSION);
+  ACCOUNT = await page.evaluate(() => window.MM_ACCOUNT);
 }
 
 async function seed(page, value) {
@@ -97,6 +107,7 @@ async function assertNoHorizontalScroll(page, width) {
 
     // 1. Screen 5 Session／授權／問卷 Route Guard。
     await seed(page, {});
+    await readFixtures(page);
     await page.goto(`${base}/onboarding.html#/profile-result`);
     await page.waitForURL(/welcome\.html$/);
     const invalidSession = validState();
@@ -119,7 +130,7 @@ async function assertNoHorizontalScroll(page, width) {
     await page.goto(`${base}/onboarding.html#/analyzing`);
     await page.waitForSelector(".analysis-stage.running");
     let saved = await readState(page);
-    if (!saved.demoSession || saved.demoSession.dataVersion !== "steady-planner-existing-8-v1" ||
+    if (!saved.demoSession || saved.demoSession.dataVersion !== DEMO_DATA_VERSION ||
         await page.locator("#session-expired.on").count())
       throw new Error("PR #28 舊狀態缺 demoSession 時未正確遷移");
     console.log("1b Legacy State OK：缺少 demoSession 的既有合法狀態就地遷移，不清除授權／問卷");
@@ -130,7 +141,7 @@ async function assertNoHorizontalScroll(page, width) {
     await page.waitForSelector(".analysis-stage.running");
     saved = await readState(page);
     const firstJobId = saved.analysisJob.id;
-    if (!firstJobId || saved.analysisJob.dataVersion !== "steady-planner-existing-8-v1") throw new Error("Analysis Job 建立異常");
+    if (!firstJobId || saved.analysisJob.dataVersion !== DEMO_DATA_VERSION) throw new Error("Analysis Job 建立異常");
     await page.evaluate(() => { location.hash = "#/profile-result"; });
     await page.waitForFunction(() => location.hash === "#/analyzing");
     await page.reload();
@@ -139,26 +150,40 @@ async function assertNoHorizontalScroll(page, width) {
     if (saved.analysisJob.id !== firstJobId) throw new Error("刷新後重複建立 Job");
     console.log("2–4 Job OK：建立一次、running 阻擋 Screen 5、刷新恢復同一 Job");
 
-    // 5–9. 完成後正確顯示 Result，所有數字只來自現有 8 筆 Mock。
+    // 5–9. 完成後正確顯示 Result；所有數字只能來自 data/health_report.json（透過 mocks/account.js）。
     await page.waitForFunction(() => location.hash === "#/profile-result", null, { timeout: 7000 });
     await page.waitForSelector("#profile-result-content:not([hidden])");
     saved = await readState(page);
     const completedBase = clone(saved);
+    const tradeTotal = ACCOUNT.trades.total;
+    const tradeTotalText = tradeTotal.toLocaleString("en-US");
+    const topPctText = String(Math.round(ACCOUNT.holdings.topPct * 10) / 10);
+    const otherPctText = String(Math.round(ACCOUNT.holdings.otherPct * 10) / 10);
     if (saved.analysisJob.id !== firstJobId || saved.analysisJob.status !== "succeeded") throw new Error("分析完成 Job 異常");
-    if (saved.profileResult.coverage.transactionCount !== 8 || saved.profileResult.coverage.questionnaireAnswerCount !== 6) throw new Error("Coverage 數量異常");
+    if (saved.profileResult.coverage.transactionCount !== tradeTotal || saved.profileResult.coverage.questionnaireAnswerCount !== 6) throw new Error(`Coverage 數量異常：${JSON.stringify(saved.profileResult.coverage)}`);
+    // 報告沒有各幣種持倉明細 → 持有項數必須是 null（畫面顯示「報告未提供」），不得補值
+    if (saved.profileResult.coverage.assetCount !== null || saved.profileResult.coverage.assetBreakdownAvailable !== false)
+      throw new Error(`缺各幣種明細時仍補出持有項數：${JSON.stringify(saved.profileResult.coverage)}`);
     const allocation = saved.profileResult.dimensions.find((item) => item.key === "allocationPattern");
-    const evidenceText = allocation.evidence.map((item) => item.value).join("/");
-    if (!evidenceText.includes("52%") || !evidenceText.includes("72%") || evidenceText.includes("78%")) throw new Error(`配置證據異常：${evidenceText}`);
+    const evidenceText = allocation.evidence.map((item) => item.label + "=" + item.value).join("/");
+    if (!evidenceText.includes(topPctText + "%") || !evidenceText.includes(otherPctText + "%") || !evidenceText.includes("報告未提供"))
+      throw new Error(`配置證據異常：${evidenceText}`);
+    if (/前兩項資產合計/.test(evidenceText)) throw new Error(`沒有各幣種比例時不得宣稱「前兩項合計」：${evidenceText}`);
+    // 現金占比高＝資金多停在現金，不能被寫成「持倉過度集中」
+    if (!allocation.descriptor.includes("現金") || /集中/.test(allocation.descriptor + allocation.summary))
+      throw new Error(`現金帳戶被描述成持倉集中：${allocation.descriptor}｜${allocation.summary}`);
     const holding = saved.profileResult.dimensions.find((item) => item.key === "holdingPattern");
     const volatility = saved.profileResult.dimensions.find((item) => item.key === "volatilityBehavior");
     if (holding.dataSufficient || volatility.dataSufficient || !holding.descriptor.includes("更多資料")) throw new Error("資料不足面向被硬產生結論");
     const resultText = await page.locator("#profile-result-content").innerText();
     if (!resultText.includes(saved.profileResult.profileHeadline) || !resultText.includes(saved.profileResult.summary)) throw new Error("Headline 或 Summary 未呈現 API 結果");
-    if (!resultText.includes("示範資料") || !resultText.includes("8 筆交易") || !resultText.includes("4 項持有資產") || !resultText.includes("6 題補充回答")) throw new Error("動態 Coverage Chips 或示範標示缺失");
-    if (/48 筆|96 天|1\.6 倍|前兩項.*78%/.test(resultText)) throw new Error("頁面出現規格範例的虛構數字");
+    if (!resultText.includes("示範資料") || !resultText.includes(tradeTotalText + " 筆交易") ||
+        !resultText.includes("無各幣種持倉明細") || !resultText.includes("6 題補充回答"))
+      throw new Error("動態 Coverage Chips 或示範標示缺失");
+    if (/48 筆|96 天|1\.6 倍|前兩項.*78%|52%|72%|4 項持有資產/.test(resultText)) throw new Error("頁面出現規格範例或舊示範帳戶的虛構數字");
     const tagCount = await page.locator("#profile-tags .profile-tag").count();
     if (tagCount < 3 || tagCount > 5) throw new Error(`Profile Tags 數量異常：${tagCount}`);
-    console.log("5–9 Result OK：Headline／Summary／Tags／8 筆／52%／72% 可追溯；不足處不補造");
+    console.log(`5–9 Result OK：Headline／Summary／Tags／${tradeTotalText} 筆／${topPctText}% 現金 可追溯；不足處不補造`);
 
     // 10. 四張 reusable Dimension 可展開、Evidence 有來源、Accordion ARIA 完整。
     const cards = page.locator(".dimension");
@@ -190,7 +215,7 @@ async function assertNoHorizontalScroll(page, width) {
     await page.click("#header-profile-basis");
     await page.waitForFunction(() => document.getElementById("basis-root").classList.contains("sheet-open"));
     const basis = await page.locator("#basis-content").innerText();
-    if (!basis.includes("8 筆交易紀錄") || !basis.includes("4 項") || !basis.includes(saved.profileResult.resultVersion) ||
+    if (!basis.includes(tradeTotalText + " 筆交易紀錄") || !basis.includes("報告未提供") || !basis.includes(saved.profileResult.resultVersion) ||
         !basis.includes("資料完整程度") || basis.includes("Internal Job ID")) throw new Error("分析依據內容異常");
     const focusInSheet = await page.evaluate(() => document.getElementById("basis-root").contains(document.activeElement));
     if (!focusInSheet) throw new Error("Bottom Sheet 開啟後焦點未移入");

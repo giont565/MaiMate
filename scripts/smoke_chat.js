@@ -59,9 +59,16 @@ const ALLOWED_EVENT_KEYS = ["e", "q", "src", "intent", "tool", "style", "status"
   await page.waitForURL(/welcome\.html/, { timeout: 10000 });
   console.log("1 Route Guard OK：無 Session → Screen 1");
 
-  // 建立 demo session（示範帳戶）
+  // 建立 demo session（隊友共用的真實帳戶：data/health_report.json → mocks/account.js）
   await page.goto(`${base}/home.html?demo=STEADY_PLANNER`);
   await page.waitForSelector(".bottom-nav", { timeout: 15000 });
+  /* 期望值一律從帳戶現推，不寫死；換一份報告時煙測會跟著換。 */
+  const account = await page.evaluate(() => window.MM_ACCOUNT);
+  const oneDecimal = (value) => String(Math.round(value * 10) / 10);
+  const TOP_PCT = oneDecimal(account.holdings.topPct) + "%";
+  const OTHER_PCT = oneDecimal(account.holdings.otherPct) + "%";
+  const TRADE_TOTAL = account.trades.total.toLocaleString("en-US");
+  const LATEST_MONTH = account.trades.latestMonth;
 
   // ── 3/5/6. 從 Screen 6 帶問題進入：Context Banner＋預填不自動送出
   await page.evaluate(() => {
@@ -93,8 +100,11 @@ const ALLOWED_EVENT_KEYS = ["e", "q", "src", "intent", "tool", "style", "status"
   await page.click("#chat-send");
   await page.waitForFunction(() => document.getElementById("chat-stop").hidden, null, { timeout: 15000 });
   const answer = await lastCard();
-  for (const need of ["52%", "72%", "4 項"])
-    if (!answer.includes(need)) throw new Error(`回答缺少工具算出的數字 ${need}：${answer.slice(0, 120)}`);
+  // 現金帳戶：最大持有占比＋未細分的其餘部位＋明說「各幣種比例報告未提供」，不得補假明細
+  for (const need of [TOP_PCT, OTHER_PCT, "報告未提供"])
+    if (!answer.includes(need)) throw new Error(`回答缺少工具算出的數字 ${need}：${answer.slice(0, 160)}`);
+  if (/持倉(過度)?集中|配置較集中/.test(answer))
+    throw new Error(`資金停在現金被寫成持倉集中：${answer.slice(0, 160)}`);
   if (/get_portfolio_summary|query_user_history|tool_call|function|Chain of Thought|思考/.test(answer))
     throw new Error("畫面出現工具原名或內部推理");
   const blocks = await page.evaluate(() => ({
@@ -117,15 +127,17 @@ const ALLOWED_EVENT_KEYS = ["e", "q", "src", "intent", "tool", "style", "status"
   const idx = (cls) => seq.findIndex((item) => item.includes(cls));
   if (!(idx("blk") < idx("followups") && idx("followups") < idx("insight-links") && idx("insight-links") < idx("msg-acts")))
     throw new Error(`區塊順序不符規格畫面：${blocks.order}`);
-  if (!answer.includes("68%")) throw new Error("回答未帶入帳戶變化歸因比重");
-  if (!/最近 30 天共有 \d/.test(answer)) throw new Error("回答未帶入交易節奏");
-  console.log(`7/8/11/13 回答 OK：52%/72%/4 項 皆來自工具、結構化區塊齊（${blocks.kv} 列指標、${blocks.follow} 個追問）、無工具原名`);
+  // health_report.json 沒有各幣種明細 → 拆不出歸因，不得再宣稱「市場占 XX%」
+  if (/帳戶變化中約 \d+(\.\d+)?% 與/.test(answer)) throw new Error("報告缺明細時仍給出歸因比重");
+  if (!answer.includes(TRADE_TOTAL + " 筆買賣")) throw new Error(`回答未帶入交易節奏：${answer.slice(0, 160)}`);
+  if (/最近 30 天/.test(answer)) throw new Error("交易節奏仍用「30 天」為單位（報告只有每月聚合）");
+  console.log(`7/8/11/13 回答 OK：${TOP_PCT}/${OTHER_PCT}/報告未提供 皆來自工具、結構化區塊齊（${blocks.kv} 列指標、${blocks.follow} 個追問）、無工具原名`);
 
   // ── 12. Evidence Sheet：顯示資料來源與時間，不顯示完整明細
   await page.click(".card-ai .ref-link");
   await page.waitForFunction(() => document.getElementById("evidence-root").classList.contains("sheet-open"), null, { timeout: 8000 });
   const evidence = await page.$eval("#evidence-body", (e) => e.textContent);
-  if (!evidence.includes("持倉摘要") || !evidence.includes("52%")) throw new Error(`依據內容異常：${evidence.slice(0, 120)}`);
+  if (!evidence.includes("持倉摘要") || !evidence.includes(TOP_PCT)) throw new Error(`依據內容異常：${evidence.slice(0, 120)}`);
   if (!evidence.includes("不會顯示完整交易明細")) throw new Error("依據未聲明不顯示完整明細");
   await page.keyboard.press("Escape");
   console.log("12 依據 OK：列出資料類型與數值、明說不顯示完整明細（Esc 可關）");
@@ -133,7 +145,7 @@ const ALLOWED_EVENT_KEYS = ["e", "q", "src", "intent", "tool", "style", "status"
   // ── 23. 同一問題固定結果（不使用 Math.random）
   await ask("為什麼 BTC 會影響我的帳戶比較多？");
   const second = await lastCard();
-  if (!second.includes("52%") || !second.includes("72%")) throw new Error("同一問題結果不穩定");
+  if (!second.includes(TOP_PCT) || !second.includes(OTHER_PCT)) throw new Error("同一問題結果不穩定");
   console.log("23 固定結果 OK：同一問題兩次得到相同數字");
 
   // ── 15. 追問帶入 context（點追問→自動送出並得到新回答）
@@ -230,7 +242,7 @@ const ALLOWED_EVENT_KEYS = ["e", "q", "src", "intent", "tool", "style", "status"
     throw new Error(`未授權模式標示異常：${JSON.stringify(limited)}`);
   await ask("為什麼 BTC 會影響我的帳戶比較多？");
   const limitedAnswer = await lastCard();
-  if (/52%|72%/.test(limitedAnswer)) throw new Error("未授權模式不得給出個人化持倉數字");
+  if (limitedAnswer.includes(TOP_PCT) || limitedAnswer.includes(TRADE_TOTAL)) throw new Error("未授權模式不得給出個人化持倉數字");
   if (!limitedAnswer.includes("目前未使用個人帳戶資料")) throw new Error("未授權模式未標示資料範圍");
   console.log("2/9 未授權 OK：切一般知識模式、明確標示、且不給個人化數字（不捏造）");
 

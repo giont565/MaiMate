@@ -44,6 +44,31 @@ function mmHomePercent(value, digits) {
   return mmHomeRound(Number(value) * 100, Number.isInteger(digits) ? digits : 0) + "%";
 }
 
+/* 占比一律保留一位小數：報告寫 98.6%，畫面不准四捨五入成 99%
+ * （整數本來就不會補 .0，例如 0.52 →「52%」）。 */
+function mmHomeRatio(value) {
+  return mmHomePercent(value, 1);
+}
+
+/** 最大持有的顯示名稱：現金帳戶要說「現金（TWD）」，不是光一個「TWD」 */
+function mmHomeTopLabel(portfolio) {
+  return String((portfolio && (portfolio.topAssetLabel || portfolio.topAsset)) || "主要持有");
+}
+
+/* 期間標籤：報告只有每月聚合，任何地方都不得寫成「最近 30 天」。 */
+function mmHomeRecentPeriodLabel(transactions) {
+  return transactions.recentPeriodLabel ? "最近一個月（" + transactions.recentPeriodLabel + "）" : "最近一個月";
+}
+
+function mmHomePreviousPeriodLabel(transactions) {
+  return transactions.previousPeriodLabel ? "前一個月（" + transactions.previousPeriodLabel + "）" : "前一個月";
+}
+
+/** 期間買賣總筆數（帶千分位）；報告沒有交易日期分布，所以不談「交易日數」 */
+function mmHomeTradeTotalText(transactions) {
+  return Number(transactions.count).toLocaleString("en-US") + " 筆";
+}
+
 /* 歸因的 marketPrice 項可能缺席（後端少回、或資料不足）；
  * 缺席時只讓這一格顯示「資料不足」，不要讓整頁掉到錯誤畫面。 */
 function mmHomeMarketPriceRatioText(attribution) {
@@ -156,6 +181,9 @@ const PortfolioAdapter = Object.freeze({
     const assets = source && Array.isArray(source.assets)
       ? source.assets.map((asset) => ({
         symbol: String(asset.symbol),
+        // 顯示名稱（例如「現金（TWD）」）與是否為現金，決定文案要說「集中」還是「資金多在現金」
+        label: String(asset.label || asset.symbol),
+        isCash: Boolean(asset.isCash),
         weight: Number(asset.weight),
       })).filter((asset) => asset.symbol && Number.isFinite(asset.weight) && asset.weight >= 0)
         .sort((a, b) => b.weight - a.weight)
@@ -177,8 +205,13 @@ const PortfolioAdapter = Object.freeze({
       assetCount: assets.length,
       assets,
       topAsset: assets[0].symbol,
+      topAssetLabel: assets[0].label,
+      topAssetIsCash: assets[0].isCash,
       topAssetRatio: assets[0].weight,
       topTwoAssetsRatio: assets.slice(0, 2).reduce((sum, asset) => sum + asset.weight, 0),
+      // 報告只有最大持有標的，其餘未細分
+      breakdownAvailable: Boolean(source && source.breakdownAvailable),
+      asOfMonth: source && source.asOfMonth,
     };
   },
 });
@@ -201,54 +234,46 @@ const TransactionAdapter = Object.freeze({
         activeDays: 0,
       };
     }
-    const raw = window.MM_ONBOARDING_MOCK && Array.isArray(window.MM_ONBOARDING_MOCK.demoTransactions)
-      ? window.MM_ONBOARDING_MOCK.demoTransactions
-      : [];
-    const transactions = raw.map((item) => ({
-      time: String(item.time),
-      symbol: String(item.symbol),
-      side: item.side,
-    })).filter((item) => Number.isFinite(Date.parse(item.time)))
-      .sort((a, b) => Date.parse(a.time) - Date.parse(b.time));
-    if (!transactions.length) {
+    /* 真實帳戶報告只有「每月交易次數」，沒有逐筆明細（官方 CSV 不進 git）。
+     * 因此比較單位是「月」而不是滾動 30 天，欄位語意見 periodLabel。 */
+    const activity = window.MM_ONBOARDING_MOCK && window.MM_ONBOARDING_MOCK.tradeActivity;
+    if (!activity || !Number.isFinite(Number(activity.total))) {
       return {
         available: true,
         count: 0,
         transactions: [],
+        detailAvailable: false,
         recent30Count: 0,
         previous30Count: 0,
         averagePerMonth: 0,
         lastTransactionAt: null,
         lastTransactionDaysAgo: null,
-        activeDays: 0,
+        activeDays: null,
       };
     }
     const referenceTime = Date.parse(asOf);
     window.MM_HOME_CORE.assert(Number.isFinite(referenceTime), "INVALID_HOME_REFERENCE_TIME");
-    const recentStart = referenceTime - 30 * 86400000;
-    const previousStart = referenceTime - 60 * 86400000;
-    const recent30Count = transactions.filter((item) => {
-      const timestamp = Date.parse(item.time);
-      return timestamp > recentStart && timestamp <= referenceTime;
-    }).length;
-    const previous30Count = transactions.filter((item) => {
-      const timestamp = Date.parse(item.time);
-      return timestamp > previousStart && timestamp <= recentStart;
-    }).length;
-    const first = transactions[0].time;
-    const last = transactions[transactions.length - 1].time;
-    const coverageDays = Math.max(30, mmHomeDaysBetween(first, last) + 1);
-    const coverageMonths = Math.max(1, coverageDays / 30.4375);
     return {
       available: true,
-      count: transactions.length,
-      transactions,
-      recent30Count,
-      previous30Count,
-      averagePerMonth: mmHomeRound(transactions.length / coverageMonths, 1),
-      lastTransactionAt: last,
-      lastTransactionDaysAgo: mmHomeDaysBetween(last, asOf),
-      activeDays: new Set(transactions.map((item) => item.time.slice(0, 10))).size,
+      count: Number(activity.total),
+      transactions: [],            // 逐筆明細不可用
+      detailAvailable: false,
+      periodUnit: "month",
+      recentPeriodLabel: activity.latestMonth,
+      previousPeriodLabel: activity.previousMonth,
+      recent30Count: Number(activity.latestMonthCount),
+      previous30Count: Number(activity.previousMonthCount),
+      averagePerMonth: Number(activity.averagePerMonth),
+      buyTotal: Number(activity.buyTotal),
+      sellTotal: Number(activity.sellTotal),
+      byCurrency: Object.assign({}, activity.byCurrency),
+      busiestMonth: activity.busiestMonth,
+      /* 報告只給每月筆數，沒有「最後一筆交易」的日期——用資料期間末日冒充會是編造，
+       * 所以留 null，畫面改顯示 periodLabel（例如「2025-12 共 375 筆」）。 */
+      periodEnd: activity.periodEnd,
+      lastTransactionAt: null,
+      lastTransactionDaysAgo: null,
+      activeDays: null,            // 報告未提供交易日期分布
     };
   },
 });
@@ -455,8 +480,8 @@ const AttributionAdapter = Object.freeze({
         },
         {
           id: "attribution-top-asset",
-          label: "目前主要持倉",
-          value: portfolio.topAsset + " 約 " + mmHomePercent(portfolio.topAssetRatio),
+          label: "目前最大持有",
+          value: mmHomeTopLabel(portfolio) + " 約 " + mmHomeRatio(portfolio.topAssetRatio),
           source: "portfolio",
         },
       ],
@@ -490,54 +515,35 @@ function mmHomeDateRangeLabel(times) {
     : label(first) + "至 " + label(last);
 }
 
-/** 歷史相似時刻的價格變化：直接由示範帳戶的成交價算，不接受寫死的百分比 */
-function mmHomeHistoricalPriceChange(times) {
-  const raw = window.MM_ONBOARDING_MOCK && window.MM_ONBOARDING_MOCK.demoTransactions;
-  if (!Array.isArray(raw)) return null;
-  const matched = times.map((time) => raw.find((item) => item.time === time)).filter(Boolean);
-  if (matched.length < 2) return null;
-  const symbols = new Set(matched.map((item) => item.symbol));
-  if (symbols.size !== 1) return null;
-  const first = Number(matched[0].price);
-  const last = Number(matched[matched.length - 1].price);
-  if (!Number.isFinite(first) || !Number.isFinite(last) || first === 0) return null;
-  return { symbol: matched[0].symbol, first, last, ratio: (last - first) / first };
-}
-
 const SimilarMomentAdapter = Object.freeze({
+  /* 真實帳戶報告裡唯一有明細的事件＝機會成本最大的那筆賣出（含日期、幣種、賣價、年末價）。
+   * 相似時刻一律以它為準，不再依賴逐筆交易明細（報告沒有）。 */
   read(transactionMetrics) {
     const source = window.MM_HOME_MOCK && window.MM_HOME_MOCK.similarMomentInput;
-    if (!source || !transactionMetrics.available || !Array.isArray(source.transactionRefs)) return null;
-    const historical = source.transactionRefs.map((time) =>
-      transactionMetrics.transactions.find((item) => item.time === time)
-    );
-    if (historical.some((item) => !item)) return null;
-    const directions = new Set(historical.map((item) => item.side));
-    const symbols = [...new Set(historical.map((item) => item.symbol))];
-    const currentStart = Date.parse(source.currentContext.startDate);
-    const currentEnd = Date.parse(source.currentContext.endDate);
-    const currentTrades = transactionMetrics.transactions.filter((item) => {
-      const time = Date.parse(item.time);
-      return time >= currentStart && time <= currentEnd;
-    });
-    // 日期一律從實際交易紀錄推導，不寫死（換一份示範資料也要跟著對）
-    const periodLabel = mmHomeDateRangeLabel(historical.map((item) => item.time));
+    const sell = window.MM_ONBOARDING_MOCK && window.MM_ONBOARDING_MOCK.notableSell;
+    if (!source || !transactionMetrics.available || !sell || !sell.date) return null;
+    const symbol = String(sell.currency || "").toUpperCase();
+    const periodLabel = mmHomeDateRangeLabel([sell.date]);
+    const priceRatio = Number(sell.sell_price) > 0
+      ? (Number(sell.eoy_price) - Number(sell.sell_price)) / Number(sell.sell_price)
+      : null;
+    const missedText = Number.isFinite(Number(sell.missed_twd))
+      ? "NT$" + Math.round(Number(sell.missed_twd)).toLocaleString("en-US")
+      : null;
     const userBehaviorThen = [
-      periodLabel + "共有 " + historical.length + " 筆 " + symbols.join("、") + " 交易紀錄。",
+      periodLabel + "你賣出了 " + symbol + "，成交價 " + sell.sell_price + "。",
     ];
-    if (directions.has("buy") && directions.has("sell")) {
-      userBehaviorThen.push("當時紀錄同時包含賣出與買入。");
+    if (missedText) {
+      userBehaviorThen.push("到年末價格為 " + sell.eoy_price + "，這筆賣出的機會成本約 " + missedText + "。");
     }
-    const userBehaviorNow = currentTrades.length
-      ? ["這次市場情境期間共有 " + currentTrades.length + " 筆交易紀錄。"]
-      : ["這次市場情境期間尚未出現新增交易。"];
-    // 當時的價格變化改由成交價現算，覆蓋 mock 字串（避免與交易紀錄不一致）
+    const userBehaviorNow = ["目前的交易明細沒有進入這份報告，所以這次的行為無法逐筆對照。"];
     const historicalContext = window.MM_HOME_CORE.clone(source.historicalContext);
-    const priceChange = mmHomeHistoricalPriceChange(source.transactionRefs);
-    historicalContext.marketChangeSummary = priceChange
-      ? priceChange.symbol + " 在 " + periodLabel + " 的成交價由 " + priceChange.first + " 變為 " +
-        priceChange.last + "（約 " + mmHomePercent(priceChange.ratio, 1) + "，示範帳戶紀錄）。"
-      : "當時的價格變化沒有足夠紀錄可以推算。";
+    historicalContext.relatedAssets = [symbol];
+    historicalContext.periodLabel = periodLabel;
+    historicalContext.marketChangeSummary = priceRatio == null
+      ? "當時的價格變化沒有足夠紀錄可以推算。"
+      : symbol + " 在 " + periodLabel + "的賣出價 " + sell.sell_price + "，年末為 " + sell.eoy_price +
+        "（約 " + mmHomePercent(priceRatio, 1) + "）。";
     return {
       id: String(source.id),
       title: String(source.title),
@@ -547,6 +553,15 @@ const SimilarMomentAdapter = Object.freeze({
       differences: source.differences.slice(),
       userBehaviorThen,
       userBehaviorNow,
+      /* 給 Screen 7 引用用的原始欄位：回答裡出現的數字必須查得到來源。 */
+      sourceEvent: {
+        periodLabel,
+        symbol,
+        sellPrice: sell.sell_price,
+        endOfYearPrice: sell.eoy_price,
+        missedText,
+        priceChangeText: priceRatio == null ? null : mmHomePercent(priceRatio, 1),
+      },
       summary: "",
       disclaimer: String(source.disclaimer),
       confidence: source.confidence,
@@ -573,7 +588,10 @@ const LearningContentAdapter = Object.freeze({
       title: String(source.title),
       durationLabel: "約 " + Number(source.durationMinutes || 3) + " 分鐘",
       description: String(source.descriptionTemplate),
-      recommendationReason: "因為 " + portfolio.topAsset + " 目前約占你的資產 " + mmHomePercent(portfolio.topAssetRatio) + "。",
+      recommendationReason: portfolio.topAssetIsCash
+        ? "因為你的資金約有 " + mmHomeRatio(portfolio.topAssetRatio) + " 停在" +
+          mmHomeTopLabel(portfolio) + "，這一課用占比說明資產比重怎麼影響帳戶變化。"
+        : "因為 " + mmHomeTopLabel(portfolio) + " 目前約占你的資產 " + mmHomeRatio(portfolio.topAssetRatio) + "。",
       route: String(source.route),
     };
   },
@@ -626,10 +644,13 @@ function mmHomeValidateStructuredOutput(source, facts) {
     );
   });
   window.MM_HOME_CORE.validateNarrative(source);
+  // 佔比允許整數或一位小數兩種寫法（報告本身給到一位小數，例如 98.6%）
   const topPercent = mmHomePercent(facts.portfolio.topAssetRatio);
+  const topPercentPrecise = mmHomePercent(facts.portfolio.topAssetRatio, 1);
   const marketPercent = mmHomePercent(facts.primaryMarket.changeRatio, 1);
   window.MM_HOME_CORE.assert(
-    source.todayRelevant.explanation.includes(topPercent) &&
+    (source.todayRelevant.explanation.includes(topPercent) ||
+     source.todayRelevant.explanation.includes(topPercentPrecise)) &&
     source.todayRelevant.explanation.includes(marketPercent),
     "HOME_AI_NUMBER_MISMATCH"
   );
@@ -646,22 +667,31 @@ function mmHomeRuleNarrative(facts) {
   const portfolio = facts.portfolio;
   const transactions = facts.transactions;
   const primaryMarket = facts.primaryMarket;
+  const topLabel = mmHomeTopLabel(portfolio);
+  const topRatio = mmHomeRatio(portfolio.topAssetRatio);
+  const marketRatio = mmHomePercent(primaryMarket.changeRatio, 1);
+  /* 現金占比高＝資金多停在現金（保守），語意和「持倉過度集中」相反，文案不得混用。 */
   return {
     todayRelevant: {
-      headline: portfolio.topAsset + " 是你今天帳戶變化的主要來源；最近 30 天共有 " +
-        transactions.recent30Count + " 筆交易。",
-      explanation: "示範行情中 " + portfolio.topAsset + " 今日約變動 " +
-        mmHomePercent(primaryMarket.changeRatio, 1) + "，且約占目前資產 " +
-        mmHomePercent(portfolio.topAssetRatio) + "；這裡只整理關聯，不提供買賣指令。",
+      headline: portfolio.topAssetIsCash
+        ? "你的資金主要停在" + topLabel + "，市場變動對整體帳戶的直接影響有限。"
+        : topLabel + " 是你今天帳戶變化的主要來源。",
+      explanation: "示範行情中 " + primaryMarket.symbol + " 今日約變動 " + marketRatio +
+        "；你目前最大的一筆是" + topLabel + "，約占 " + topRatio +
+        "。這裡只整理關聯，不提供買賣指令。",
     },
     planAlignmentSummary: mmHomeRhythmTitle(transactions).replace("最近的交易次數", "可確認的交易次數") +
       "；持有時間仍需要更多資料才能完整對照。",
-    attributionSummary: "依目前示範資料估算，帳戶變化主要來自市場價格與主要持倉的組合影響。",
-    similarMomentSummary: "兩次情境只有部分可比；資產與變動幅度不同，這次目前沒有新增交易。",
+    attributionSummary: "這份報告沒有各幣種持倉明細，因此不拆解帳戶變化來源。",
+    similarMomentSummary: "只有一次留有完整明細的紀錄可以回顧；資產與變動幅度都和這次不同。",
     contextualQuestions: [
-      { id: "question_btc_impact", text: "為什麼主要持倉會影響我的帳戶比較多？", contextType: "portfolio" },
-      { id: "question_market_source", text: "今天的變化主要是市場造成的嗎？", contextType: "market" },
-      { id: "question_rhythm", text: "我最近的交易節奏有變快嗎？", contextType: "behavior" },
+      {
+        id: "question_cash_impact",
+        text: portfolio.topAssetIsCash ? "資金停在現金對我的帳戶有什麼影響？" : "為什麼最大持有會影響我的帳戶比較多？",
+        contextType: "portfolio",
+      },
+      { id: "question_market_source", text: "今天的市場變化跟我有關嗎？", contextType: "market" },
+      { id: "question_rhythm", text: "我的交易頻率算高嗎？", contextType: "behavior" },
     ],
   };
 }
@@ -909,26 +939,28 @@ function mmHomeBuildResponse(state) {
       },
       evidence: [
         {
+          /* 市場那一格要講示範行情的主要資產（BTC），不是帳戶的最大持有——
+           * 帳戶最大持有是現金時，「TWD 今日變動」是不存在的東西。 */
           id: "today-market-change",
-          label: portfolio.topAsset + " 今日變動",
+          label: primaryMarket.symbol + " 今日變動",
           value: mmHomePercent(primaryMarket.changeRatio, 1) + "（示範資料）",
           source: "marketContext",
         },
         {
           id: "today-allocation",
-          label: portfolio.topAsset + " 持倉占比",
-          value: "約 " + mmHomePercent(portfolio.topAssetRatio),
+          label: mmHomeTopLabel(portfolio) + " 占比",
+          value: "約 " + mmHomeRatio(portfolio.topAssetRatio),
           source: "portfolio",
         },
         {
           id: "today-recent-trades",
-          label: "最近 30 天交易",
+          label: mmHomeRecentPeriodLabel(transactions) + "買賣",
           value: transactions.recent30Count + " 筆",
           source: "transactions",
         },
         {
           id: "today-previous-trades",
-          label: "前一個 30 天交易",
+          label: mmHomePreviousPeriodLabel(transactions) + "買賣",
           value: transactions.previous30Count + " 筆",
           source: "transactions",
         },
@@ -951,14 +983,19 @@ function mmHomeBuildResponse(state) {
         }),
       }),
       ConversationContextAdapter.action({
-        id: "question-btc-impact",
+        id: "question-top-asset-impact",
         type: "openChat",
-        label: "為什麼 " + portfolio.topAsset + " 影響比較大？",
+        /* 現金帳戶問「為什麼 TWD 影響比較大？」是錯的問題——資金停在現金代表影響變小。 */
+        label: portfolio.topAssetIsCash
+          ? "資金停在現金有什麼影響？"
+          : "為什麼 " + mmHomeTopLabel(portfolio) + " 影響比較大？",
         route: "/maimate/chat",
-        question: "為什麼 " + portfolio.topAsset + " 會影響我的帳戶比較多？",
+        question: portfolio.topAssetIsCash
+          ? "資金停在現金對我的帳戶有什麼影響？"
+          : "為什麼 " + mmHomeTopLabel(portfolio) + " 會影響我的帳戶比較多？",
         context: mmHomeContext("module_today_relevant", profile, {
           source: "today_relevant_hero",
-          questionId: "question_btc_impact",
+          questionId: "question_cash_impact",
           relatedAsset: portfolio.topAsset,
           relatedInsightId: "insight_market_impact",
           marketContextId: market.id,
@@ -994,17 +1031,19 @@ function mmHomeBuildResponse(state) {
   const recentBehaviorItems = [
     {
       id: "behavior-recent-trades",
-      label: "最近 30 天 " + transactions.recent30Count + " 筆，前一個 30 天 " + transactions.previous30Count + " 筆",
+      label: mmHomeRecentPeriodLabel(transactions) + " " + transactions.recent30Count + " 筆，" +
+        mmHomePreviousPeriodLabel(transactions) + " " + transactions.previous30Count + " 筆",
       trend: transactions.recent30Count === transactions.previous30Count
         ? "stable"
         : transactions.recent30Count > transactions.previous30Count ? "increased" : "decreased",
     },
     {
+      /* 前後期都直接列出實際占比，不換算成「幾個百分點」——避免百分比與百分點混用。 */
       id: "behavior-allocation",
       label: topWeightChange == null
-        ? "主要持倉目前約占 " + mmHomePercent(portfolio.topAssetRatio)
-        : "主要持倉比前期快照" + (topWeightChange >= 0 ? "提高 " : "降低 ") +
-          Math.abs(Math.round(topWeightChange * 100)) + " 個百分點",
+        ? mmHomeTopLabel(portfolio) + "目前約占 " + mmHomeRatio(portfolio.topAssetRatio)
+        : mmHomeTopLabel(portfolio) + "目前約占 " + mmHomeRatio(portfolio.topAssetRatio) +
+          "，前期快照為 " + mmHomeRatio(priorTopWeight),
       trend: topWeightChange == null ? "unknown" : topWeightChange > 0.005 ? "increased" : "stable",
     },
     {
@@ -1033,14 +1072,14 @@ function mmHomeBuildResponse(state) {
         },
         {
           id: "alignment-recent-trades",
-          label: "最近 30 天交易",
+          label: mmHomeRecentPeriodLabel(transactions) + "買賣",
           value: transactions.recent30Count + " 筆",
           source: "transactions",
         },
         {
           id: "alignment-allocation",
-          label: "主要持倉",
-          value: portfolio.topAsset + " 約 " + mmHomePercent(portfolio.topAssetRatio),
+          label: "最大持有",
+          value: mmHomeTopLabel(portfolio) + " 約 " + mmHomeRatio(portfolio.topAssetRatio),
           source: "portfolio",
         },
         ...(profile.correctedDimensions.length ? [{
@@ -1180,29 +1219,49 @@ function mmHomeBuildResponse(state) {
     {
       id: "insight_market_impact",
       type: "marketImpact",
-      title: "主要持倉仍是帳戶變化的關鍵",
-      summary: portfolio.topAsset + " 約占目前資產 " + mmHomePercent(portfolio.topAssetRatio) + "，今天的主要變化也和它有關。",
-      explanation: "持倉占比較高時，該資產的價格變化會更容易反映在帳戶整體變化上；這是關聯說明，不代表好壞。",
+      /* 現金占比高＝資金多停在現金，不是「持倉過度集中」；兩者結論相反，不可共用文案。 */
+      title: portfolio.topAssetIsCash ? "你的資金主要停在現金" : "最大持有仍是帳戶變化的關鍵",
+      summary: portfolio.topAssetIsCash
+        ? mmHomeTopLabel(portfolio) + "約占目前資產 " + mmHomeRatio(portfolio.topAssetRatio) +
+          "，所以市場價格變動反映到整體帳戶的幅度有限。"
+        : mmHomeTopLabel(portfolio) + " 約占目前資產 " + mmHomeRatio(portfolio.topAssetRatio) + "，今天的主要變化也和它有關。",
+      explanation: portfolio.topAssetIsCash
+        ? "帳戶整體變化是各項資產依占比加權的結果；資金多在現金時，加密資產的漲跌帶動整體帳戶的幅度會比較小。這是關聯說明，不代表好壞。"
+        : "持倉占比較高時，該資產的價格變化會更容易反映在帳戶整體變化上；這是關聯說明，不代表好壞。",
       priority: "high",
       evidence: [
         {
           id: "insight-top-weight",
-          label: portfolio.topAsset + " 持倉占比",
-          value: "約 " + mmHomePercent(portfolio.topAssetRatio),
+          label: mmHomeTopLabel(portfolio) + " 占比（" + (portfolio.asOfMonth || "最新月份") + "）",
+          value: "約 " + mmHomeRatio(portfolio.topAssetRatio),
           source: "portfolio",
         },
         {
+          id: "insight-other-weight",
+          // 報告只有最大持有一項，其餘未細分——不得為了畫面把它拆成看似精確的比例
+          label: "其餘資產（未細分）",
+          value: portfolio.breakdownAvailable
+            ? "約 " + mmHomeRatio(1 - portfolio.topAssetRatio)
+            : "約 " + mmHomeRatio(1 - portfolio.topAssetRatio) + "，報告未提供各幣種比例",
+          source: "portfolio",
+        },
+        ...(attribution ? [{
           id: "insight-market-attribution",
           label: "市場價格估算影響",
           // 後端若少回 marketPrice 這一項，只讓這一格顯示「資料不足」，不得讓整頁掛掉
           value: mmHomeMarketPriceRatioText(attribution),
           source: "marketContext",
-        },
+        }] : []),
       ],
-      contextualQuestions: [
-        { id: "question_concentration_impact", text: "為什麼占比會放大影響？", contextType: "portfolio", relatedInsightId: "insight_market_impact" },
-        { id: "question_allocation_change", text: "我的配置最近有變嗎？", contextType: "portfolio", relatedInsightId: "insight_market_impact" },
-      ],
+      contextualQuestions: portfolio.topAssetIsCash
+        ? [
+          { id: "question_cash_impact", text: "資金停在現金對我的帳戶有什麼影響？", contextType: "portfolio", relatedInsightId: "insight_market_impact" },
+          { id: "question_allocation_change", text: "我的配置最近有變嗎？", contextType: "portfolio", relatedInsightId: "insight_market_impact" },
+        ]
+        : [
+          { id: "question_concentration_impact", text: "為什麼占比會放大影響？", contextType: "portfolio", relatedInsightId: "insight_market_impact" },
+          { id: "question_allocation_change", text: "我的配置最近有變嗎？", contextType: "portfolio", relatedInsightId: "insight_market_impact" },
+        ],
       dismissible: true,
     },
     {
@@ -1210,29 +1269,30 @@ function mmHomeBuildResponse(state) {
       type: "tradingRhythmChange",
       // 標題跟著實際筆數走，不預設「沒有增加」（換資料就會說反話）
       title: mmHomeRhythmTitle(transactions),
-      summary: "最近 30 天 " + transactions.recent30Count + " 筆、前一個 30 天 " +
-        transactions.previous30Count + " 筆交易；現有 " +
-        transactions.count + " 筆紀錄平均每月約 " + transactions.averagePerMonth + " 筆。",
-      explanation: "目前只比較可見交易日期，不從頻率推測操作原因或心理狀態。" +
+      summary: mmHomeRecentPeriodLabel(transactions) + " " + transactions.recent30Count + " 筆、" +
+        mmHomePreviousPeriodLabel(transactions) + " " + transactions.previous30Count +
+        " 筆買賣；期間共 " + mmHomeTradeTotalText(transactions) + "，平均每月約 " +
+        transactions.averagePerMonth + " 筆。",
+      explanation: "目前只比較報告提供的每月買賣筆數，不從頻率推測操作原因或心理狀態。" +
         (correctedRhythm ? " 你先前補充：「" + correctedRhythm.effectiveDescriptor + "」；原始交易筆數仍會保留。" : ""),
       priority: "normal",
       evidence: [
         {
           id: "insight-recent-count",
-          label: "最近 30 天",
-          value: transactions.recent30Count + " 筆交易",
+          label: mmHomeRecentPeriodLabel(transactions),
+          value: transactions.recent30Count + " 筆買賣",
           source: "transactions",
         },
         {
           id: "insight-monthly-average",
-          label: "現有紀錄平均每月",
+          label: "期間平均每月",
           value: "約 " + transactions.averagePerMonth + " 筆",
           source: "transactions",
         },
         {
           id: "insight-previous-count",
-          label: "前一個 30 天",
-          value: transactions.previous30Count + " 筆交易",
+          label: mmHomePreviousPeriodLabel(transactions),
+          value: transactions.previous30Count + " 筆買賣",
           source: "transactions",
         },
       ],
@@ -1245,7 +1305,7 @@ function mmHomeBuildResponse(state) {
   ];
   if (correctedAllocation) {
     insights[0].explanation += " 你先前補充：「" + correctedAllocation.effectiveDescriptor +
-      "」；" + mmHomePercent(portfolio.topAssetRatio) + " 的原始持倉比例不會被改寫。";
+      "」；" + mmHomeRatio(portfolio.topAssetRatio) + " 的原始持倉比例不會被改寫。";
   }
   const insightActions = insights.flatMap((insight) =>
     insight.contextualQuestions.map((question) =>
@@ -1365,12 +1425,20 @@ function mmHomeBuildResponse(state) {
     position: 8,
     payload: {
       title: "你的帳戶概況",
-      assetCount: portfolio.assetCount,
+      /* 報告沒有各幣種持倉明細，「持有幾項資產」是未知數：留 null 讓畫面顯示「—」，
+       * 不得把「最大持有＋其餘未細分」數成 2 項當作事實。 */
+      assetCount: portfolio.breakdownAvailable ? portfolio.assetCount : null,
+      assetCountLabel: portfolio.breakdownAvailable ? null : "報告未提供",
       topAsset: portfolio.topAsset,
+      topAssetLabel: mmHomeTopLabel(portfolio),
       topAssetRatio: portfolio.topAssetRatio,
-      topTwoAssetsRatio: portfolio.topTwoAssetsRatio,
+      topTwoAssetsRatio: portfolio.breakdownAvailable ? portfolio.topTwoAssetsRatio : null,
+      /* 報告只有每月筆數，沒有最後一筆交易的日期 → 改顯示可對照的期間與筆數。 */
       lastTransactionAt: transactions.lastTransactionAt,
       lastTransactionDaysAgo: transactions.lastTransactionDaysAgo,
+      latestTransactionLabel: transactions.recentPeriodLabel
+        ? transactions.recentPeriodLabel + " 共 " + transactions.recent30Count + " 筆"
+        : "報告未提供",
       updatedAt: source.snapshots.portfolioUpdatedAt,
       supportsAmountVisibility: true,
       amountsHidden: Boolean(preferences.amountsHidden),

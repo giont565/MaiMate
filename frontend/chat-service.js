@@ -17,7 +17,12 @@
 
   let idCounter = 0;
   const nextId = (prefix) => prefix + "_" + (++idCounter) + "_" + String(Date.now()).slice(-6);
-  const pct = (ratio) => Math.round(Number(ratio) * 100) + "%";
+  /* 占比保留一位小數，和 Screen 4/5/6 一致：報告寫 98.6%，這裡不得寫成 99%
+   * （整數不補 .0，例如 0.52 →「52%」）。 */
+  const pct = (ratio) => {
+    const value = Math.round(Number(ratio) * 1000) / 10;
+    return (Number.isInteger(value) ? value : value.toFixed(1)) + "%";
+  };
   const state = () => OnboardingStore.read();
 
   /* ── 對話保存 ── */
@@ -89,8 +94,14 @@
       return {
         assetCount: data.assetCount,
         topAsset: data.topAsset,
+        // 顯示名稱與「是不是現金」決定文案要說「集中」還是「資金多在現金」
+        topAssetLabel: data.topAssetLabel || data.topAsset,
+        topAssetIsCash: Boolean(data.topAssetIsCash),
         topAssetRatio: data.topAssetRatio,
         topTwoAssetsRatio: data.topTwoAssetsRatio,
+        // 報告只有最大持有標的與占比，其餘未細分
+        breakdownAvailable: Boolean(data.breakdownAvailable),
+        asOfMonth: data.asOfMonth || null,
         assets: data.assets,
       };
     },
@@ -123,7 +134,9 @@
     { category: "fraudOrAbuse", re: /(規避|繞過|風控|洗錢|假帳號)/ },
     { category: "selfWorth", re: /(我是不是很(爛|差)|我很失敗|我很笨)/ },
     { category: "allowedEducation", re: /(什麼是|名詞|意思是|差別|為什麼.*(比例|占比).*影響|手續費|市價單|限價單|市場深度)/ },
-    { category: "allowedHistoricalReview", re: /(相似|過去|上一次|以前|之前那次|回顧)/ },
+    /* 「1 月那筆 DOGE 賣出，當時發生什麼？」也是回顧題（首頁的 question_similar 會送這句），
+     * 少了「當時／那筆／那次」會被誤判成市場題，答出完全無關的內容。 */
+    { category: "allowedHistoricalReview", re: /(相似|過去|上一次|以前|之前那次|回顧|當時|那筆|那一次|那次)/ },
     { category: "allowedPersonalAnalysis", re: /(我的|帳戶|持倉|配置|交易節奏|習慣|一致|集中)/ },
   ];
 
@@ -144,11 +157,15 @@
     const attribution = AgentTools.attribution();
     const market = AgentTools.market();
     if (!portfolio) return null;
-    const top = portfolio.topAsset;
+    const topLabel = portfolio.topAssetLabel;
     const topPct = pct(portfolio.topAssetRatio);
+    const otherPct = pct(1 - portfolio.topAssetRatio);
     const evidence = [
-      evidenceRef("ev_top_weight", "portfolio", top + " 持倉占比", topPct, market.observedAt),
-      evidenceRef("ev_top_two", "portfolio", "前兩項資產合計", pct(portfolio.topTwoAssetsRatio), market.observedAt),
+      evidenceRef("ev_top_weight", "portfolio", topLabel + " 占比", topPct, market.observedAt),
+      /* 沒有各幣種比例時，「前兩項合計」等於 100%＝廢話且誤導；改列未細分的其餘部位。 */
+      portfolio.breakdownAvailable
+        ? evidenceRef("ev_top_two", "portfolio", "前兩項資產合計", pct(portfolio.topTwoAssetsRatio), market.observedAt)
+        : evidenceRef("ev_other_weight", "portfolio", "其餘資產（報告未細分）", otherPct, market.observedAt),
     ];
     const marketShare = attribution &&
       attribution.contributors.find((item) => item.category === "marketPrice");
@@ -160,19 +177,33 @@
      * 每個數字都先進 evidence 才准出現在文字裡（guardDraft 會逐一核對）。 */
     const tx = AgentTools.transactions();
     if (tx) {
-      evidence.push(evidenceRef("ev_recent30", "transactions", "最近 30 天交易", tx.recent30Count + " 筆"));
-      evidence.push(evidenceRef("ev_avg", "transactions", "過去 12 個月平均每月", tx.averagePerMonth + " 筆"));
+      evidence.push(evidenceRef("ev_recent_month", "transactions",
+        "最近一個月（" + tx.recentPeriodLabel + "）買賣", tx.recent30Count + " 筆"));
+      evidence.push(evidenceRef("ev_trade_total", "transactions", "期間買賣總筆數",
+        Number(tx.count).toLocaleString("en-US") + " 筆"));
+      evidence.push(evidenceRef("ev_avg", "transactions", "期間平均每月", tx.averagePerMonth + " 筆"));
     }
-    const directAnswer = "因為 " + top + " 約占你目前資產的 " + topPct +
-      "，它的價格變化會比其他單一資產更明顯地反映在整體帳戶上。";
-    const paragraphs = ["可以把帳戶想成一個籃子。占比越大的資產，移動時越容易帶動整個籃子的變化。"];
-    if (marketShare || tx) {
-      const parts = [];
-      if (marketShare) parts.push("今天的資料顯示，帳戶變化中約 " + pct(marketShare.contributionRatio) + " 與 " + top + " 的市場變動有關");
-      if (tx) parts.push("最近 30 天共有 " + tx.recent30Count + " 筆交易，沒有明顯高於你平常每月約 " + tx.averagePerMonth + " 筆的節奏");
-      paragraphs.push(parts.join("；") + "。");
+    /* 最大持有是現金＝資金多停在現金（市場影響變小），
+     * 和「持倉占比高所以影響大」結論相反，兩種說法不可共用。 */
+    const directAnswer = portfolio.topAssetIsCash
+      ? "你的資金約有 " + topPct + " 停在" + topLabel + "，所以市場變動對整體帳戶的直接影響有限。"
+      : "因為 " + topLabel + " 約占你目前資產的 " + topPct +
+        "，它的價格變化會比其他單一資產更明顯地反映在整體帳戶上。";
+    const paragraphs = [portfolio.topAssetIsCash
+      ? "帳戶整體變化，是各項資產的漲跌依占比加權後的結果。資金多在現金時，加密資產的漲跌帶動整體帳戶的幅度就比較小。"
+      : "可以把帳戶想成一個籃子。占比越大的資產，移動時越容易帶動整個籃子的變化。"];
+    const parts = [];
+    if (marketShare) {
+      parts.push("今天的資料顯示，帳戶變化中約 " + pct(marketShare.contributionRatio) + " 與市場價格變動有關");
     }
-    if (marketShare && tx) paragraphs.push("因此，今天的變化主要來自市場與配置，而不是近期交易增加。");
+    if (tx) {
+      parts.push("這段期間共有 " + Number(tx.count).toLocaleString("en-US") + " 筆買賣，平均每月約 " +
+        tx.averagePerMonth + " 筆");
+    }
+    if (parts.length) paragraphs.push(parts.join("；") + "。");
+    if (!portfolio.breakdownAvailable) {
+      paragraphs.push("要再往下拆「哪一種資產影響最大」需要各幣種持倉比例，這份報告沒有提供，麥麥就不替你猜。");
+    }
     const explanation = paragraphs.join("\n\n");
     const usedTools = ["portfolio"];
     if (marketShare) usedTools.push("attribution", "market");
@@ -184,16 +215,22 @@
         block("metric", {
           title: "目前配置",
           items: [
-            { label: top + " 占比", value: topPct },
-            { label: "前兩項合計", value: pct(portfolio.topTwoAssetsRatio) },
-            { label: "持有資產", value: portfolio.assetCount + " 項" },
+            { label: topLabel + " 占比", value: topPct },
+            portfolio.breakdownAvailable
+              ? { label: "前兩項合計", value: pct(portfolio.topTwoAssetsRatio) }
+              : { label: "其餘資產（未細分）", value: otherPct },
+            portfolio.breakdownAvailable
+              ? { label: "持有資產", value: portfolio.assetCount + " 項" }
+              : { label: "各幣種持倉比例", value: "報告未提供" },
           ],
         }),
       ],
       evidence,
-      limitations: ["帳戶變化來源為依目前資料估算，不等同正式會計損益歸因。"],
+      limitations: portfolio.breakdownAvailable
+        ? ["帳戶變化來源為依目前資料估算，不等同正式會計損益歸因。"]
+        : ["這份報告只有最大持有標的與占比，沒有各幣種持倉比例。", "帳戶變化來源為依目前資料估算，不等同正式會計損益歸因。"],
       followUps: [
-        { id: "q_allocation_change", text: "我的 " + top + " 占比最近有提高嗎？" },
+        { id: "q_allocation_change", text: "我的" + topLabel + "占比最近有變嗎？" },
         { id: "q_attribution_split", text: "今天主要是市場影響，還是我的交易？" },
         { id: "q_concentration_basics", text: "什麼是資產集中？" },
       ],
@@ -201,9 +238,49 @@
     };
   }
 
+  /* 報告沒有各幣種持倉明細時拆不出變化來源：明說資料不足，
+   * 不落到「這個問題我沒辦法回答」的通用模板，也不猜比例。 */
+  function answerAttributionUnavailable() {
+    const portfolio = AgentTools.portfolio();
+    const market = AgentTools.market();
+    if (!portfolio) return null;
+    const primary = market.assets.find((item) => item.symbol === market.primaryAsset) || market.assets[0];
+    const topLabel = portfolio.topAssetLabel;
+    const topPct = pct(portfolio.topAssetRatio);
+    return {
+      tools: ["portfolio", "market"],
+      answer: {
+        directAnswer: "這份報告沒有各幣種持倉明細，所以麥麥沒辦法拆解今天帳戶變化的來源。",
+        explanation: "可以確認的是：目前最大的一筆是" + topLabel + "，約占 " + topPct +
+          "；示範行情中 " + primary.symbol + " 今日約變動 " + pct(primary.changeRatio) +
+          "。要把變化拆成市場、配置、交易等來源，需要逐項持倉與對應價格，這些不在目前的資料裡。",
+      },
+      blocks: [
+        block("metric", {
+          title: "可確認的部分",
+          items: [
+            { label: topLabel + " 占比", value: topPct },
+            { label: primary.symbol + " 今日變動", value: pct(primary.changeRatio) },
+            { label: "各幣種持倉比例", value: "報告未提供" },
+          ],
+        }),
+      ],
+      evidence: [
+        evidenceRef("ev_top_weight", "portfolio", topLabel + " 占比", topPct, market.observedAt),
+        evidenceRef("ev_market", "market", primary.symbol + " 今日變動", pct(primary.changeRatio), market.observedAt),
+      ],
+      limitations: ["這份報告只有最大持有標的與占比，沒有各幣種持倉比例，因此不做變化來源拆解。"],
+      followUps: [
+        { id: "q_trading_rhythm", text: "我最近的交易節奏有變快嗎？" },
+        { id: "q_portfolio_impact", text: "目前的資金分布對帳戶有什麼影響？" },
+      ],
+      insightLinks: [],
+    };
+  }
+
   function answerAttribution() {
     const attribution = AgentTools.attribution();
-    if (!attribution) return null;
+    if (!attribution) return answerAttributionUnavailable();
     const evidence = attribution.contributors.map((item, index) =>
       evidenceRef("ev_attr_" + index, "market", item.label, pct(item.contributionRatio), attribution.periodEnd));
     const main = attribution.contributors[0];
@@ -237,18 +314,22 @@
   function answerTradingRhythm() {
     const tx = AgentTools.transactions();
     if (!tx) return null;
+    /* 報告只有每月聚合，沒有逐筆日期：單位一律是「月」，也不能說「最近一次交易在幾天前」。 */
+    const recentLabel = "最近一個月（" + tx.recentPeriodLabel + "）";
+    const previousLabel = "前一個月（" + tx.previousPeriodLabel + "）";
+    const totalText = Number(tx.count).toLocaleString("en-US") + " 筆";
     const evidence = [
-      evidenceRef("ev_recent30", "transactions", "最近 30 天交易", tx.recent30Count + " 筆"),
-      evidenceRef("ev_prev30", "transactions", "前一個 30 天交易", tx.previous30Count + " 筆"),
-      evidenceRef("ev_avg", "transactions", "過去 12 個月平均每月", tx.averagePerMonth + " 筆"),
-      evidenceRef("ev_last", "transactions", "最近一次交易", tx.lastTransactionDaysAgo + " 天前"),
+      evidenceRef("ev_recent_month", "transactions", recentLabel + "買賣", tx.recent30Count + " 筆"),
+      evidenceRef("ev_prev_month", "transactions", previousLabel + "買賣", tx.previous30Count + " 筆"),
+      evidenceRef("ev_avg", "transactions", "期間平均每月", tx.averagePerMonth + " 筆"),
+      evidenceRef("ev_total", "transactions", "期間買賣總筆數", totalText),
     ];
     const faster = Number(tx.recent30Count) > Number(tx.previous30Count);
     const directAnswer = faster
-      ? "有變快一些：最近 30 天 " + tx.recent30Count + " 筆，前一個 30 天 " + tx.previous30Count + " 筆。"
-      : "看起來沒有明顯變快：最近 30 天 " + tx.recent30Count + " 筆，前一個 30 天 " + tx.previous30Count + " 筆。";
-    const explanation = "現有 " + tx.count + " 筆紀錄平均每月約 " + tx.averagePerMonth +
-      " 筆，最近一次交易在 " + tx.lastTransactionDaysAgo + " 天前。麥麥只比較可見的交易日期，不從次數推測你的心情或動機。";
+      ? "有變快一些：" + recentLabel + " " + tx.recent30Count + " 筆，" + previousLabel + " " + tx.previous30Count + " 筆。"
+      : "看起來沒有變快：" + recentLabel + " " + tx.recent30Count + " 筆，" + previousLabel + " " + tx.previous30Count + " 筆。";
+    const explanation = "整段期間共 " + totalText + "，平均每月約 " + tx.averagePerMonth +
+      " 筆。這份報告只提供每月買賣筆數，沒有逐筆時間，所以麥麥只比較月份之間的多寡，不從次數推測你的心情或動機。";
     return {
       tools: ["transactions"],
       answer: { directAnswer, explanation },
@@ -256,14 +337,14 @@
         block("comparison", {
           title: "交易節奏",
           items: [
-            { label: "最近 30 天", value: tx.recent30Count + " 筆" },
-            { label: "前一個 30 天", value: tx.previous30Count + " 筆" },
+            { label: recentLabel, value: tx.recent30Count + " 筆" },
+            { label: previousLabel, value: tx.previous30Count + " 筆" },
             { label: "平均每月", value: tx.averagePerMonth + " 筆" },
           ],
         }),
       ],
       evidence,
-      limitations: ["目前可用的交易紀錄共 " + tx.count + " 筆，樣本不多時，短期比較容易受單筆影響。"],
+      limitations: ["這份報告只有每月買賣筆數，沒有逐筆交易時間，因此無法比較交易日分布或持有間隔。"],
       followUps: [
         { id: "q_plan_alignment", text: "我的實際做法和原本的方向一致嗎？" },
         { id: "q_similar_moment", text: "過去遇到類似情況時我怎麼做？" },
@@ -276,25 +357,29 @@
     const profile = AgentTools.profile();
     const tx = AgentTools.transactions();
     if (!profile || !tx) return null;
-    const plans = profile.originalPlanItems.slice(0, 3);
+    // originalPlanItems 是 {id,label,source} 物件，直接 join 會印出 [object Object]
+    const plans = profile.originalPlanItems.slice(0, 3)
+      .map((item) => (typeof item === "string" ? item : String(item && item.label || "")))
+      .filter(Boolean);
+    const recentLabel = "最近一個月（" + tx.recentPeriodLabel + "）";
     const evidence = [
       evidenceRef("ev_plan", "questionnaire", "你原本選的方向", plans.join("、") || "尚未填寫"),
-      evidenceRef("ev_recent30", "transactions", "最近 30 天交易", tx.recent30Count + " 筆"),
-      evidenceRef("ev_avg", "transactions", "過去 12 個月平均每月", tx.averagePerMonth + " 筆"),
+      evidenceRef("ev_recent_month", "transactions", recentLabel + "買賣", tx.recent30Count + " 筆"),
+      evidenceRef("ev_avg", "transactions", "期間平均每月", tx.averagePerMonth + " 筆"),
     ];
     return {
       tools: ["profile", "transactions"],
       answer: {
         directAnswer: "從目前資料看，你最近的做法和原本設定的方向大致沒有衝突。",
-        explanation: "你原本選的是「" + (plans[0] || "尚未填寫") + "」，最近 30 天有 " + tx.recent30Count +
-          " 筆交易，平均每月約 " + tx.averagePerMonth + " 筆。麥麥只做對照，不替你打分數，也不會說哪一種比較好。",
+        explanation: "你原本選的是「" + (plans[0] || "尚未填寫") + "」，" + recentLabel + "有 " + tx.recent30Count +
+          " 筆買賣，期間平均每月約 " + tx.averagePerMonth + " 筆。麥麥只做對照，不替你打分數，也不會說哪一種比較好。",
       },
       blocks: [
         block("comparison", {
           title: "原本的方向 vs 最近的行為",
           items: [
             { label: "原本的方向", value: plans.join("、") || "尚未填寫" },
-            { label: "最近 30 天", value: tx.recent30Count + " 筆交易" },
+            { label: recentLabel, value: tx.recent30Count + " 筆買賣" },
           ],
         }),
       ],
@@ -311,10 +396,17 @@
   function answerSimilarMoment() {
     const moment = AgentTools.similarMoment();
     if (!moment) return null;
+    const source = moment.sourceEvent || {};
     const evidence = [
-      evidenceRef("ev_moment", "historicalMoment", "相似時刻", moment.historicalContext.periodLabel || moment.title),
+      evidenceRef("ev_moment", "historicalMoment", "可回顧的紀錄", moment.historicalContext.periodLabel || moment.title),
       evidenceRef("ev_moment_market", "market", "當時市場情況", moment.historicalContext.marketChangeSummary),
     ];
+    /* 回答文字會提到這筆賣出的機會成本金額 → 必須先進 evidence，
+     * 否則 chat-core 的數字一致性檢查會把整段換成安全模板。 */
+    if (source.missedText) {
+      evidence.push(evidenceRef("ev_moment_missed", "historicalMoment",
+        "這筆賣出的機會成本", source.missedText));
+    }
     return {
       tools: ["similarMoment", "transactions"],
       answer: {
@@ -368,31 +460,48 @@
     const market = AgentTools.market();
     const portfolio = AgentTools.portfolio();
     if (!portfolio) return null;
+    /* 報告沒有各幣種持倉比例時，行情資產與持倉的交集會是空的。
+     * 這時不得回「BTC 持倉占比 0%」——那是誤導，不是事實。 */
     const held = market.assets.filter((asset) =>
       portfolio.assets.some((item) => item.symbol === asset.symbol));
-    const primary = held[0] || market.assets[0];
+    const primary = held[0] ||
+      market.assets.find((asset) => asset.symbol === market.primaryAsset) ||
+      market.assets[0];
+    const matched = held.length > 0;
+    const topLabel = portfolio.topAssetLabel;
+    const topPct = pct(portfolio.topAssetRatio);
     const evidence = [
       evidenceRef("ev_market", "market", primary.symbol + " 今日變動", pct(primary.changeRatio), market.observedAt),
-      evidenceRef("ev_top_weight", "portfolio", primary.symbol + " 持倉占比",
-        pct((portfolio.assets.find((item) => item.symbol === primary.symbol) || { weight: 0 }).weight), market.observedAt),
+      matched
+        ? evidenceRef("ev_top_weight", "portfolio", primary.symbol + " 持倉占比",
+          pct((portfolio.assets.find((item) => item.symbol === primary.symbol) || { weight: 0 }).weight), market.observedAt)
+        : evidenceRef("ev_top_weight", "portfolio", topLabel + " 占比", topPct, market.observedAt),
     ];
     return {
       tools: ["market", "portfolio"],
       answer: {
-        directAnswer: "今天和你比較有關的是 " + primary.symbol + "：變動約 " + pct(primary.changeRatio) + "。",
-        explanation: "因為它在你的持倉裡占比較高，所以同樣的市場變動，反映到你帳戶上的幅度會比其他資產明顯。",
+        directAnswer: matched
+          ? "今天和你比較有關的是 " + primary.symbol + "：變動約 " + pct(primary.changeRatio) + "。"
+          : "今天市場上比較明顯的是 " + primary.symbol + "：變動約 " + pct(primary.changeRatio) + "。",
+        explanation: matched
+          ? "因為它在你的持倉裡占比較高，所以同樣的市場變動，反映到你帳戶上的幅度會比其他資產明顯。"
+          : "你目前最大的一筆是" + topLabel + "，約占 " + topPct +
+            "；這份報告沒有各幣種持倉比例，所以無法對照你持有多少這項資產。以整體帳戶來看，這類變動的直接影響有限。",
       },
       blocks: [
         block("metric", {
           title: "今天的市場",
-          items: held.slice(0, 3).map((asset) => ({ label: asset.symbol, value: pct(asset.changeRatio) })),
+          items: (matched ? held : market.assets).slice(0, 3)
+            .map((asset) => ({ label: asset.symbol, value: pct(asset.changeRatio) })),
         }),
       ],
       evidence,
-      limitations: ["市場資料為示範情境，時間以資料標示為準。"],
+      limitations: matched
+        ? ["市場資料為示範情境，時間以資料標示為準。"]
+        : ["市場資料為示範情境，時間以資料標示為準。", "這份報告沒有各幣種持倉比例，無法逐項對照你持有哪些資產。"],
       followUps: [
         { id: "q_attribution_split", text: "今天帳戶變化主要來自哪裡？" },
-        { id: "q_portfolio_impact", text: "為什麼主要持倉影響比較大？" },
+        { id: "q_portfolio_impact", text: "目前的資金分布對帳戶有什麼影響？" },
       ],
       insightLinks: [],
     };

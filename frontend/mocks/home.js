@@ -5,33 +5,32 @@
 "use strict";
 
 window.MM_HOME_MOCK = Object.freeze({
-  dataVersion: "home-context-steady-planner-existing-8-v1",
+  dataVersion: "home-context-health-report-2025-v1",
   narrativeVersion: "home-narrative-rules-v1",
-  generatedAt: "2026-07-27T08:30:00+08:00",
-  nextRefreshAt: "2026-07-27T09:00:00+08:00",
+  generatedAt: "2025-12-31T16:00:00+08:00",
+  nextRefreshAt: "2025-12-31T16:30:00+08:00",
   user: {
     userId: "demo-user-001",
     displayName: "壹踢",
     demoMode: true,
   },
   snapshots: {
-    portfolioUpdatedAt: "2026-07-27T08:20:00+08:00",
+    portfolioUpdatedAt: "2025-12-31T15:50:00+08:00",
+    /* 前期快照＝health_report.json 的 2025-11 月最大持有（TWD 98.5%），非杜撰 */
     priorPortfolio: {
-      id: "portfolio_snapshot_demo_20260627",
-      observedAt: "2026-06-27T08:20:00+08:00",
+      id: "portfolio_snapshot_health_report_2025_11",
+      observedAt: "2025-11-30T16:00:00+08:00",
       weights: [
-        { symbol: "BTC", weight: 0.49 },
-        { symbol: "ETH", weight: 0.22 },
-        { symbol: "DOGE", weight: 0.18 },
-        { symbol: "USDT", weight: 0.11 },
+        { symbol: "TWD", weight: 0.985 },
+        { symbol: "OTHER", weight: 0.015 },
       ],
     },
   },
   marketContext: {
-    id: "market_context_demo_20260727",
-    observedAt: "2026-07-27T08:30:00+08:00",
-    periodStart: "2026-07-26T08:30:00+08:00",
-    periodEnd: "2026-07-27T08:30:00+08:00",
+    id: "market_context_demo_20251231",
+    observedAt: "2025-12-31T16:00:00+08:00",
+    periodStart: "2025-12-30T16:00:00+08:00",
+    periodEnd: "2025-12-31T16:00:00+08:00",
     primaryAsset: "BTC",
     volatilityLevel: "medium",
     assets: [
@@ -39,25 +38,25 @@ window.MM_HOME_MOCK = Object.freeze({
         symbol: "BTC",
         changeRatio: -0.018,
         impactLevel: "medium",
-        sourceLabel: "MAX 示範行情",
+        sourceLabel: "示範行情（非真實報價）",
       },
       {
         symbol: "ETH",
         changeRatio: -0.006,
         impactLevel: "low",
-        sourceLabel: "MAX 示範行情",
+        sourceLabel: "示範行情（非真實報價）",
       },
       {
         symbol: "DOGE",
         changeRatio: 0.004,
         impactLevel: "low",
-        sourceLabel: "MAX 示範行情",
+        sourceLabel: "示範行情（非真實報價）",
       },
       {
         symbol: "USDT",
         changeRatio: 0,
         impactLevel: "low",
-        sourceLabel: "MAX 示範行情",
+        sourceLabel: "示範行情（非真實報價）",
       },
     ],
     event: {
@@ -66,83 +65,44 @@ window.MM_HOME_MOCK = Object.freeze({
       sourceLabel: "示範市場情境",
     },
   },
-  attributionInput: {
-    modelVersion: "demo-estimated-attribution-v1",
-    type: "estimated",
-    periodStart: "2026-07-26T08:30:00+08:00",
-    periodEnd: "2026-07-27T08:30:00+08:00",
-    /*
-     * effectUnits 是後端規則模型產出的無量綱相對影響值。
-     * Adapter 會正規化並驗證總和；UI 不會看到這組 raw input。
-     */
-    components: [
-      {
-        id: "attribution-market",
-        category: "marketPrice",
-        label: "市場價格影響",
-        effectUnits: 68,
-        explanation: "依示範行情與目前持倉曝險估算。",
-      },
-      {
-        id: "attribution-allocation",
-        category: "allocation",
-        label: "資產配置影響",
-        effectUnits: 21,
-        explanation: "主要持倉占比較高，放大了它對帳戶變化的影響。",
-      },
-      {
-        id: "attribution-trades",
-        category: "recentTrades",
-        label: "近期交易影響",
-        effectUnits: 7,
-        explanation: "最近一次交易形成的部位仍有少量影響。",
-      },
-      {
-        id: "attribution-other",
-        category: "other",
-        label: "其他",
-        effectUnits: 4,
-        explanation: "包含四捨五入與目前未細分的示範因素。",
-      },
-    ],
-  },
+  /* 帳戶變化歸因：需要各幣種持倉明細才能拆解，但 health_report.json 只給
+   * 「最大持有標的與占比」。缺料就不提供輸入，Adapter 會回 null，
+   * 首頁該模組顯示「資料不足」——不用估算值假裝拆得出來。 */
+  attributionInput: null,
   similarMomentInput: {
-    id: "moment_demo_20260108",
+    id: "moment_health_report_20250108",
     title: "這個情況，你以前遇過",
     confidence: "low",
     currentContext: {
-      startDate: "2026-07-26T08:30:00+08:00",
-      endDate: "2026-07-27T08:30:00+08:00",
+      startDate: "2025-12-30T16:00:00+08:00",
+      endDate: "2025-12-31T16:00:00+08:00",
       relatedAssets: ["BTC"],
-      marketChangeSummary: "BTC 今日約變動 -1.8%（示範市場情境）。",
+      marketChangeSummary: "BTC 今日約變動 -1.8%（示範行情，非真實報價）。",
     },
+    /* 期間與內容由 SimilarMomentAdapter 依 health_report 的 worst_single_sell 現算 */
     historicalContext: {
-      startDate: "2026-01-08T00:00:00+08:00",
-      endDate: "2026-01-09T23:59:59+08:00",
+      startDate: "2025-01-08T00:00:00+08:00",
+      endDate: "2025-01-08T23:59:59+08:00",
       relatedAssets: ["DOGE"],
-      // 實際文字由 SimilarMomentAdapter 依 transactionRefs 的成交價現算後覆蓋；
-      // 這裡不寫死百分比，避免與 mocks/onboarding.js 的交易紀錄對不上。
       marketChangeSummary: "",
     },
-    transactionRefs: [
-      "2026-01-08T22:55:00+08:00",
-      "2026-01-09T10:20:00+08:00",
-    ],
     similarities: [
       "兩次都遇到關注資產出現較明顯的價格變化。",
-      "兩次情境都有既有持倉可能受到影響。",
+      "兩次都是在有既有部位的情況下需要做決定。",
     ],
     differences: [
-      "上次關注的是 DOGE，這次帳戶主要影響來源是 BTC。",
-      "這次的示範市場變動幅度較小。",
+      "當時處理的是 DOGE，這次示範行情的主要變動在 BTC。",
+      "當時有完整的賣出紀錄可回顧，這次的逐筆交易明細不在這份報告裡。",
     ],
     disclaimer: "相似情境只用來回顧，不代表市場會重複，也不是買賣建議。",
   },
+  /* 教材本身是一般知識（占比如何影響帳戶變化），對現金為主的帳戶同樣成立；
+   * 標題不預設使用者「持倉集中」，那是這個帳戶沒有的結論。 */
   learningContent: {
     id: "learning_concentration_basics",
-    title: "為什麼持倉集中會放大帳戶波動？",
+    title: "資產占比怎麼影響帳戶變化？",
     durationMinutes: 3,
-    descriptionTemplate: "用你的主要持倉當例子，看懂資產占比和帳戶變化的關係。",
+    descriptionTemplate: "用你目前的資金分布當例子，看懂占比和帳戶整體變化的關係。",
     route: "/maimate/insights/concentration-basics",
   },
   navigation: {
@@ -155,17 +115,17 @@ window.MM_HOME_MOCK = Object.freeze({
   },
   aiStructuredOutput: {
     todayRelevant: {
-      headline: "BTC 是你今天帳戶變化的主要來源；最近 30 天的交易次數和前一個 30 天相同。",
-      explanation: "示範行情中 BTC 今日約變動 -1.8%，且約占目前資產 52%；因此帳戶變化主要來自既有持倉，而不是近期新增交易。",
+      headline: "你的資金目前主要停在現金，市場變動對帳戶的直接影響有限。",
+      explanation: "2025 年 12 月的紀錄顯示最大持有是現金（TWD），占比約 98.6%；示範行情中 BTC 今日約變動 -1.8%，但你的加密部位很小，因此帳戶不會跟著明顯移動。",
     },
-    planAlignmentSummary: "可確認的投入節奏大致相近；主要持倉占比比前期快照提高，但持有時間仍需要更多資料才能完整對照。",
-    attributionSummary: "依目前示範資料估算，今天的帳戶變化主要來自市場價格與主要持倉的組合影響，而不是近期交易。",
-    similarMomentSummary: "兩次都是關注資產出現價格變化，但資產與幅度不同；這次目前沒有新增交易。",
+    planAlignmentSummary: "可確認的是交易相當頻繁，而資金多數時間停在現金；持有時間仍需要逐筆紀錄才能完整對照。",
+    attributionSummary: "這份報告沒有各幣種持倉明細，因此不拆解帳戶變化來源。",
+    similarMomentSummary: "2025 年 1 月那筆 DOGE 賣出是報告裡唯一有明細的事件，可以拿來回顧當時的決定。",
     contextualQuestions: [
-      { id: "question_btc_impact", text: "為什麼 BTC 會影響我的帳戶比較多？", contextType: "portfolio" },
-      { id: "question_market_source", text: "今天的變化主要是市場造成的嗎？", contextType: "market" },
-      { id: "question_rhythm", text: "我最近的交易節奏有變快嗎？", contextType: "behavior" },
-      { id: "question_similar", text: "這次和 1 月那次有什麼不同？", contextType: "history", relatedMomentId: "moment_demo_20260108" },
+      { id: "question_cash_impact", text: "資金停在現金對我的帳戶有什麼影響？", contextType: "portfolio" },
+      { id: "question_market_source", text: "今天的市場變化跟我有關嗎？", contextType: "market" },
+      { id: "question_rhythm", text: "我的交易頻率算高嗎？", contextType: "behavior" },
+      { id: "question_similar", text: "1 月那筆 DOGE 賣出，當時發生什麼？", contextType: "history", relatedMomentId: "moment_health_report_20250108" },
       { id: "question_plan", text: "目前可確認的行為和我的長期目標一致嗎？", contextType: "behavior" },
     ],
   },

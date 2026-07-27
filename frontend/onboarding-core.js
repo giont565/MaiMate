@@ -33,7 +33,9 @@
 /** @typedef {{currentScreen:number,consent?:ConsentRecord,profile?:OnboardingProfile,portfolioSource?:'mock'|'internalApi',draft?:{qIndex:number,answers:Object,optional:Object},demoSession?:DemoSession,demoPersonaId?:'STEADY_PLANNER',analysisJob?:AnalysisJob,profileResult?:InvestmentProfileResult,profileFeedback?:Object,overallFeedback?:OverallProfileFeedback,effectiveProfile?:EffectiveInvestmentProfile,profileConfirmationReminder?:boolean,home?:Object}} OnboardingState */
 
 const MM_DEMO_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
-const MM_DEMO_DATA_VERSION = "steady-planner-existing-8-v1";
+/* 示範資料版本：現在的來源是隊友共用的真實帳戶（data/health_report.json → mocks/account.js），
+ * 不再是舊的「8 筆交易」示範帳戶，版本字串也一併改掉避免誤導。 */
+const MM_DEMO_DATA_VERSION = "health-report-2025-v1";
 const MM_EVENT_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$/;
 
 /* Analytics 只允許事件名與 questionId；不接受任意 metadata。 */

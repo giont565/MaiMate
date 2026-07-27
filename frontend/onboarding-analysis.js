@@ -620,13 +620,15 @@ const AnalysisUI = (() => {
     const coverage = activeResult.coverage;
     const dataTypes = [];
     if (coverage.portfolioAvailable) dataTypes.push("目前持倉");
-    if (coverage.transactionCount) dataTypes.push(coverage.transactionCount + " 筆交易紀錄");
+    if (coverage.transactionCount) dataTypes.push(coverage.transactionCount.toLocaleString("en-US") + " 筆交易紀錄");
     if (coverage.fundingHistoryAvailable) dataTypes.push("入出金紀錄");
     if (coverage.questionnaireCompleted) dataTypes.push(coverage.questionnaireAnswerCount + " 題補充問卷");
     const rows = [
       ["資料期間", coveragePeriod(coverage)],
       ["使用資料", dataTypes.length ? dataTypes.join("、") : "目前沒有足夠資料"],
-      ["持有資產", coverage.portfolioAvailable ? coverage.assetCount + " 項" : "未使用持倉資料"],
+      // 報告只給最大持有標的與占比時 assetCount 是 null → 明說未提供，不補數字
+      ["持有資產", !coverage.portfolioAvailable ? "未使用持倉資料"
+        : coverage.assetCount == null ? "報告未提供各幣種比例" : coverage.assetCount + " 項"],
       ["問卷狀態", coverage.questionnaireCompleted ? "已完成 " + coverage.questionnaireAnswerCount + " / " + coverage.questionnaireAnswerCount : "稍後補充"],
       ["入出金資料", coverage.fundingHistoryAvailable ? "已使用" : "未使用"],
       ["分析時間", formatDate(activeResult.createdAt)],
@@ -657,8 +659,9 @@ const AnalysisUI = (() => {
     const coverage = activeResult.coverage;
     const values = [
       coveragePeriod(coverage),
-      coverage.transactionCount ? coverage.transactionCount + " 筆交易" : "交易紀錄未使用",
-      coverage.portfolioAvailable ? coverage.assetCount + " 項持有資產" : "持倉資料未使用",
+      coverage.transactionCount ? coverage.transactionCount.toLocaleString("en-US") + " 筆交易" : "交易紀錄未使用",
+      !coverage.portfolioAvailable ? "持倉資料未使用"
+        : coverage.assetCount == null ? "無各幣種持倉明細" : coverage.assetCount + " 項持有資產",
       coverage.questionnaireCompleted ? coverage.questionnaireAnswerCount + " 題補充回答" : "問卷稍後補充",
     ];
     if (!coverage.fundingHistoryAvailable) values.push("未使用入出金紀錄");
