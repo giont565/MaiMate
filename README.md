@@ -327,10 +327,12 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 - [ ] 每次工具呼叫留痕（摘要不含 PII）；訂單生命週期 draft→confirmed/expired→executed
 - [ ] GET /audit 可還原完整軌跡；前端「決策軌跡」面板；append-only
 
-### 4.8 前端（#13）｜主責 C
-- [ ] 手機版 RWD：對話主畫面、健檢卡收合、確認卡放大（照 docs/mockups/ 三畫面實作）
-- [ ] 三方案卡、模式徽章、軌跡面板渲染
-- [ ] API 失敗自動切離線 mock＋UI 標示（拔網路實測）
+### 4.8 前端（#13）｜主責 C — 🧪 已實作＋smoke／瀏覽器走查通過（07/24，PR #26）
+- [x] 手機版 RWD：對話主畫面、健檢卡收合、確認卡放大（照 docs/mockups/ 三畫面實作）
+- [x] 三方案卡、模式徽章、軌跡面板渲染
+- [x] API 失敗自動切離線 mock＋UI 標示（拔網路實測）
+- 追加：健康分 hero 卡（透明加權，PR #26）、確認卡數量/手續費列、集中度卡標明現金 TWD、模式徽章鍵盤可及
+- 待資料：hero 已實現損益需 health_report 重跑補 realized_pnl（見 #27）
 
 ### 4.9 安全與法遵｜主責 D（Guardrails 掛載：A）（上台講法：「合規不是免責聲明，是系統設計」）
 - [ ] 不報明牌＝三層護欄（prompt＋正則＋Bedrock Guardrails #6，任一層可獨立擋住）

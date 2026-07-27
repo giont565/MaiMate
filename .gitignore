@@ -23,3 +23,4 @@ docs/*.pdf
 docs/slide-*.jpg
 .DS_Store
 smoke_mobile.png
+smoke_confirm.png

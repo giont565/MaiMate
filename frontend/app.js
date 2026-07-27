@@ -16,10 +16,14 @@ function setBadge(mode, isOverride) {
   currentMode = mode;
   document.getElementById("mode-badge").textContent = MODE_LABELS[mode] + (isOverride ? "＊" : "");
 }
-document.getElementById("mode-badge").onclick = () => {
+function cycleMode() {
   modeOverride = MODE_ORDER[(MODE_ORDER.indexOf(modeOverride || currentMode) + 1) % MODE_ORDER.length];
   setBadge(modeOverride, true);
-};
+}
+const _badge = document.getElementById("mode-badge");
+_badge.onclick = cycleMode;
+// 鍵盤可及（a11y）：Enter／Space 等同點擊
+_badge.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); cycleMode(); } };
 
 // 千分位格式化：fmt(2091464.5) → "2,091,464.5"；小數照原值保留（最多 maxDec 位）
 function fmt(n, maxDec = 4) {
@@ -30,9 +34,10 @@ function fmt(n, maxDec = 4) {
 // ---------- 離線備援資料（決賽保險：任一步掛掉→mock 接手走完 Golden Path） ----------
 const MOCK = {
   health: {
-    chase_index: { buy_above_ma_pct: 65.0, buy_total: 2350 },
+    chase_index: { buy_above_ma_pct: 64.9, buy_total: 2350 },
     opportunity_cost: { total_missed_twd: 26598877 },
-    concentration: { peak_concentration: { top_pct: 98.6, month: "2025-12" } },
+    realized_pnl: { total_realized_twd: 117482, loss_trades: 493, profit_trades: 981 },
+    concentration: { peak_concentration: { top_pct: 98.6, month: "2025-12", top_currency: "twd" } },
     cash_flow_behavior: { withdrawals_after_7d_btc_drop_pct: 14.2, twd_withdrawal_count: 417 },
   },
   markets: ["btctwd", "ethtwd", "soltwd", "dogetwd"],
@@ -83,13 +88,56 @@ function maiMood(state) {
   if (state === "bullish") _moodTimer = setTimeout(() => maiMood("idle"), 6000);
 }
 
+// ---------- 麥麥健康分 hero 卡（設計稿 screen1）----------
+// 分數＝真實子項的透明加權（追高控制/勝率/出金紀律），公式印在卡上；
+// 缺哪個子項就把它的權重攤到其餘，數字全部指得出 health_report 來源，無憑空編造。
+function renderHero(r) {
+  const el = document.getElementById("hero");
+  if (!el) return;
+  const rp = r.realized_pnl;
+  const winRate = rp && rp.profit_trades + rp.loss_trades > 0
+    ? (rp.profit_trades / (rp.profit_trades + rp.loss_trades)) * 100 : null;
+  const factors = [
+    { k: "追高控制", v: 100 - r.chase_index.buy_above_ma_pct, w: 0.4 },
+    ...(winRate != null ? [{ k: "勝率", v: winRate, w: 0.3 }] : []),
+    { k: "出金紀律", v: 100 - r.cash_flow_behavior.withdrawals_after_7d_btc_drop_pct, w: 0.3 },
+  ];
+  const wsum = factors.reduce((a, f) => a + f.w, 0);
+  const score = Math.round(factors.reduce((a, f) => a + f.v * f.w, 0) / wsum);
+  const worst = factors.reduce((a, f) => (f.v < a.v ? f : a));
+  const pnl = rp ? rp.total_realized_twd : null;
+  const pnlLine = rp
+    ? `2025 已實現損益 <span class="${pnl >= 0 ? "pos" : "neg"}">${pnl >= 0 ? "+" : "−"}NT$${fmt(Math.abs(pnl))}</span>`
+      + (winRate != null ? ` · 勝率 <b>${winRate.toFixed(1)}%</b>（${fmt(rp.profit_trades)}勝/${fmt(rp.loss_trades)}負）` : "")
+    : "";
+  const formula = "＝" + factors.map((f) => `${f.k}${Math.round(f.w / wsum * 100)}%`).join("＋") + "，皆依你 2025 真實紀錄";
+  el.innerHTML = `
+    <div class="ring" style="background:conic-gradient(var(--gold) 0 ${score}%, #E8EDF7 ${score}% 100%)">
+      <i><b>${score}</b><s>健康分</s></i>
+    </div>
+    <div class="htxt">
+      <div class="n">投資健康分</div>
+      <div class="l">${esc(worst.k)}扣最多分，最該練；其餘大致健康。</div>
+      ${pnlLine ? `<div class="pnl">${pnlLine}</div>` : ""}
+      <div class="formula">${esc(formula)}</div>
+    </div>`;
+}
+
 // ---------- 健檢面板（2×2 卡＋麥麥 insight，照 mockup screen1） ----------
 function renderHealth(r) {
+  renderHero(r);
   const missedWan = Math.round(r.opportunity_cost.total_missed_twd / 1e4);
+  // 集中度卡：top_currency=twd 代表「資金多在現金」（保守，非風險）。明確標幣別，
+  // 免得評審把 98.6% 誤讀成危險的加密資產過度集中（實際意思相反）。
+  const pc = r.concentration.peak_concentration;
+  const isCash = String(pc.top_currency || "").toLowerCase() === "twd";
+  const concLabel = isCash
+    ? `峰值現金佔比（TWD）<br>（${pc.month}，資金多在觀望）`
+    : `峰值持倉集中度 ${String(pc.top_currency || "").toUpperCase()}<br>（${pc.month}）`;
   document.getElementById("health").innerHTML = [
     { n: r.chase_index.buy_above_ma_pct + "%", l: "追高指數<br>買在近7筆均價上方", c: "var(--red)" },
     { n: fmt(missedWan) + "萬", l: "年度賣出機會成本（少賺）<br>（NT$）", c: "var(--gold)" },
-    { n: r.concentration.peak_concentration.top_pct + "%", l: `峰值持倉集中度<br>（${r.concentration.peak_concentration.month}）`, c: "var(--navy)" },
+    { n: pc.top_pct + "%", l: concLabel, c: "var(--navy)" },
     { n: r.cash_flow_behavior.withdrawals_after_7d_btc_drop_pct + "%", l: "下跌後出金比例<br>習慣健康", c: "var(--green)" },
   ].map((c) => `<div class="card"><div class="n" style="color:${c.c}">${c.n}</div><div class="l">${c.l}</div></div>`).join("");
   document.getElementById("insights").innerHTML = `
@@ -200,15 +248,31 @@ async function showTrail() {
   } catch { /* 軌跡載入失敗不影響主流程 */ }
 }
 
+// 確認卡手續費：取自對應方案已算好的 fee_twd（真值，README §3 方案含手續費），以 volume_twd 對應；
+// 對不到就回 null（不前端估算、不編數字）。
+function feeForConfirm(card, scenarios) {
+  if (!Array.isArray(scenarios)) return null;
+  const s = scenarios.find((x) => x.amount_twd != null && x.amount_twd === card.volume_twd);
+  return s && s.fee_twd != null ? s.fee_twd : null;
+}
+
 // 下單確認卡（設計稿 screen3：表格＋滑價警語＋大按鈕）
-function addConfirmCard(card, token) {
+// fee＝對應方案的真實 fee_twd（feeForConfirm 帶入）；數量照契約——市價單無價，標「依成交價定」，
+// 限價單才由 volume_twd/price 算（price 為契約內真值）。皆不憑空編數字。
+function addConfirmCard(card, token, fee) {
   const id = "c" + Date.now();
+  const coin = String(card.market).replace(/twd$/i, "").toUpperCase();
+  const qtyCell = card.ord_type === "market"
+    ? "市價，數量依成交價定"
+    : (card.price ? `${fmt(card.volume_twd / card.price, 6)} ${esc(coin)}` : "—");
   log().insertAdjacentHTML("beforeend", `
     <div class="confirm" id="${id}">
       <div class="h">📋 下單確認 — 最後一步由你決定</div>
       <table>
         <tr><td>動作</td><td>${card.side === "buy" ? "買入" : "賣出"} ${esc(card.market).toUpperCase()}（${card.ord_type === "market" ? "市價" : "限價 NT$" + fmt(card.price)}）</td></tr>
+        <tr><td>數量</td><td>${qtyCell}</td></tr>
         <tr><td>預估金額</td><td>NT$${fmt(card.volume_twd)}</td></tr>
+        ${fee != null ? `<tr><td>預估手續費</td><td>NT$${fmt(fee)}</td></tr>` : ""}
         <tr><td>確認時效</td><td>60 秒內有效</td></tr>
       </table>
       <div class="warn">⚠ 以當下價格估算，實際成交可能有滑價。麥麥不會替你按下這顆按鈕。</div>
@@ -257,14 +321,14 @@ document.getElementById("chatform").onsubmit = async (e) => {
     addTrail(r.tool_trail);
     addMsg("ai", r.reply);
     addScenarios(r.scenarios);
-    if (r.confirm) addConfirmCard(r.confirm.confirmation_card, r.confirm.confirm_token);
+    if (r.confirm) addConfirmCard(r.confirm.confirmation_card, r.confirm.confirm_token, feeForConfirm(r.confirm.confirmation_card, r.scenarios));
   } catch { // 離線劇本接手：依意圖回展示回應，Golden Path 全鏈路照走
     offline();
     const m = MOCK.chat(text);
     addTrail(m.tool_trail);
     addMsg("ai", m.reply);
     addScenarios(m.scenarios);
-    if (m.confirm) addConfirmCard(m.confirm.confirmation_card, m.confirm.confirm_token);
+    if (m.confirm) addConfirmCard(m.confirm.confirmation_card, m.confirm.confirm_token, feeForConfirm(m.confirm.confirmation_card, m.scenarios));
   }
 };
 
