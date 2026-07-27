@@ -456,7 +456,11 @@ window.addEventListener("hashchange", (event) => {
   route();
 });
 
+/* 從「我的」進來時（?from=settings），返回鍵一律回設定頁——
+ * 使用者只是想看授權或樣貌，不該被退回行銷入口頁或分析中畫面。 */
+const cameFromSettings = new URLSearchParams(location.search).get("from") === "settings";
 document.getElementById("btn-back").onclick = () => {
+  if (cameFromSettings) { location.href = "settings.html"; return; }
   if (location.hash === "#/profile") location.hash = "#/consent";
   else if (location.hash === "#/profile-result") window.MM_ANALYSIS_UI.returnToAnalysis();
   else if (location.hash === "#/analyzing") location.hash = "#/profile";

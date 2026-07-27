@@ -14,12 +14,27 @@
   }
 
   document.getElementById("btn-back").onclick = () => navigate("/maimate/home");
+  // from=settings：讓 onboarding 各頁的返回鍵回到設定頁，而不是掉回行銷入口頁
   document.getElementById("btn-profile").onclick = () => {
-    window.location.assign("onboarding.html#/profile-result");
+    window.location.assign("onboarding.html?from=settings#/profile-result");
   };
   document.getElementById("btn-consent").onclick = () => {
-    window.location.assign("onboarding.html#/consent");
+    window.location.assign("onboarding.html?from=settings#/consent");
   };
+
+  /* 使用者若曾點「先看示範帳戶」，自己的作答會被示範人格覆蓋；這裡提供換回入口 */
+  const restore = document.getElementById("btn-restore");
+  if (typeof OnboardingStore !== "undefined" && OnboardingStore.hasUserSnapshot()) {
+    restore.hidden = false;
+    restore.onclick = () => {
+      if (!OnboardingStore.restoreUserState()) return;
+      restore.hidden = true;
+      const message = document.getElementById("settings-message");
+      message.querySelector("b").textContent = "已換回你自己的設定";
+      message.querySelector("p").textContent = "麥麥會依你原本的作答重新整理首頁內容。";
+      navigate("/maimate/home");
+    };
+  }
   document.getElementById("btn-notifications").onclick = () => {
     const message = document.getElementById("settings-message");
     message.querySelector("b").textContent = "通知設定即將提供";

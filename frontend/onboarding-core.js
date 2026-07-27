@@ -69,6 +69,31 @@ const OnboardingStore = {
     localStorage.setItem(this.KEY, JSON.stringify(state));
     return state;
   },
+  /* ── 使用者自己的作答快照 ──
+   * 「先看示範帳戶」會用示範人格覆蓋整份 onboarding 狀態。覆蓋前先留一份快照，
+   * 讓使用者能在「我的」把自己的設定換回來，不會因為好奇點一下就永久失去作答。 */
+  SNAPSHOT_KEY: "mm_onboarding_user_snapshot",
+  /** 只在使用者確實有自己的（非示範）資料、且尚未有快照時建立 */
+  snapshotUserState() {
+    if (localStorage.getItem(this.SNAPSHOT_KEY)) return false;
+    const state = this.read();
+    const isOwnData = Boolean(state.profile) &&
+      !state.demoPersonaId &&
+      !(state.consent && state.consent.source === "demo");
+    if (!isOwnData) return false;
+    localStorage.setItem(this.SNAPSHOT_KEY, JSON.stringify(state));
+    return true;
+  },
+  hasUserSnapshot() { return Boolean(localStorage.getItem(this.SNAPSHOT_KEY)); },
+  /** @returns {boolean} 還原成功與否 */
+  restoreUserState() {
+    const raw = localStorage.getItem(this.SNAPSHOT_KEY);
+    if (!raw) return false;
+    try { JSON.parse(raw); } catch (_) { localStorage.removeItem(this.SNAPSHOT_KEY); return false; }
+    localStorage.setItem(this.KEY, raw);
+    localStorage.removeItem(this.SNAPSHOT_KEY);
+    return true;
+  },
   /** @returns {DemoSession} */
   ensureDemoSession() {
     const state = this.read();

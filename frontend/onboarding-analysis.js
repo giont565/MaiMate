@@ -104,11 +104,14 @@ const AnalysisUI = (() => {
     show("session-expired", false);
   }
 
+  /* 只要本機已有「與目前資料版本相符」的結果就算可救援——分析本身成功、
+   * 只是這次讀取失敗時同樣適用；否則會把讀取失敗誤報成分析失敗，
+   * 並讓使用者走上會清掉自己修正的「使用展示結果」。 */
   function hasPreviousResultForFailedJob() {
     const state = OnboardingStore.read();
     return Boolean(
       state.analysisJob &&
-      state.analysisJob.status === "failed" &&
+      (state.analysisJob.status === "failed" || state.analysisJob.status === "succeeded") &&
       resultMatchesState(state, state.profileResult)
     );
   }
@@ -199,7 +202,16 @@ const AnalysisUI = (() => {
         return;
       }
     } catch (_) {
-      if (routeRequestIsCurrent(epoch, "#/analyzing")) showFailed();
+      if (!routeRequestIsCurrent(epoch, "#/analyzing")) return;
+      // 讀取失敗但本機已有同版本結果 → 走「查看上次結果」，不謊報分析失敗
+      if (hasPreviousResultForFailedJob()) {
+        activeJob = state.analysisJob;
+        renderScopeNote();
+        renderStageList(activeJob);
+        showFailed(true);
+      } else {
+        showFailed();
+      }
       return;
     }
     const storedJobIsCurrent = Boolean(

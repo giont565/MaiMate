@@ -159,7 +159,13 @@ document.getElementById("btn-demo").onclick = async () => {
   const s = await EntryAdapter.createDemoSession("STEADY_PLANNER");
   location.href = s.nextRoute;
 };
-document.getElementById("btn-back").onclick = () => history.back();
+/* 入口頁通常是 app 的第一頁：沒有上一頁時直接隱藏返回鍵，
+ * 否則按下去會落到 about:blank，第一畫面就掉出 app。 */
+(function initBack() {
+  const back = document.getElementById("btn-back");
+  if (!document.referrer) { back.hidden = true; return; } // 直接開啟＝沒有上一頁
+  back.onclick = () => history.back();
+})();
 
 /* ── Demo 用狀態切換（評審展示三態；與 index.html 模式徽章同手法）── */
 function cycleState() {

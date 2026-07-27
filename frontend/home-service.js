@@ -44,6 +44,17 @@ function mmHomePercent(value, digits) {
   return mmHomeRound(Number(value) * 100, Number.isInteger(digits) ? digits : 0) + "%";
 }
 
+/* 歸因的 marketPrice 項可能缺席（後端少回、或資料不足）；
+ * 缺席時只讓這一格顯示「資料不足」，不要讓整頁掉到錯誤畫面。 */
+function mmHomeMarketPriceRatioText(attribution) {
+  const item = attribution && Array.isArray(attribution.contributors)
+    ? attribution.contributors.find((c) => c && c.category === "marketPrice")
+    : null;
+  return item && Number.isFinite(Number(item.contributionRatio))
+    ? mmHomePercent(item.contributionRatio)
+    : "資料不足";
+}
+
 function mmHomeState() {
   return OnboardingStore.read();
 }
@@ -1116,9 +1127,8 @@ function mmHomeBuildResponse(state) {
         {
           id: "insight-market-attribution",
           label: "市場價格估算影響",
-          value: attribution
-            ? mmHomePercent(attribution.contributors.find((item) => item.category === "marketPrice").contributionRatio)
-            : "資料不足",
+          // 後端若少回 marketPrice 這一項，只讓這一格顯示「資料不足」，不得讓整頁掛掉
+          value: mmHomeMarketPriceRatioText(attribution),
           source: "marketContext",
         },
       ],

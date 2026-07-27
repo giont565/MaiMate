@@ -40,7 +40,9 @@
         /%(?:2f|5c|2e)/i.test(candidate)) return null;
 
     let parsed;
-    try { parsed = new URL(candidate, window.location.origin); }
+    // 以目前網址（而非 origin）為 base：file:// 開啟時 origin 是 "null"，
+    // 用它當 base 會讓每個路由都 throw → 全部導覽靜默失效（零建置直接開檔的天條）。
+    try { parsed = new URL(candidate, window.location.href); }
     catch (_) { return null; }
     if (parsed.protocol !== window.location.protocol ||
         parsed.origin !== window.location.origin ||

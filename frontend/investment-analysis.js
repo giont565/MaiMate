@@ -576,13 +576,11 @@ const MockInvestmentAnalysisService = {
       completedAt: stage.completedAt || completedAt,
     }));
     const result = validateProfileResult(fallbackResult(job, currentAuthorizedData(), "fallbackTemplate"));
+    // 展示結果由同一份授權資料決定性重建、dimension 結構一致，
+    // 因此保留使用者既有的修正／回饋——切換展示結果不該清空別人填過的東西。
     OnboardingStore.write({
       analysisJob: job,
       profileResult: result,
-      profileFeedback: undefined,
-      overallFeedback: undefined,
-      effectiveProfile: undefined,
-      profileConfirmationReminder: undefined,
       currentScreen: 5,
     });
     return result;
@@ -719,6 +717,9 @@ async function bootstrapHomeDemo(personaId) {
   if (sessionIsValid && existing.demoPersonaId === personaId &&
       existing.profileResult && existing.analysisJob &&
       existing.analysisJob.status === "succeeded") return existing;
+
+  // 覆寫成示範人格前，先保住使用者自己的作答（可在「我的」還原）
+  OnboardingStore.snapshotUserState();
 
   const now = new Date().toISOString();
   const demoSession = OnboardingStore.ensureDemoSession();
