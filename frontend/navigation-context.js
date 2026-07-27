@@ -70,13 +70,14 @@
         kind: "home",
       };
     }
-    if (localPath === "index.html") {
+    // Screen 7 實體頁是 chat.html；index.html 是舊版 Golden Path demo，仍可解析（CI 煙測用）
+    if (localPath === "chat.html" || localPath === "index.html") {
       const validChatQuery = noSearch ||
         (params.length === 1 && params[0][0] === "src" && params[0][1] === "home");
       if (!validChatQuery) return null;
       return {
         canonical: "/maimate/chat",
-        local: "index.html" + parsed.search,
+        local: localPath + parsed.search,
         kind: "chat",
       };
     }
@@ -91,7 +92,7 @@
       return { canonical: pathname, local: "home.html", kind: "home" };
     }
     if (pathname === "/maimate/chat") {
-      return { canonical: pathname, local: "index.html", kind: "chat" };
+      return { canonical: pathname, local: "chat.html", kind: "chat" };
     }
     if (pathname === "/maimate/settings") {
       return { canonical: pathname, local: "settings.html", kind: "settings" };

@@ -551,7 +551,7 @@ async function assertNoHorizontalScroll(page, width) {
     // 27. Analytics 只允許事件名／questionId。
     const events = await page.evaluate(() => JSON.parse(localStorage.getItem("mm_events") || "[]"));
     for (const event of events) {
-      if (Object.keys(event).some((key) => !["e", "q"].includes(key))) throw new Error("Analytics 出現未允許欄位");
+      if (Object.keys(event).some((key) => !["e", "q", "src", "intent", "tool", "style", "status", "guard"].includes(key))) throw new Error("Analytics 出現未允許欄位");
     }
     const serializedEvents = JSON.stringify(events);
     if (/analysis_demo|obs_demo|temporary_state|近期配置|BTC|372000|api.?key|prompt/i.test(serializedEvents))

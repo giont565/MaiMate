@@ -13,6 +13,7 @@
     "smoke:onboarding": "node --check frontend/onboarding-core.js && node --check frontend/investment-analysis.js && node --check frontend/onboarding-analysis.js && node --check frontend/onboarding.js && node --check frontend/mocks/onboarding.js && node scripts/smoke_onboarding.js",
     "smoke:analysis": "node --check frontend/onboarding-core.js && node --check frontend/investment-analysis.js && node --check frontend/onboarding-analysis.js && node scripts/smoke_analysis.js",
     "smoke:home": "node --check frontend/home-core.js && node --check frontend/mocks/home.js && node --check frontend/navigation-context.js && node --check frontend/home-service.js && node --check frontend/home.js && node scripts/smoke_home.js",
+    "smoke:chat": "node --check frontend/chat-core.js && node --check frontend/chat-service.js && node --check frontend/chat.js && node --check frontend/mocks/chat.js && node scripts/smoke_chat.js",
     "smoke:regressions": "node --check frontend/settings.js && node --check frontend/welcome.js && node scripts/smoke_regressions.js",
     "handbook": "node docs/build_handbook.js"
   },

@@ -125,7 +125,7 @@ const server = http.createServer((req, res) => {
     if (!events.includes(ev)) throw new Error(`事件未記錄：${ev}`);
   const parsedEvents = JSON.parse(events);
   for (const event of parsedEvents)
-    if (Object.keys(event).some((key) => !["e", "q"].includes(key))) throw new Error("Screen 1 Analytics 出現未允許欄位");
+    if (Object.keys(event).some((key) => !["e", "q", "src", "intent", "tool", "style", "status", "guard"].includes(key))) throw new Error("Screen 1 Analytics 出現未允許欄位");
   const cleanedLegacy = parsedEvents.find((event) => event.e === "legacy_event");
   if (!cleanedLegacy || cleanedLegacy.q !== "experienceLevel") throw new Error("Screen 1 Analytics 清洗舊格式時遺失允許的 questionId");
   if (/token|balance|volume/i.test(events)) throw new Error("事件記錄疑似含敏感欄位");

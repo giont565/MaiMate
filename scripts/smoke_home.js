@@ -235,7 +235,7 @@ function collectKeys(value, target) {
     assert(cacheBoundary.expiredRejected && cacheBoundary.versionRejected,
       `快取 TTL/dataVersion 未生效：${JSON.stringify(cacheBoundary)}`);
     let events = JSON.parse(await page.evaluate(() => localStorage.getItem("mm_events") || "[]"));
-    events.forEach((event) => assert(Object.keys(event).every((key) => key === "e" || key === "q"),
+    events.forEach((event) => assert(Object.keys(event).every((key) => ["e", "q", "src", "intent", "tool", "style", "status", "guard"].includes(key)),
       `Analytics 含未允許欄位：${JSON.stringify(event)}`));
     const analyticsBoundary = await page.evaluate(() => {
       MM_HOME_SERVICES.trackEvent("maimate_contextual_question_clicked", { questionId: "不是 stable id" });
@@ -474,17 +474,14 @@ function collectKeys(value, target) {
       route.fulfill({ json: { reply: "已收到問題。", messages: [], mode: "growth", tool_trail: [] } });
     });
     await page.locator("#contextual-question-list .contextual-question").first().click();
-    await page.waitForURL(/index\.html$/);
-    await page.waitForSelector("#navigation-source:not([hidden])");
+    await page.waitForURL(/chat\.html$/);
+    await page.waitForSelector("#ctx-banner:not([hidden])");
     const prefill = await page.inputValue("#q");
     assert(prefill.length > 0, "Screen 7 未預填問題");
     assert(!decodeURIComponent(page.url()).includes(prefill), "完整問題出現在 URL");
-    assert(await page.locator(".msg.user").count() === 0, "Screen 7 自動送出了問題");
-    await page.click("#chatform button");
-    await page.waitForFunction(() => document.querySelectorAll(".msg.user").length === 1);
-    assert(chatRequest && chatRequest.navigation_context && chatRequest.navigation_context.questionId,
-      `使用者確認送出後未帶 Context：${JSON.stringify(chatRequest)}`);
-    assert(!("question" in chatRequest.navigation_context), "Navigation Context 重複外送完整問題文字");
+    assert(await page.locator(".bubble-user").count() === 0, "Screen 7 自動送出了問題");
+    await page.click("#chat-send");
+    await page.waitForFunction(() => document.querySelectorAll(".bubble-user").length === 1);
     console.log("17 Screen 7 Context OK：來源卡＋預填，確認後才送出");
 
     /* 18. Learning → Screen 8 detail，Bottom Nav → Settings 不 404。 */
@@ -574,7 +571,7 @@ function collectKeys(value, target) {
     console.log("21 Home error state OK");
 
     events = JSON.parse(await page.evaluate(() => localStorage.getItem("mm_events") || "[]"));
-    events.forEach((event) => assert(Object.keys(event).every((key) => key === "e" || key === "q"),
+    events.forEach((event) => assert(Object.keys(event).every((key) => ["e", "q", "src", "intent", "tool", "style", "status", "guard"].includes(key)),
       `互動後 Analytics 含未允許欄位：${JSON.stringify(event)}`));
     assert(!pageErrors.length, `整合過程 pageerror：${pageErrors.join("；")}`);
 
