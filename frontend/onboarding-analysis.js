@@ -1033,9 +1033,12 @@ const AnalysisUI = (() => {
 
   function navigateNext(response) {
     if (!response || !response.nextRoute) throw new Error("NEXT_ROUTE_MISSING");
-    const target = new URL(response.nextRoute, location.href);
-    if (target.origin !== location.origin) throw new Error("NEXT_ROUTE_NOT_ALLOWED");
-    location.href = target.href;
+    if (!window.MM_NAVIGATION || typeof window.MM_NAVIGATION.resolveRoute !== "function") {
+      throw new Error("NEXT_ROUTE_GUARD_UNAVAILABLE");
+    }
+    const resolved = window.MM_NAVIGATION.resolveRoute(response.nextRoute);
+    if (!resolved) throw new Error("NEXT_ROUTE_NOT_ALLOWED");
+    location.href = resolved;
   }
 
   async function confirmProfile() {

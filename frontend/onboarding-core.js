@@ -30,10 +30,11 @@
 /** @typedef {{key:ProfileDimensionKey,originalDescriptor:string,effectiveDescriptor:string,effectiveExplanation:string,correctionApplied:boolean}} EffectiveProfileDimension */
 /** @typedef {{id:string,userId:string,analysisJobId:string,dataVersion?:string,resultVersion:string,status:'draft'|'confirmed'|'revised',profileHeadline:string,summary:string,tags:ProfileTag[],coverage:AnalysisDataCoverage,dimensions:ProfileDimension[],stablePatterns:ProfileObservation[],attentionPoints:ProfileObservation[],supportPlan:SupportPlanItem[],overallFeedback?:OverallProfileFeedback,generatedBy:'rules'|'rulesAndAi'|'fallbackTemplate',createdAt:string,updatedAt:string,confirmedAt?:string}} InvestmentProfileResult */
 /** @typedef {{originalResultId:string,effectiveHeadline:string,dimensions:EffectiveProfileDimension[],supportPlan:SupportPlanItem[],userCorrections:UserProfileCorrection[],updatedAt:string}} EffectiveInvestmentProfile */
-/** @typedef {{currentScreen:number,consent?:ConsentRecord,profile?:OnboardingProfile,portfolioSource?:'mock'|'internalApi',draft?:{qIndex:number,answers:Object,optional:Object},demoSession?:DemoSession,analysisJob?:AnalysisJob,profileResult?:InvestmentProfileResult,profileFeedback?:Object,overallFeedback?:OverallProfileFeedback,effectiveProfile?:EffectiveInvestmentProfile,profileConfirmationReminder?:boolean}} OnboardingState */
+/** @typedef {{currentScreen:number,consent?:ConsentRecord,profile?:OnboardingProfile,portfolioSource?:'mock'|'internalApi',draft?:{qIndex:number,answers:Object,optional:Object},demoSession?:DemoSession,demoPersonaId?:'STEADY_PLANNER',analysisJob?:AnalysisJob,profileResult?:InvestmentProfileResult,profileFeedback?:Object,overallFeedback?:OverallProfileFeedback,effectiveProfile?:EffectiveInvestmentProfile,profileConfirmationReminder?:boolean,home?:Object}} OnboardingState */
 
 const MM_DEMO_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const MM_DEMO_DATA_VERSION = "steady-planner-existing-8-v1";
+const MM_EVENT_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$/;
 
 /* Analytics 只允許事件名與 questionId；不接受任意 metadata。 */
 function track(name, meta) {
@@ -42,11 +43,13 @@ function track(name, meta) {
     const log = (Array.isArray(stored) ? stored : []).flatMap((item) => {
       if (!item || item.e == null || String(item.e).length === 0) return [];
       const clean = { e: String(item.e) };
-      if (item.q != null && String(item.q).length > 0) clean.q = String(item.q);
+      const priorQuestionId = item.q == null ? "" : String(item.q);
+      if (MM_EVENT_ID_PATTERN.test(priorQuestionId)) clean.q = priorQuestionId;
       return [clean];
     });
     const event = { e: String(name) };
-    if (meta && meta.questionId) event.q = String(meta.questionId);
+    const questionId = meta && meta.questionId ? String(meta.questionId) : "";
+    if (MM_EVENT_ID_PATTERN.test(questionId)) event.q = questionId;
     log.push(event);
     localStorage.setItem("mm_events", JSON.stringify(log.slice(-100)));
   } catch (_) {}
@@ -99,12 +102,14 @@ const OnboardingStore = {
       portfolioSource: undefined,
       draft: undefined,
       demoSession: undefined,
+      demoPersonaId: undefined,
       analysisJob: undefined,
       profileResult: undefined,
       profileFeedback: undefined,
       overallFeedback: undefined,
       effectiveProfile: undefined,
       profileConfirmationReminder: undefined,
+      home: undefined,
     });
   },
 };

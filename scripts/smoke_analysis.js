@@ -350,7 +350,7 @@ async function assertNoHorizontalScroll(page, width) {
       window.__releaseDimensionFeedback();
       window.__releaseOverallFeedback();
     });
-    await page.waitForURL(/index\.html\?src=onboarding/);
+    await page.waitForURL(/home\.html\?src=onboarding/);
     const completedTimeline = await page.evaluate(() => JSON.parse(sessionStorage.getItem("smoke_feedback_timeline")));
     if (completedTimeline.confirmCalls !== 1 ||
         completedTimeline.events.indexOf("confirm") < completedTimeline.events.indexOf("dimension:end") ||
@@ -362,12 +362,12 @@ async function assertNoHorizontalScroll(page, width) {
     await seed(page, completedBase);
     await openResult(page);
     await page.click("#btn-profile-confirm");
-    await page.waitForURL(/index\.html\?src=onboarding/);
+    await page.waitForURL(/home\.html\?src=onboarding/);
     saved = await readState(page);
     if (saved.overallFeedback.value !== "accurate" || saved.profileResult.status !== "confirmed" || !saved.profileResult.confirmedAt ||
         saved.currentScreen !== 6 || saved.profileConfirmationReminder) throw new Error("預設 accurate 或確認狀態未保存");
     if (!saved.effectiveProfile || saved.effectiveProfile.originalResultId !== saved.profileResult.id) throw new Error("確認時未建立 effectiveProfile");
-    console.log("19 Confirm OK：未選整體回饋→accurate；Service nextRoute→現有首頁；effectiveProfile 已建立");
+    console.log("19 Confirm OK：未選整體回饋→accurate；Service nextRoute→Screen 6；effectiveProfile 已建立");
 
     // 20. 已確認結果可重看，CTA 更新且刷新仍 confirmed。
     await page.goto(`${base}/onboarding.html#/profile-result`);
@@ -414,7 +414,7 @@ async function assertNoHorizontalScroll(page, width) {
     await seed(page, completedBase);
     await openResult(page);
     await page.click("#btn-profile-later");
-    await page.waitForURL(/index\.html\?src=onboarding/);
+    await page.waitForURL(/home\.html\?src=onboarding/);
     saved = await readState(page);
     if (saved.profileResult.status !== "draft" || !saved.profileConfirmationReminder || !saved.effectiveProfile || saved.currentScreen !== 6)
       throw new Error("稍後確認沒有保留 draft/effective/reminder");

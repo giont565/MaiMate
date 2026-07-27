@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MaiMate｜洞察</title>
+<style>
+  :root{--bg:#FBFCFE;--card:#FFFFFF;--red:#E64A4D;--blue:#1E4DA7;--txt:#0F172A;--sub:#46557B;--mut:#6B7280;--line:#E3E9F5;--tint:#EEF3FC}
+  *{box-sizing:border-box;font-family:"Noto Sans CJK TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;margin:0}
+  html,body{overflow-x:clip}
+  body{background:var(--bg);color:var(--txt)}
+  button{font:inherit}
+  .topbar{height:58px;padding:7px 16px;display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:10;background:rgba(251,252,254,.96);border-bottom:1px solid var(--line)}
+  .back{width:44px;height:44px;border:0;background:none;color:var(--sub);font-size:24px;cursor:pointer}
+  .brand{display:flex;align-items:center;gap:8px;min-width:0}
+  .brand img{width:32px;height:38px;object-fit:contain}
+  .brand b{font-size:15px}
+  .home-link{margin-left:auto;min-height:44px;border:0;background:none;color:var(--blue);font-size:13px;font-weight:800;padding:0 8px;cursor:pointer}
+  main{max-width:480px;margin:0 auto;padding:18px 20px calc(174px + env(safe-area-inset-bottom))}
+  .hero{display:grid;grid-template-columns:1fr 84px;align-items:end;gap:12px}
+  .hero h1{font-size:28px;line-height:1.3;letter-spacing:-.01em}
+  .hero p{font-size:14px;color:var(--sub);line-height:1.75;margin-top:8px}
+  .hero img{width:84px;height:auto}
+  @media (prefers-reduced-motion:no-preference){.hero img{animation:breathe 3.4s ease-in-out infinite}}
+  @keyframes breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  .source{display:none;background:var(--tint);border-radius:12px;padding:11px 13px;margin-top:16px;color:var(--sub);font-size:12.5px;line-height:1.65}
+  .source.on{display:block}
+  .source b{display:block;color:var(--blue);font-size:12px;margin-bottom:2px}
+  .section-title{font-size:17px;margin-top:22px}
+  .insight-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+  .insight-item{width:100%;min-height:82px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 44px 14px 15px;text-align:left;color:var(--txt);cursor:pointer;position:relative}
+  .insight-item::after{content:"›";position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:22px;color:var(--blue)}
+  .insight-item b{display:block;font-size:14px;line-height:1.5}
+  .insight-item span{display:block;font-size:12.5px;color:var(--mut);line-height:1.6;margin-top:3px}
+  .detail{display:none;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 16px;margin-top:18px}
+  .detail.on{display:block}
+  .detail-tag{display:inline-block;background:var(--tint);color:var(--blue);font-size:12px;font-weight:800;border-radius:12px;padding:5px 9px}
+  .detail h2{font-size:17px;line-height:1.45;margin-top:12px}
+  .detail p{font-size:13.5px;color:var(--sub);line-height:1.75;margin-top:9px}
+  .basis{border-top:1px solid var(--line);margin-top:14px;padding-top:13px}
+  .basis b{font-size:13px}
+  .basis p{font-size:12.5px;color:var(--mut);margin-top:5px}
+  .actions{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+  .primary,.secondary{min-height:48px;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer}
+  .primary{border:0;background:var(--blue);color:#fff}
+  .secondary{border:1px solid var(--line);background:#fff;color:var(--txt)}
+  .info{background:var(--tint);border-radius:16px;padding:14px 15px;margin-top:16px;font-size:12.5px;color:var(--sub);line-height:1.75}
+  .chat-entry{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);width:min(480px,100%);z-index:15;padding:8px 20px;background:var(--bg)}
+  .chat-entry button{width:100%;min-height:48px;border:1px solid var(--line);border-radius:16px;background:#fff;color:var(--sub);font-size:13.5px;text-align:left;padding:0 16px;cursor:pointer;box-shadow:0 2px 8px rgba(15,23,42,.06)}
+  .bottom-nav{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(480px,100%);height:calc(64px + env(safe-area-inset-bottom));padding:5px 8px env(safe-area-inset-bottom);background:#fff;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);z-index:16}
+  .bottom-nav button{min-height:54px;border:0;background:none;color:var(--mut);font-size:12px;font-weight:800;cursor:pointer}
+  .bottom-nav button[aria-current="page"]{color:var(--blue)}
+  :focus-visible{outline:2px solid var(--red);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <button class="back" id="btn-back" type="button" aria-label="返回">‹</button>
+  <div class="brand"><img src="maimate_hero.png" alt=""><b>MaiMate 洞察</b></div>
+  <button class="home-link" type="button" data-route="/maimate/home">回首頁</button>
+</header>
+
+<main>
+  <section class="hero">
+    <div>
+      <h1 id="page-heading">把重要的事，再看深一點</h1>
+      <p id="page-intro">這裡會延續首頁的資料依據，讓你看懂市場、帳戶與原本計畫之間的關係。</p>
+    </div>
+    <img src="maimate_hero.png" alt="">
+  </section>
+
+  <aside class="source" id="insight-source" aria-live="polite">
+    <b>接續自首頁</b>
+    <span id="insight-source-copy"></span>
+  </aside>
+
+  <section id="insight-index">
+    <h2 class="section-title">可以深入看的內容</h2>
+    <div class="insight-list">
+      <button class="insight-item" type="button" data-insight-route="/maimate/insights/today-impact">
+        <b>今天的市場怎麼影響我</b>
+        <span>從市場變化、主要持倉與最近行為一起看。</span>
+      </button>
+      <button class="insight-item" type="button" data-insight-route="/maimate/insights/plan-alignment">
+        <b>原本的我 vs 最近的我</b>
+        <span>對照原本設定的方向與近期可確認的紀錄。</span>
+      </button>
+      <button class="insight-item" type="button" data-insight-route="/maimate/insights/account-change">
+        <b>帳戶變化原因</b>
+        <span>理解市場、配置與近期活動各自扮演的角色。</span>
+      </button>
+      <button class="insight-item" type="button" data-insight-route="/maimate/insights/similar-moment">
+        <b>相似時刻回放</b>
+        <span>回顧可解釋的歷史情境，不假設市場一定重演。</span>
+      </button>
+      <button class="insight-item" type="button" data-insight-route="/maimate/insights/concentration-basics">
+        <b>看懂持倉集中與帳戶變化</b>
+        <span>從比例開始理解，不提供最佳配置或買賣指令。</span>
+      </button>
+    </div>
+  </section>
+
+  <article class="detail" id="insight-detail">
+    <span class="detail-tag">深入了解</span>
+    <h2 id="detail-title"></h2>
+    <p id="detail-copy"></p>
+    <div class="basis">
+      <b>資料與說明邊界</b>
+      <p id="detail-basis">內容會沿用首頁已整理的資料與來源；資料不足時會保留，不補造數字。</p>
+    </div>
+    <div class="actions">
+      <button class="primary" id="btn-detail-ask" type="button">帶著這個情境問麥麥</button>
+      <button class="secondary" id="btn-all-insights" type="button">查看其他洞察</button>
+    </div>
+  </article>
+
+  <aside class="info" role="note">洞察用來協助理解目前資料，不代表投資能力、績效或獲利預測，也不是買賣建議。</aside>
+</main>
+
+<div class="chat-entry"><button type="button" id="btn-chat-entry">想問麥麥什麼？</button></div>
+<nav class="bottom-nav" aria-label="MaiMate 主要導覽">
+  <button type="button" data-route="/maimate/home">首頁</button>
+  <button type="button" aria-current="page">洞察</button>
+  <button type="button" data-route="/maimate/chat">問麥麥</button>
+  <button type="button" data-route="/maimate/settings">我的</button>
+</nav>
+
+<script src="navigation-context.js"></script>
+<script src="insights.js"></script>
+</body>
+</html>

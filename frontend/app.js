@@ -28,7 +28,7 @@ _badge.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventD
 // 千分位格式化：fmt(2091464.5) → "2,091,464.5"；小數照原值保留（最多 maxDec 位）
 function fmt(n, maxDec = 4) {
   const num = Number(n);
-  return Number.isFinite(num) ? num.toLocaleString("en-US", { maximumFractionDigits: maxDec }) : String(n);
+  return Number.isFinite(num) ? num.toLocaleString("en-US", { maximumFractionDigits: maxDec }) : "—";
 }
 
 // ---------- 離線備援資料（決賽保險：任一步掛掉→mock 接手走完 Golden Path） ----------
@@ -126,23 +126,29 @@ function renderHero(r) {
 // ---------- 健檢面板（2×2 卡＋麥麥 insight，照 mockup screen1） ----------
 function renderHealth(r) {
   renderHero(r);
-  const missedWan = Math.round(r.opportunity_cost.total_missed_twd / 1e4);
+  // 後端若回傳非數字字串，一律先轉數字／esc，避免注入 DOM（見 smoke_frontend 的 XSS 邊界斷言）
+  const chasePct = Number(r.chase_index.buy_above_ma_pct);
+  const missedValue = Number(r.opportunity_cost.total_missed_twd);
+  const topPct = Number(r.concentration.peak_concentration.top_pct);
+  const withdrawalPct = Number(r.cash_flow_behavior.withdrawals_after_7d_btc_drop_pct);
+  const missedWan = Number.isFinite(missedValue) ? Math.round(missedValue / 1e4) : NaN;
   // 集中度卡：top_currency=twd 代表「資金多在現金」（保守，非風險）。明確標幣別，
   // 免得評審把 98.6% 誤讀成危險的加密資產過度集中（實際意思相反）。
   const pc = r.concentration.peak_concentration;
+  const month = esc(String(pc.month || "").slice(0, 20));
   const isCash = String(pc.top_currency || "").toLowerCase() === "twd";
   const concLabel = isCash
-    ? `峰值現金佔比（TWD）<br>（${pc.month}，資金多在觀望）`
-    : `峰值持倉集中度 ${String(pc.top_currency || "").toUpperCase()}<br>（${pc.month}）`;
+    ? `峰值現金佔比（TWD）<br>（${month}，資金多在觀望）`
+    : `峰值持倉集中度 ${esc(String(pc.top_currency || "").toUpperCase().slice(0, 10))}<br>（${month}）`;
   document.getElementById("health").innerHTML = [
-    { n: r.chase_index.buy_above_ma_pct + "%", l: "追高指數<br>買在近7筆均價上方", c: "var(--red)" },
+    { n: fmt(chasePct) + "%", l: "追高指數<br>買在近7筆均價上方", c: "var(--red)" },
     { n: fmt(missedWan) + "萬", l: "年度賣出機會成本（少賺）<br>（NT$）", c: "var(--gold)" },
-    { n: pc.top_pct + "%", l: concLabel, c: "var(--navy)" },
-    { n: r.cash_flow_behavior.withdrawals_after_7d_btc_drop_pct + "%", l: "下跌後出金比例<br>習慣健康", c: "var(--green)" },
+    { n: fmt(topPct) + "%", l: concLabel, c: "var(--navy)" },
+    { n: fmt(withdrawalPct) + "%", l: "下跌後出金比例<br>習慣健康", c: "var(--green)" },
   ].map((c) => `<div class="card"><div class="n" style="color:${c.c}">${c.n}</div><div class="l">${c.l}</div></div>`).join("");
   document.getElementById("insights").innerHTML = `
-    <div class="insight">你 ${fmt(r.chase_index.buy_total)} 筆買入中有 <b>${r.chase_index.buy_above_ma_pct}% 買在高點</b>——這是典型的 FOMO 模式，麥麥會在你追高前提醒你。</div>
-    <div class="insight g">你的出金習慣很健康：${fmt(r.cash_flow_behavior.twd_withdrawal_count)} 筆提領只有 <b>${r.cash_flow_behavior.withdrawals_after_7d_btc_drop_pct}%</b> 發生在下跌後——不是恐慌型。</div>`;
+    <div class="insight">你 ${fmt(r.chase_index.buy_total)} 筆買入中有 <b>${fmt(chasePct)}% 買在高點</b>——這是典型的 FOMO 模式，麥麥會在你追高前提醒你。</div>
+    <div class="insight g">你的出金習慣很健康：${fmt(r.cash_flow_behavior.twd_withdrawal_count)} 筆提領只有 <b>${fmt(withdrawalPct)}%</b> 發生在下跌後——不是恐慌型。</div>`;
 }
 
 async function loadHealth() {
@@ -215,7 +221,7 @@ function addScenarios(list) {
     const rows = [
       s.amount_twd != null ? `<div>預估金額<b>NT$${fmt(s.amount_twd)}</b></div>` : "<div>動作<b>不產生訂單</b></div>",
       s.fee_twd != null ? `<div>手續費<b>NT$${fmt(s.fee_twd)}</b></div>` : "",
-      s.post_concentration_pct != null ? `<div>執行後佔比<b>${s.post_concentration_pct}%</b></div>` : "",
+      s.post_concentration_pct != null ? `<div>執行後佔比<b>${fmt(s.post_concentration_pct)}%</b></div>` : "",
     ].join("");
     const note = s.behavior_note ? `<div class="note">${esc(s.behavior_note)}</div>` : "";
     return `<div class="scen${i === 0 ? " pick" : ""}"><div class="t">${icon} ${esc(s.label)}<span class="tag">${tag}</span></div><div class="row">${rows}</div>${note}</div>`;
@@ -269,7 +275,7 @@ function addConfirmCard(card, token, fee) {
     <div class="confirm" id="${id}">
       <div class="h">📋 下單確認 — 最後一步由你決定</div>
       <table>
-        <tr><td>動作</td><td>${card.side === "buy" ? "買入" : "賣出"} ${esc(card.market).toUpperCase()}（${card.ord_type === "market" ? "市價" : "限價 NT$" + fmt(card.price)}）</td></tr>
+        <tr><td>動作</td><td>${card.side === "buy" ? "買入" : "賣出"} ${esc(String(card.market || "").toUpperCase())}（${card.ord_type === "market" ? "市價" : "限價 NT$" + fmt(card.price)}）</td></tr>
         <tr><td>數量</td><td>${qtyCell}</td></tr>
         <tr><td>預估金額</td><td>NT$${fmt(card.volume_twd)}</td></tr>
         ${fee != null ? `<tr><td>預估手續費</td><td>NT$${fmt(fee)}</td></tr>` : ""}
@@ -315,6 +321,8 @@ document.getElementById("chatform").onsubmit = async (e) => {
   try {
     const body = { messages, session_id: SESSION_ID };
     if (modeOverride) body.mode = modeOverride;
+    const navigationContext = window.MM_CHAT_CONTEXT && window.MM_CHAT_CONTEXT.takeRequestContext();
+    if (navigationContext) body.navigation_context = navigationContext;
     const r = await (await fetch(`${API}/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json();
     messages = r.messages;
     if (r.mode) setBadge(r.mode, !!modeOverride);

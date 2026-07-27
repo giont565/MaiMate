@@ -686,7 +686,7 @@ const MockInvestmentProfileService = {
       effectiveProfileId: "effective_" + result.id,
       onboardingStatus: "COMPLETED",
       nextStep: "HOME",
-      nextRoute: "index.html?src=onboarding",
+      nextRoute: "home.html?src=onboarding",
     };
   },
   async continueWithoutConfirmation(resultId) {
@@ -701,11 +701,89 @@ const MockInvestmentProfileService = {
       status: "draft",
       onboardingStatus: "PROFILE_READY",
       nextStep: "HOME",
-      nextRoute: "index.html?src=onboarding",
+      nextRoute: "home.html?src=onboarding",
       showProfileConfirmationReminder: true,
     };
   },
 };
+
+/* Welcome 的「先看示範」可直接進 Screen 6，但仍必須建立同一套
+ * Consent / Questionnaire / AnalysisJob / InvestmentProfileResult /
+ * EffectiveInvestmentProfile；不可在首頁另造第二套 Profile。
+ * 只有明確的 Demo Persona route 會呼叫此方法。 */
+async function bootstrapHomeDemo(personaId) {
+  if (personaId !== "STEADY_PLANNER") throw new Error("UNKNOWN_DEMO_PERSONA");
+  const existing = OnboardingStore.read();
+  const sessionIsValid = existing.demoSession &&
+    !OnboardingStore.isDemoSessionExpired(existing.demoSession);
+  if (sessionIsValid && existing.demoPersonaId === personaId &&
+      existing.profileResult && existing.analysisJob &&
+      existing.analysisJob.status === "succeeded") return existing;
+
+  const now = new Date().toISOString();
+  const demoSession = OnboardingStore.ensureDemoSession();
+  /** @type {ConsentRecord} */
+  const consent = {
+    consentVersion: window.MM_ONBOARDING_MOCK.consentVersion,
+    requiredScopes: ["portfolio", "transactions"],
+    optionalScopes: ["fundingHistory", "interactionPersonalization"],
+    grantedScopes: ["portfolio", "transactions", "fundingHistory", "interactionPersonalization"],
+    source: "demo",
+    grantedAt: now,
+  };
+  /** @type {OnboardingProfile} */
+  const profile = {
+    questionnaireVersion: window.MM_ONBOARDING_MOCK.questionnaireVersion,
+    experienceLevel: "habitual",
+    investmentGoals: ["longTermGrowth", "steadyHabit"],
+    holdingHorizon: "mediumLong",
+    volatilityResponse: "investigate",
+    helpPriorities: ["newsToHoldings", "planReview", "termExplain"],
+    communicationStyle: "concise",
+    status: "completed",
+    completedAt: now,
+  };
+  OnboardingStore.write({
+    consent,
+    profile,
+    portfolioSource: "mock",
+    demoSession,
+    demoPersonaId: personaId,
+    draft: undefined,
+  });
+
+  const job = createJob(demoSession.dataVersion);
+  job.id = "analysis_home_demo_steady_v1";
+  job.status = "succeeded";
+  job.progress = 100;
+  job.currentStage = undefined;
+  job.profileVersion = "profile-rules-v1";
+  job.completedAt = now;
+  job.updatedAt = now;
+  job.stages = job.stages.map((stage) => Object.assign({}, stage, {
+    status: "completed",
+    startedAt: now,
+    completedAt: now,
+  }));
+  const originalResult = validateProfileResult(
+    fallbackResult(job, currentAuthorizedData(), "fallbackTemplate")
+  );
+  const profileResult = Object.assign({}, originalResult, {
+    status: "confirmed",
+    confirmedAt: now,
+    updatedAt: now,
+  });
+  const effectiveProfile = buildEffectiveProfile(profileResult, {});
+  return OnboardingStore.write({
+    currentScreen: 6,
+    analysisJob: job,
+    profileResult,
+    profileFeedback: {},
+    overallFeedback: { value: "accurate", createdAt: now },
+    effectiveProfile,
+    profileConfirmationReminder: false,
+  });
+}
 
 function normalizeFormalAnalysisJob(payload, previousJob, dataVersion) {
   const raw = payload && payload.analysisJob ? payload.analysisJob : payload || {};
@@ -879,6 +957,7 @@ async function fetchJson(path, options, settings) {
 window.MM_INVESTMENT_SERVICES = {
   analysis: MockInvestmentAnalysisService,
   profile: MockInvestmentProfileService,
+  demo: { bootstrapHomeDemo },
   stageDefinitions: ANALYSIS_STAGE_DEFINITIONS,
   rules: ANALYSIS_RULES,
   setFailureMode(value) { analysisRuntime.failRequests = Boolean(value); },

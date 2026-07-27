@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MaiMate｜我的</title>
+<style>
+  :root{--bg:#FBFCFE;--card:#FFFFFF;--red:#E64A4D;--blue:#1E4DA7;--txt:#0F172A;--sub:#46557B;--mut:#6B7280;--line:#E3E9F5;--tint:#EEF3FC}
+  *{box-sizing:border-box;font-family:"Noto Sans CJK TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;margin:0}
+  html,body{overflow-x:clip}
+  body{background:var(--bg);color:var(--txt)}
+  button{font:inherit}
+  .topbar{height:58px;padding:7px 16px;display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:10;background:rgba(251,252,254,.96);border-bottom:1px solid var(--line)}
+  .back{width:44px;height:44px;border:0;background:none;color:var(--sub);font-size:24px;cursor:pointer}
+  .brand{display:flex;align-items:center;gap:8px}
+  .brand img{width:32px;height:38px;object-fit:contain}
+  .brand b{font-size:15px}
+  main{max-width:480px;margin:0 auto;padding:20px 20px calc(92px + env(safe-area-inset-bottom))}
+  .hero{display:grid;grid-template-columns:1fr 88px;align-items:end;gap:12px}
+  .hero h1{font-size:28px;line-height:1.3;letter-spacing:-.01em}
+  .hero p{font-size:14px;color:var(--sub);line-height:1.75;margin-top:8px}
+  .hero img{width:88px;height:auto}
+  @media (prefers-reduced-motion:no-preference){.hero img{animation:breathe 3.4s ease-in-out infinite}}
+  @keyframes breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  .notice{background:var(--tint);border-radius:16px;padding:14px 15px;margin-top:18px}
+  .notice b{font-size:14px}
+  .notice p{font-size:12.5px;color:var(--sub);line-height:1.7;margin-top:5px}
+  .section-title{font-size:17px;margin-top:22px}
+  .settings-list{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-top:12px}
+  .setting{width:100%;min-height:68px;border:0;border-top:1px solid var(--line);background:#fff;padding:12px 44px 12px 15px;text-align:left;color:var(--txt);cursor:pointer;position:relative}
+  .setting:first-child{border-top:0}
+  .setting::after{content:"›";position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:22px;color:var(--blue)}
+  .setting b{display:block;font-size:14px}
+  .setting span{display:block;font-size:12px;color:var(--mut);line-height:1.55;margin-top:3px}
+  .info{background:#fff;border:1px solid var(--line);border-radius:16px;padding:15px;margin-top:16px}
+  .info b{font-size:14px}
+  .info p{font-size:12.5px;color:var(--sub);line-height:1.7;margin-top:5px}
+  .bottom-nav{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(480px,100%);height:calc(64px + env(safe-area-inset-bottom));padding:5px 8px env(safe-area-inset-bottom);background:#fff;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);z-index:16}
+  .bottom-nav button{min-height:54px;border:0;background:none;color:var(--mut);font-size:12px;font-weight:800;cursor:pointer}
+  .bottom-nav button[aria-current="page"]{color:var(--blue)}
+  :focus-visible{outline:2px solid var(--red);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <button class="back" id="btn-back" type="button" aria-label="返回">‹</button>
+  <div class="brand"><img src="maimate_hero.png" alt=""><b>我的 MaiMate</b></div>
+</header>
+
+<main>
+  <section class="hero">
+    <div>
+      <h1>把陪伴方式，留給你決定</h1>
+      <p>之後可以在這裡管理投資樣貌、資料授權與內容偏好。</p>
+    </div>
+    <img src="maimate_hero.png" alt="">
+  </section>
+
+  <aside class="notice" role="note">
+    <b>設定頁正在接上正式服務</b>
+    <p>目前先提供既有的投資樣貌與資料授權入口；不會要求你輸入 API Key、密碼、私鑰或助記詞。</p>
+  </aside>
+
+  <h2 class="section-title">個人化設定</h2>
+  <div class="settings-list">
+    <button class="setting" id="btn-profile" type="button">
+      <b>查看或確認投資樣貌</b>
+      <span>回到 Screen 5 查看原始結果、修正與目前套用的樣貌。</span>
+    </button>
+    <button class="setting" id="btn-consent" type="button">
+      <b>資料授權設定</b>
+      <span>查看目前同意的資料範圍，之後仍可調整或撤回。</span>
+    </button>
+    <button class="setting" id="btn-notifications" type="button">
+      <b>通知與提醒</b>
+      <span>正式版本將在這裡管理洞察、樣貌更新與學習內容通知。</span>
+    </button>
+  </div>
+
+  <aside class="info" id="settings-message" aria-live="polite">
+    <b>你的資料仍由你決定</b>
+    <p>投資樣貌只用來調整 MaiMate 的解釋與提醒方式，不代表投資能力、績效或獲利預測。</p>
+  </aside>
+</main>
+
+<nav class="bottom-nav" aria-label="MaiMate 主要導覽">
+  <button type="button" data-route="/maimate/home">首頁</button>
+  <button type="button" data-route="/maimate/insights">洞察</button>
+  <button type="button" data-route="/maimate/chat">問麥麥</button>
+  <button type="button" aria-current="page">我的</button>
+</nav>
+
+<script src="navigation-context.js"></script>
+<script src="settings.js"></script>
+</body>
+</html>

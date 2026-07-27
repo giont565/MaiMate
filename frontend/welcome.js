@@ -61,7 +61,7 @@ const EntryAdapter = {
     return {
       demoSessionId: "demo_session_local",
       persona: { id: personaId, displayName: DEMO_PERSONAS[personaId] || personaId },
-      nextRoute: "index.html?demo=" + encodeURIComponent(personaId),
+      nextRoute: "home.html?demo=" + encodeURIComponent(personaId),
     };
   },
 };
@@ -152,7 +152,7 @@ document.addEventListener("keydown", e => {
 document.getElementById("btn-cta").onclick = async () => {
   if (entryState === "ERROR") { track("maimate_entry_reload_clicked"); return init(); }
   track("maimate_primary_cta_clicked");
-  location.href = entryState === "READY_COMPLETED" ? "index.html?src=welcome" : "onboarding.html#/consent";
+  location.href = entryState === "READY_COMPLETED" ? "home.html?src=welcome" : "onboarding.html#/consent";
 };
 document.getElementById("btn-demo").onclick = async () => {
   track("maimate_demo_cta_clicked");
