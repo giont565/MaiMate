@@ -64,30 +64,69 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem("mm_
   await page.goto(`${base}/home.html?demo=STEADY_PLANNER`);
   await page.waitForSelector(".bottom-nav");
   st = await store(page);
-  const snap = await page.evaluate(() => JSON.parse(localStorage.getItem("mm_onboarding_user_snapshot") || "null"));
-  if (st.profile.experienceLevel !== "habitual") throw new Error("示範帳戶未套用示範人格");
-  if (!snap || snap.profile.experienceLevel !== "advanced" || snap.profile.communicationStyle !== "analytical")
-    throw new Error("使用者作答沒有被快照保住");
-  console.log("1 示範帳戶 OK：套用示範人格，同時保住使用者原作答快照");
+  const snap = await page.evaluate(() => localStorage.getItem("mm_onboarding_user_snapshot"));
+  // 示範帳戶＝示範的歷史投資資料 ＋ 使用者自己的問卷人格（不再覆寫成固定示範人格）
+  if (st.profile.experienceLevel !== "advanced" || st.profile.communicationStyle !== "analytical")
+    throw new Error(`示範帳戶蓋掉了使用者的問卷人格：${JSON.stringify(st.profile)}`);
+  if (st.portfolioSource !== "mock" || !st.profileResult) throw new Error("示範帳戶未套用示範歷史資料");
+  if (snap) throw new Error("沒有覆寫任何東西時不該留快照");
+  console.log("1 示範帳戶 OK：沿用使用者問卷人格（advanced/analytical）＋示範歷史投資資料，未留多餘快照");
 
-  // ── 5+1b. 「我的」→ 資料授權 → 返回回到設定頁；且可換回自己的設定
+  // ── 1c. 三種版面：預設跟著問卷 Q6，改選會記住
+  const styleDefault = await page.evaluate(() => ({
+    body: document.body.dataset.homeStyle,
+    pressed: [...document.querySelectorAll("[data-style]")].filter((b) => b.getAttribute("aria-pressed") === "true").map((b) => b.dataset.style),
+    hint: document.getElementById("home-style-hint").textContent,
+  }));
+  if (styleDefault.body !== "analytical" || styleDefault.pressed.join() !== "analytical")
+    throw new Error(`版面預設未跟著問卷答案：${JSON.stringify(styleDefault)}`);
+  if (!styleDefault.hint.includes("問卷")) throw new Error(`版面提示文案異常：${styleDefault.hint}`);
+  await page.click('[data-style="concise"]');
+  await page.waitForFunction(() => document.body.dataset.homeStyle === "concise");
+  const conciseHides = await page.evaluate(() => {
+    const el = document.querySelector(".evidence-list") || document.querySelector(".module-note");
+    return el ? getComputedStyle(el).display : "none";
+  });
+  if (conciseHides !== "none") throw new Error("「先告訴我重點」未收起解釋／證據區塊");
+  await page.reload();
+  await page.waitForSelector(".bottom-nav");
+  const remembered = await page.evaluate(() => ({ body: document.body.dataset.homeStyle, hint: document.getElementById("home-style-hint").textContent }));
+  if (remembered.body !== "concise" || !remembered.hint.includes("已記住"))
+    throw new Error(`版面選擇未被記住：${JSON.stringify(remembered)}`);
+  console.log("1c 三種版面 OK：預設＝問卷 Q6（analytical）、改選 concise 會收起解釋且刷新後記住");
+
+  // ── 5. 「我的」→ 資料授權 → 返回回到設定頁
   await page.goto(`${base}/settings.html`);
-  const restoreHidden = await page.$eval("#btn-restore", (e) => e.hidden);
-  if (restoreHidden) throw new Error("有快照時「換回我自己的設定」應顯示");
   await page.click("#btn-consent");
   await page.waitForURL(/onboarding\.html\?from=settings#\/consent/);
   await page.click("#btn-back");
   await page.waitForURL(/settings\.html/);
   console.log("5 返回路徑 OK：我的→資料授權→返回→設定頁（不再掉回入口頁）");
 
+  // ── 1b. 只有「答到一半就被示範人格覆蓋」時才需要快照＋還原
+  await page.goto(`${base}/onboarding.html#/consent`);
+  await page.evaluate(() => { // 未完成的作答（status=inProgress）→ 會被示範人格覆蓋
+    localStorage.clear();
+    localStorage.setItem("mm_onboarding", JSON.stringify({
+      profile: { questionnaireVersion: "demo-1.0", experienceLevel: "beginner", investmentGoals: [],
+        holdingHorizon: "short", volatilityResponse: "unsure", helpPriorities: [],
+        communicationStyle: "guided", status: "inProgress" },
+    }));
+  });
+  await page.goto(`${base}/home.html?demo=STEADY_PLANNER`);
+  await page.waitForSelector(".bottom-nav");
+  st = await store(page);
+  if (st.profile.experienceLevel !== "habitual") throw new Error("未完成作答時應套用預設示範人格");
+  await page.goto(`${base}/settings.html`);
+  const restoreHidden = await page.$eval("#btn-restore", (e) => e.hidden);
+  if (restoreHidden) throw new Error("作答被覆蓋時應顯示「換回我自己的設定」");
   await page.click("#btn-restore");
   await page.waitForURL(/home\.html/);
   st = await store(page);
   const snapAfter = await page.evaluate(() => localStorage.getItem("mm_onboarding_user_snapshot"));
-  if (st.profile.experienceLevel !== "advanced" || st.profile.communicationStyle !== "analytical")
-    throw new Error("換回設定後仍是示範人格");
+  if (st.profile.experienceLevel !== "beginner") throw new Error("換回設定後仍是示範人格");
   if (snapAfter) throw new Error("換回後快照應清除");
-  console.log("1b 換回設定 OK：作答還原成 advanced/analytical，快照已清");
+  console.log("1b 換回設定 OK：未完成作答被覆蓋→有快照可還原（beginner），還原後快照已清");
 
   // ── 2+3. 讀取失敗但已有同版本結果 → 查看上次結果，且修正不被清空
   await page.goto(`${base}/onboarding.html#/consent`);

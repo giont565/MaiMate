@@ -59,10 +59,29 @@ function mmHomeState() {
   return OnboardingStore.read();
 }
 
+/* 三種版面＝問卷 Q6 的三種溝通風格（呈現偏好，不是投資人格分類）：
+ *   guided     陪我慢慢看懂——保留解釋段落，少一點數字
+ *   concise    先告訴我重點——只留結論與摘要
+ *   analytical 給我更多數據與脈絡——解釋與證據數字全展開 */
+const MM_HOME_STYLES = ["guided", "concise", "analytical"];
+
+/** 目前套用的版面：使用者在首頁選過就以他的選擇為準，否則跟著問卷 Q6 的答案 */
+function mmHomeResolveStyle(state) {
+  const chosen = mmHomeStorage(state).preferences.presentationStyle;
+  if (MM_HOME_STYLES.includes(chosen)) return { style: chosen, source: "userChoice" };
+  // effectiveProfile 只承載 dimension 修正，溝通風格仍以問卷答案為準
+  const fromProfile = (state.effectiveProfile && state.effectiveProfile.communicationStyle) ||
+    (state.profile && state.profile.communicationStyle);
+  return MM_HOME_STYLES.includes(fromProfile)
+    ? { style: fromProfile, source: "questionnaire" }
+    : { style: "guided", source: "default" };
+}
+
 function mmHomeStorage(state) {
   const source = state && state.home && typeof state.home === "object" ? state.home : {};
   return {
-    preferences: Object.assign({ amountsHidden: false }, source.preferences || {}),
+    // presentationStyle 未設定＝跟著問卷 Q6 的溝通風格走（見 mmHomeResolveStyle）
+    preferences: Object.assign({ amountsHidden: false, presentationStyle: null }, source.preferences || {}),
     moduleState: {
       dismissed: Object.assign({}, source.moduleState && source.moduleState.dismissed || {}),
       snoozed: Object.assign({}, source.moduleState && source.moduleState.snoozed || {}),
@@ -1549,6 +1568,13 @@ const MockMaiMateHomeService = {
     mmHomeWriteStorage({ preferences: storage.preferences });
     mmHomeClearPersonalizedCache();
   },
+  /** @param {"guided"|"concise"|"analytical"|null} style 傳 null＝改回跟著問卷答案 */
+  async updatePresentationStyle(style) {
+    const storage = mmHomeStorage(mmHomeState());
+    storage.preferences.presentationStyle = MM_HOME_STYLES.includes(style) ? style : null;
+    mmHomeWriteStorage({ preferences: storage.preferences });
+    return storage.preferences.presentationStyle;
+  },
 };
 
 async function mmHomeFetchJson(path, options) {
@@ -1620,6 +1646,14 @@ const MaiMatePersonalizedHomeService = {
     mmHomeWriteStorage({ preferences: storage.preferences });
     mmHomeClearPersonalizedCache();
   },
+  /* TODO(正式 API)：版面偏好之後應併入 PATCH /api/v1/maimate/preferences；
+   * 它只影響呈現密度、不影響資料，所以先在本地保存即可。 */
+  async updatePresentationStyle(style) {
+    const storage = mmHomeStorage(mmHomeState());
+    storage.preferences.presentationStyle = MM_HOME_STYLES.includes(style) ? style : null;
+    mmHomeWriteStorage({ preferences: storage.preferences });
+    return storage.preferences.presentationStyle;
+  },
 };
 
 const activeHomeService = window.MM_USE_FORMAL_HOME === true
@@ -1627,6 +1661,9 @@ const activeHomeService = window.MM_USE_FORMAL_HOME === true
   : MockMaiMateHomeService;
 
 window.MM_HOME_SERVICES = Object.freeze({
+  styles: Object.freeze(MM_HOME_STYLES.slice()),
+  /** 目前該用哪一種版面（使用者選過→他的選擇；否則→問卷 Q6；再否則→guided） */
+  currentStyle() { return mmHomeResolveStyle(mmHomeState()); },
   home: activeHomeService,
   mock: MockMaiMateHomeService,
   formal: MaiMatePersonalizedHomeService,

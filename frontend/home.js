@@ -669,6 +669,7 @@
     const response = rawResponse && rawResponse.home ? rawResponse.home : rawResponse;
     if (!response || !response.user || !Array.isArray(response.modules)) throw new Error("HOME_RESPONSE_INVALID");
     uiState.response = response;
+    applyStyle();
     renderGreeting(response);
     renderDraftReminder(response);
     renderModules(response);
@@ -897,7 +898,41 @@
     });
   }
 
+  /* ── 三種版面（＝問卷 Q6 的溝通風格）──
+   * 預設跟著使用者的問卷答案；在首頁改選會記住，只影響呈現密度，不改任何資料。 */
+  const STYLE_HINTS = {
+    questionnaire: "依你在問卷選的說明方式呈現，可以隨時改。",
+    userChoice: "已記住你選的版面，之後回來都會用這個。",
+    default: "可以選一種你看起來最舒服的呈現方式。",
+  };
+
+  function applyStyle() {
+    const services = window.MM_HOME_SERVICES;
+    if (!services || typeof services.currentStyle !== "function") return;
+    const { style, source } = services.currentStyle();
+    document.body.dataset.homeStyle = style;
+    document.querySelectorAll("[data-style]").forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset.style === style));
+    });
+    const hint = byId("home-style-hint");
+    if (hint) hint.textContent = STYLE_HINTS[source] || STYLE_HINTS.default;
+  }
+
+  function bindStyleSwitch() {
+    document.querySelectorAll("[data-style]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        analytics("maimate_home_style_changed");
+        const svc = window.MM_HOME_SERVICES && window.MM_HOME_SERVICES.home;
+        if (svc && typeof svc.updatePresentationStyle === "function") {
+          try { await svc.updatePresentationStyle(button.dataset.style); } catch (_) {}
+        }
+        applyStyle();
+      });
+    });
+  }
+
   function bindStaticEvents() {
+    bindStyleSwitch();
     byId("home-notifications").addEventListener("click", openNotificationSheet);
     document.querySelectorAll("[data-close-notifications]").forEach((node) => node.addEventListener("click", closeNotificationSheet));
     document.addEventListener("keydown", trapSheetFocus);

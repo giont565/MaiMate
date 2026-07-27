@@ -718,11 +718,16 @@ async function bootstrapHomeDemo(personaId) {
       existing.profileResult && existing.analysisJob &&
       existing.analysisJob.status === "succeeded") return existing;
 
-  // 覆寫成示範人格前，先保住使用者自己的作答（可在「我的」還原）
-  OnboardingStore.snapshotUserState();
-
   const now = new Date().toISOString();
   const demoSession = OnboardingStore.ensureDemoSession();
+  /* 示範帳戶＝示範的歷史投資資料 ＋ 使用者自己的問卷人格。
+   * 使用者若已完成問卷，就沿用他的答案（他點進來要看的是「用我的偏好解讀這份帳戶」），
+   * 只有從未作答的人才套用預設示範人格。 */
+  const ownProfile = existing.profile && existing.profile.status === "completed" && !existing.demoPersonaId
+    ? existing.profile
+    : null;
+  // 只有真的要覆寫別人的作答時才留快照（可在「我的」換回）
+  if (!ownProfile) OnboardingStore.snapshotUserState();
   /** @type {ConsentRecord} */
   const consent = {
     consentVersion: window.MM_ONBOARDING_MOCK.consentVersion,
@@ -733,7 +738,7 @@ async function bootstrapHomeDemo(personaId) {
     grantedAt: now,
   };
   /** @type {OnboardingProfile} */
-  const profile = {
+  const profile = ownProfile || {
     questionnaireVersion: window.MM_ONBOARDING_MOCK.questionnaireVersion,
     experienceLevel: "habitual",
     investmentGoals: ["longTermGrowth", "steadyHabit"],
