@@ -4,6 +4,8 @@
 > **這是本專案唯一的文件。** 開發地圖、架構、驗收、成果全在這份；改介面、改範圍都改這裡。
 > 決賽 8/1–8/2｜評分：創意25／可行20／商業20／AI設計15／切合10／完成10＋Lv2 Private API +5＋Kiro +5
 
+[![CI](https://github.com/giont565/MaiMate/actions/workflows/ci.yml/badge.svg)](https://github.com/giont565/MaiMate/actions/workflows/ci.yml)
+
 **一句話**：別的投資工具看「市場」，MaiMate 同時看「你」——AI 讀你一年 10,000 筆交易紀錄找出行為盲點，
 結合 MAX 即時行情給個人化洞察，在你明確授權下執行交易。**洞察 → 對話 → 行動，AI 有手，方向盤在人手上。**
 
@@ -59,7 +61,7 @@ mockup HTML 在 `docs/mockups/`＝C 包前端起點，畫面中所有數字皆�
 
 **D｜整合部署與交付**（地盤 `infra/` `docs/`，估 4 天，多為測試/設定短項）
 - 🔨 **AWS 帳號＋Bedrock 開通（多條線的前置，第一件做）**
-- 🧪 SAM 首次部署＋Lambda×4 冒煙（/health /market /chat /order）
+- 🧪 SAM 首次部署＋Lambda×5 冒煙（/health /market /chat /order /audit）
 - 🔨 #6 Bedrock Guardrails 建立（A 掛載）｜🔨 #14 從零部署演練＋DEPLOY.md（<1hr）
 - 🔬 #4 Private API E2E 最小額度真實成交｜🔬 憑證過期/重放 410｜🔬 雙層護欄攔截測試
 - 🔬 E2E Golden Path 主導（全員配合）｜🔬 從零部署計時
