@@ -35,6 +35,13 @@ def main():
     for name, val in (("MAX_API_KEY", key), ("MAX_API_SECRET", secret)):
         if val != val.strip():
             print(f"  ⚠ {name} 前後有空白——貼上時多帶了空格或換行，這會讓簽章必定失敗")
+        elif any(c.isspace() for c in val):
+            # 實際踩過：多行貼上時 read -s 會把下一行指令當成輸入吃掉，
+            # export 再讓它留在整個 shell session，症狀是 2008（金鑰不存在）。
+            print(f"  ⚠ {name} 中間有空白字元，這不是金鑰。多半是 `read -s` 把下一行"
+                  f"指令吃進去了：先 `unset {name}` 再重跑，並在提示出現後單獨貼一個值。")
+        elif len(val) != 40:
+            print(f"  ⚠ {name} 長度 {len(val)}，MAX 金鑰是 40 字元——可能貼到別的東西")
 
     from backend.integrations import max_private
 
