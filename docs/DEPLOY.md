@@ -37,18 +37,21 @@ sam deploy --guided     # 第一次；之後 sam deploy 即可
 
 ### 部署後手動設定（模板刻意不含，金鑰嚴禁進版控）
 
+🚨 **一律用主控台的「Add environment variable」新增**，不要用
+`aws lambda update-function-configuration --environment`——該參數是**整組取代**，
+會把模板設好的 `TABLE_NAME`／`KB_ID`／`BEDROCK_REGION` 全部清掉（RAG 會無聲失效）。
+
 - [ ] Lambda 主控台 → **OrderFunction 與 ChatFunction 都要**設環境變數：
       `MAX_API_KEY`、`MAX_API_SECRET`（或 Secrets Manager；權限只開「讀取＋交易」，**不開提領**）
       —— ChatFunction 的 get_account_balance／三方案引擎查持倉需要（07/21 實測發現漏設會
       讓模型答「帳戶 API 未設定」、Golden Path 卡在查持倉）
-- [ ] （選配）ChatFunction 環境變數：`BEDROCK_REGION`（不設預設 us-east-1）
 - [ ] （選配，先驗證再開）ChatFunction 環境變數：`ENABLE_PROMPT_CACHE=1`
       —— prompt caching 開關；開啟後對話一次確認無 ValidationException 才留著
-- [ ] （#9 KB 建好後）ChatFunction 環境變數：`KB_ID=<Bedrock KB ID>`
-      —— 設定後 query_knowledge 工具自動註冊，RAG 問答即通（ChatFunction 需補
-      `bedrock:Retrieve` IAM 權限）
 - [ ] （#6 Guardrail 建好後）ChatFunction 環境變數：`GUARDRAIL_ID=<id>`（版本非 DRAFT
       再加 `GUARDRAIL_VERSION`）—— 設定後 converse 自動掛載，與程式層護欄疊加
+
+> **不用手動設的**（模板已自動帶入，PR #21 之後）：`KB_ID`（參數 `KnowledgeBaseId`，
+> 預設 `DSIYBVI1IX`，RAG 部署完即通）、`BEDROCK_REGION`（跟隨部署 region）、`TABLE_NAME`。
 
 ## 3. 前端部署｜預估 10 分
 
@@ -86,7 +89,8 @@ curl "<ApiUrl>/market?market=btctwd&kind=ticker"        # 應回 MAX 行情
 
 | 症狀 | 檢查 |
 |---|---|
-| 前端載入但全部離線 mock | index.html 的 API_BASE 忘了改（本表 §3） |
+| 某一頁全走離線 mock（其他頁正常） | 那頁的 API_BASE 忘了改——回 §3 跑 `sort -u` 驗證 |
+| RAG 問答退化成一般回答 | `KB_ID` 被 CLI `--environment` 洗掉了（見 §2 警告） |
 | /chat 500 | Bedrock model access 未開通／region 不符 → 開通或設 BEDROCK_REGION |
 | /chat ValidationException | ENABLE_PROMPT_CACHE 先關掉再查 |
 | /order 一直 410 | 憑證 60 秒過期＝正常；重新對話產生新確認卡 |
