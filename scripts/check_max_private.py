@@ -38,26 +38,45 @@ def main():
 
     from backend.integrations import max_private
 
-    print("\n→ GET /api/v3/wallet/spot/accounts")
-    try:
-        data = max_private.balances()
-    except Exception as e:  # noqa: BLE001 — 這支就是要把原始錯誤秀出來
-        print(f"✘ 失敗：{e}\n")
-        print("常見對照：")
-        print("  2004 / signature   → 簽章不符：secret 貼錯或前後有空白")
-        print("  2006 / nonce       → 時間戳超出容許範圍：檢查本機時鐘")
-        print("  2001 / unauthorized→ 金鑰無效或已刪除")
-        print("  403 / permission   → API Key 權限沒開『個人及帳戶[讀取]』")
-        print("  身分驗證等級不足    → Lv2 KYC 未完成（issue #3）")
-        sys.exit(1)
+    # 逐條試：把「簽章對不對」與「路徑對不對」分開。
+    # /api/v3/info 是官方文件範例用的私有端點——它若通過就證明簽章正確，
+    # 剩下的失敗全是路徑問題；它若也失敗，問題在簽章組法。
+    candidates = sys.argv[1:] or [
+        "/api/v3/info",
+        "/api/v3/wallet/spot/accounts",
+        "/api/v3/wallet/m/accounts",
+        "/api/v2/members/accounts",
+    ]
+    ok_paths = []
+    for path in candidates:
+        print(f"\n→ GET {path}")
+        try:
+            data = max_private._signed_request("GET", path)
+        except Exception as e:  # noqa: BLE001 — 這支就是要把原始錯誤秀出來
+            print(f"  ✘ {e}")
+            continue
+        ok_paths.append(path)
+        if isinstance(data, list):
+            nonzero = [d for d in data if float(d.get("balance", 0) or 0) > 0]
+            print(f"  ✔ 成功：{len(data)} 筆，其中 {len(nonzero)} 個有餘額")
+            for d in nonzero[:8]:
+                print(f"      {str(d.get('currency', '?')).upper():6} {d.get('balance')}")
+        else:
+            print(f"  ✔ 成功：{json.dumps(data, ensure_ascii=False)[:300]}")
 
-    if isinstance(data, list):
-        nonzero = [d for d in data if float(d.get("balance", 0) or 0) > 0]
-        print(f"✔ 成功：{len(data)} 個幣別，其中 {len(nonzero)} 個有餘額")
-        for d in nonzero[:8]:
-            print(f"    {d.get('currency', '?').upper():6} {d.get('balance')}")
-    else:
-        print(f"✔ 成功，回傳：{json.dumps(data, ensure_ascii=False)[:400]}")
+    print()
+    if not ok_paths:
+        print("全部失敗。對照：")
+        print("  2014 → payload 與 body 不一致／path 寫錯（簽章組法或路徑問題）")
+        print("  2004 → 簽章不符：secret 貼錯或前後有空白")
+        print("  2006 → nonce 超出伺服器時間 ±30 秒：檢查本機時鐘")
+        print("  2001 → 金鑰無效或已刪除")
+        print("  403  → 權限沒開『個人及帳戶[讀取]』")
+        print("  提到驗證等級 → Lv2 KYC 未完成（issue #3）")
+        sys.exit(1)
+    print(f"可用路徑：{', '.join(ok_paths)}")
+    if "/api/v3/info" in ok_paths:
+        print("→ 簽章組法正確；失敗的那幾條純粹是路徑不對，改 max_private.py 的路徑即可。")
 
 
 if __name__ == "__main__":
