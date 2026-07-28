@@ -62,10 +62,14 @@ sam deploy --guided     # 第一次；之後 sam deploy 即可
 ```bash
 # ⚠ API_BASE 檢查項（workflow.md 可重部署鐵則）：多個進入頁各有一份，用 glob 一次改完，
 #   不要逐檔列名——前端每加一頁就會多一處，寫死檔名遲早漏掉
-sed -i 's#window.API_BASE = "[^"]*"#window.API_BASE = "<本次 ApiUrl>"#' frontend/*.html
+sed -i 's#window.API_BASE = "[^"]*"#window.API_BASE = "<本次 ApiUrl>"#' frontend/*.html      # Linux
+sed -i '' 's#window.API_BASE = "[^"]*"#window.API_BASE = "<本次 ApiUrl>"#' frontend/*.html   # macOS：多一組空引號
 grep -oh 'window.API_BASE = "[^"]*"' frontend/*.html | sort -u   # 必須只剩「一行」＝全站一致
 aws s3 sync frontend/ s3://<FrontendBucket>/
 ```
+
+> macOS 的 `sed -i` 把下一個參數當備份副檔名，不加 `''` 會報
+> `invalid command code` 或吃掉檔案。隊上是 Mac，決賽當天別踩第二次。
 
 - [ ] 上面那行 `sort -u` **只輸出一行**（全部進入頁指向同一個本次 ApiUrl）。最常忘的一步；
       漏改任何一頁不會報錯，只會讓該頁靜默掉回離線 mock，很難當場察覺
