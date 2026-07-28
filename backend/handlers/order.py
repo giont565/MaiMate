@@ -38,6 +38,15 @@ def handler(event, context):
     audit.set_session(body.get("session_id"))
     if not token:
         return _resp(400, {"code": "bad_request", "message": "缺少 confirm_token", "retryable": False})
+    if body.get("action") == "cancel":
+        # 使用者主動喊停。「AI 不會自己下單」是紅線賣點，使用者按下取消卻在軌跡上
+        # 留不下任何證據很可惜；順帶讓憑證立刻失效，不要讓它在剩下的 TTL 裡繼續可用。
+        order = _pop_order(token)
+        audit.log("user_cancelled", confirm_token=token,
+                  market=(order or {}).get("market"), side=(order or {}).get("side"),
+                  volume_twd=(order or {}).get("volume_twd"))
+        return _resp(200, {"ok": True, "cancelled": True, "message": "已取消，沒有送出任何訂單"})
+
     order = _pop_order(token)
     if order is None:
         audit.log("expired", confirm_token=token)

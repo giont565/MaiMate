@@ -205,8 +205,17 @@ def prepare_order(market, side, volume_twd, ord_type, price=None):
     from . import audit
     audit.log("draft_created", market=market, side=side, volume_twd=volume_twd,
               ord_type=ord_type, confirm_token=token)
+    # notice 是給模型看的。原本只寫「於介面上確認」，模型會腦補成「請到 MAX 介面確認」，
+    # 把使用者導離本 App；expires_at 是絕對時間戳，模型換算不出來就自己猜（實測猜成「約 2 分鐘」）。
+    # 兩件事都直接寫死在這裡，不要讓模型推。
     return {"confirm_token": token, "confirmation_card": order,
-            "notice": "已產生確認卡片，等待使用者於介面上確認後才會送出訂單。"}
+            "ttl_seconds": CONFIRM_TTL_SEC,
+            "notice": (
+                f"確認卡片已顯示在 MaiMate 對話畫面中，{CONFIRM_TTL_SEC} 秒內有效。"
+                "請使用者直接在這個畫面上按下確認按鈕即可，"
+                "**不要**叫使用者去 MAX 或任何其他平台操作。"
+                f"提到有效期間時一律說「{CONFIRM_TTL_SEC} 秒」，不要自行推算或改寫。"
+            )}
 
 
 def execute_order(confirm_token):

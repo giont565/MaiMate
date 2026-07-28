@@ -230,9 +230,21 @@ function addScenarios(list) {
       s.post_concentration_pct != null ? `<div>執行後佔比<b>${s.post_concentration_pct}%</b></div>` : "",
     ].join("");
     const note = s.behavior_note ? `<div class="note">${esc(s.behavior_note)}</div>` : "";
-    return `<div class="scen${i === 0 ? " pick" : ""}"><div class="t">${icon} ${esc(s.label)}<span class="tag">${tag}</span></div><div class="row">${rows}</div>${note}</div>`;
+    return `<div class="scen${i === 0 ? " pick" : ""}" role="button" tabindex="0" data-label="${esc(s.label)}"><div class="t">${icon} ${esc(s.label)}<span class="tag">${tag}</span></div><div class="row">${rows}</div>${note}<div class="hint">點這張卡片選它 →</div></div>`;
   }).join("");
   log().insertAdjacentHTML("beforeend", html);
+  // 卡片本身就是選項，使用者（與評審）第一直覺是直接點它。原本 pick 只有樣式沒有行為，
+  // 點下去毫無反應。這裡把點擊接回聊天送出，沿用同一條路徑（含離線劇本 fallback）。
+  log().querySelectorAll(".scen[data-label]:not([data-wired])").forEach((card) => {
+    card.dataset.wired = "1";
+    const choose = () => {
+      const input = document.getElementById("q");
+      input.value = card.dataset.label;
+      document.getElementById("chatform").requestSubmit();
+    };
+    card.onclick = choose;
+    card.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); choose(); } };
+  });
   scrollBottom();
 }
 
@@ -312,7 +324,16 @@ function addConfirmCard(card, token, fee) {
     el.remove();
     scrollBottom();
   };
-  el.querySelector(".no").onclick = () => { addMsg("ai", "已取消，沒有送出任何訂單。"); el.remove(); };
+  el.querySelector(".no").onclick = () => {
+    addMsg("ai", "已取消，沒有送出任何訂單。");
+    el.remove();
+    // 回報取消：留下軌跡證據並讓憑證即刻失效。網路失敗不影響「已取消」這個結果，
+    // 憑證本來就會在 TTL 到期後自動作廢，所以這裡不打擾使用者。
+    if (token !== "offline-demo") {
+      fetch(`${API}/order`, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm_token: token, session_id: SESSION_ID, action: "cancel" }) }).catch(() => {});
+    }
+  };
   scrollBottom();
 }
 

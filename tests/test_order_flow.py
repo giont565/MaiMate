@@ -64,6 +64,24 @@ class ConfirmTokenTests(unittest.TestCase):
         self.assertEqual(resp["statusCode"], 400)
         fake_place.assert_not_called()
 
+    @patch("backend.integrations.max_private.place_order")
+    def test_cancel_revokes_the_token_and_never_sends(self, fake_place):
+        token = self.prepare()
+        resp = call({"confirm_token": token, "action": "cancel"})
+        self.assertEqual(resp["statusCode"], 200)
+        self.assertTrue(json.loads(resp["body"])["cancelled"])
+        fake_place.assert_not_called()
+        # 取消後憑證必須失效——不能在剩下的 TTL 裡被撿回來用
+        self.assertEqual(call({"confirm_token": token})["statusCode"], 410)
+        fake_place.assert_not_called()
+
+    def test_prepare_order_tells_the_model_the_real_ttl(self):
+        """模型實測會把 expires_at 猜成「約 2 分鐘」，並叫使用者去 MAX 介面確認。"""
+        card = tools.prepare_order(market="btctwd", side="buy", volume_twd=300, ord_type="market")
+        self.assertEqual(card["ttl_seconds"], tools.CONFIRM_TTL_SEC)
+        self.assertIn(str(tools.CONFIRM_TTL_SEC), card["notice"])
+        self.assertIn("MaiMate", card["notice"])
+
     def test_execute_order_is_not_reachable_by_the_llm(self):
         """紅線：execute_order 永不進 LLM 工具清單（CLAUDE.md 鐵則 4）。"""
         self.assertNotIn("execute_order", tools._DISPATCH)
