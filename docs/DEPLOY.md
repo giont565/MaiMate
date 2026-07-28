@@ -53,15 +53,21 @@ sam deploy --guided     # 第一次；之後 sam deploy 即可
 ## 3. 前端部署｜預估 10 分
 
 ```bash
-# ⚠ API_BASE 檢查項（workflow.md 可重部署鐵則）：
-#   frontend/index.html 倒數第二行 window.API_BASE 改成本次 ApiUrl
+# ⚠ API_BASE 檢查項（workflow.md 可重部署鐵則）：三個進入頁各有一份，全都要改！
+#   frontend/index.html／frontend/welcome.html／frontend/onboarding.html
+sed -i 's#window.API_BASE = "[^"]*"#window.API_BASE = "<本次 ApiUrl>"#' \
+  frontend/index.html frontend/welcome.html frontend/onboarding.html
+grep -c "<本次 ApiUrl>" frontend/index.html frontend/welcome.html frontend/onboarding.html  # 應各回 1
 aws s3 sync frontend/ s3://<FrontendBucket>/
 ```
 
-- [ ] `window.API_BASE` 已改成**本次**部署的 ApiUrl（最常忘的一步）
+- [ ] **三個** HTML 的 `window.API_BASE` 都改成**本次**部署的 ApiUrl（最常忘的一步；
+      漏改 welcome/onboarding 不會報錯，只會靜默掉回離線 mock，很難當場察覺）
 - [ ] 瀏覽器開 FrontendUrl：頂欄麥麥 logo 有出現（assets 同步成功）
 
 ## 4. 冒煙測試（workflow.md 部署冒煙順序）｜預估 10 分
+
+> 本節是「部署當下 10 分鐘快篩」。**完整全功能驗收看 `docs/TEST_CHECKLIST.md`**（A–G 段、約 45 分）。
 
 ```bash
 curl <ApiUrl>/health                                    # 應回 health_report JSON
