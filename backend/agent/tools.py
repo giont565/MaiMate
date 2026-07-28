@@ -197,11 +197,31 @@ def calculate_trade_scenarios(market, side, fraction=1.0, amount_twd=None):
     return scenarios.calculate_trade_scenarios(market, side, fraction=fraction, amount_twd=amount_twd)
 
 
+TABLE = os.environ.get("TABLE_NAME")
+
+
+def _store_order(token, order):
+    """存確認憑證。**必須跨 Lambda 存活**：prepare_order 跑在 ChatFunction，
+    /order 跑在 OrderFunction，兩者是不同 process——只寫 _pending_orders 的話
+    OrderFunction 永遠查不到，每一次真實下單都會回 410。
+    （order.py 的讀取端一直是讀 DynamoDB，但寫入端從來沒有實作。）
+    """
+    if not TABLE:
+        _pending_orders[token] = order
+        return
+    import boto3
+    boto3.resource("dynamodb").Table(TABLE).put_item(Item={
+        "pk": f"order#{token}",
+        "order": json.dumps(order, ensure_ascii=False),
+        "expires_at": int(order["expires_at"]),
+    })
+
+
 def prepare_order(market, side, volume_twd, ord_type, price=None):
     token = str(uuid.uuid4())
     order = {"market": market, "side": side, "volume_twd": volume_twd,
              "ord_type": ord_type, "price": price, "expires_at": time.time() + CONFIRM_TTL_SEC}
-    _pending_orders[token] = order
+    _store_order(token, order)
     from . import audit
     audit.log("draft_created", market=market, side=side, volume_twd=volume_twd,
               ord_type=ord_type, confirm_token=token)

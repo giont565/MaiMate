@@ -82,6 +82,30 @@ class ConfirmTokenTests(unittest.TestCase):
         self.assertIn(str(tools.CONFIRM_TTL_SEC), card["notice"])
         self.assertIn("MaiMate", card["notice"])
 
+    def test_token_is_persisted_where_the_order_lambda_reads_it(self):
+        """prepare_order 在 ChatFunction、/order 在 OrderFunction，是兩個 process。
+        憑證只寫記憶體的話線上每一次下單都會 410——寫入端與讀取端必須是同一個地方。"""
+        writes = {}
+
+        class FakeTable:
+            def put_item(self, Item):
+                writes[Item["pk"]] = Item
+
+        fake_boto = type("boto3", (), {"resource": staticmethod(lambda _: type(
+            "R", (), {"Table": staticmethod(lambda _: FakeTable())})())})
+        with patch.dict("sys.modules", {"boto3": fake_boto}), \
+                patch.object(tools, "TABLE", "maimate-sessions"):
+            card = tools.prepare_order(market="btctwd", side="buy", volume_twd=300,
+                                       ord_type="market")
+
+        token = card["confirm_token"]
+        self.assertIn(f"order#{token}", writes, "憑證沒寫進 DynamoDB，OrderFunction 讀不到")
+        stored = json.loads(writes[f"order#{token}"]["order"])
+        self.assertEqual(stored["market"], "btctwd")
+        self.assertEqual(stored["volume_twd"], 300)
+        # order.py 的 _pop_order 用 expires_at 判過期，型別要能跟 time.time() 比大小
+        self.assertGreater(writes[f"order#{token}"]["expires_at"], time.time())
+
     def test_execute_order_is_not_reachable_by_the_llm(self):
         """紅線：execute_order 永不進 LLM 工具清單（CLAUDE.md 鐵則 4）。"""
         self.assertNotIn("execute_order", tools._DISPATCH)
