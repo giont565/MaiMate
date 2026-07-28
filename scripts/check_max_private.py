@@ -83,8 +83,11 @@ def main():
         print("  提到驗證等級 → Lv2 KYC 未完成（issue #3）")
         sys.exit(1)
     print(f"可用路徑：{', '.join(ok_paths)}")
-    if "/api/v3/info" in ok_paths:
+    failed = [p for p in candidates if p not in ok_paths]
+    if "/api/v3/info" in ok_paths and failed:
         print("→ 簽章組法正確；失敗的那幾條純粹是路徑不對，改 max_private.py 的路徑即可。")
+    elif not failed:
+        print("→ 簽章組法與四條路徑全部正確，Private API 讀取端已可用。")
 
 
 if __name__ == "__main__":
