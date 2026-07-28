@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-19T15:08:24.939845+00:00",
+  "generated_at": "2026-07-28T14:37:12.356285+00:00",
   "row_count": 10000,
   "period": {
     "start": "2025-01-01",
@@ -22,6 +22,29 @@
       "eoy_price": 64.54,
       "missed_twd": 312924.0
     }
+  },
+  "realized_pnl": {
+    "method": "moving_average_cost",
+    "total_realized_twd": 117482.0,
+    "loss_trades": 493,
+    "profit_trades": 981,
+    "worst_single_loss": {
+      "date": "2025-10-01",
+      "currency": "usdt",
+      "qty": 9014.989267,
+      "sell_price": 32.57,
+      "avg_cost": 32.676842,
+      "pnl_twd": -963.0
+    },
+    "best_single_gain": {
+      "date": "2025-01-06",
+      "currency": "doge",
+      "qty": 5266.663224,
+      "sell_price": 13.6,
+      "avg_cost": 12.84845,
+      "pnl_twd": 3958.0
+    },
+    "note": "期初持倉無成本紀錄之賣出不計入（792 筆）；成本採移動平均法"
   },
   "concentration": {
     "monthly_top_holding": {
@@ -130,5 +153,90 @@
       "sell": 2317,
       "withdrawal": 2647
     }
+  },
+  "holdings_snapshot": {
+    "asOf": "2025-12-31",
+    "method": "各幣最後成交價估值",
+    "holdings": [
+      {
+        "currency": "twd",
+        "pct": 98.6,
+        "value_twd": 116530466.0
+      },
+      {
+        "currency": "usdt",
+        "pct": 0.4,
+        "value_twd": 444940.0
+      },
+      {
+        "currency": "eth",
+        "pct": 0.3,
+        "value_twd": 405305.0
+      },
+      {
+        "currency": "doge",
+        "pct": 0.3,
+        "value_twd": 327441.0
+      },
+      {
+        "currency": "usdc",
+        "pct": 0.2,
+        "value_twd": 264490.0
+      },
+      {
+        "currency": "btc",
+        "pct": 0.1,
+        "value_twd": 101744.0
+      },
+      {
+        "currency": "sol",
+        "pct": 0.1,
+        "value_twd": 94592.0
+      }
+    ]
+  },
+  "change_attribution": {
+    "period": "2025-12",
+    "type": "estimated",
+    "delta_twd": 12249913.0,
+    "contributors": [
+      {
+        "category": "marketPrice",
+        "pct": 0.3,
+        "value_twd": 36394.0
+      },
+      {
+        "category": "netDeposit",
+        "pct": 99.7,
+        "value_twd": 12213519.0
+      }
+    ],
+    "note": "殘差法（Δ市值−出入金淨額→市價波動）；已實現損益為另一視角見 realized_pnl，不相加"
+  },
+  "holding_period_distribution": {
+    "method": "FIFO 配對推估、賣出市值加權",
+    "buckets": [
+      {
+        "range": "0-7",
+        "pct": 99.9
+      },
+      {
+        "range": "8-30",
+        "pct": 0.1
+      },
+      {
+        "range": "31-90",
+        "pct": 0.0
+      },
+      {
+        "range": "91-180",
+        "pct": 0.0
+      },
+      {
+        "range": "181+",
+        "pct": 0.0
+      }
+    ],
+    "note": "期初持倉無買入紀錄之賣出不計（792 筆）"
   }
 }
