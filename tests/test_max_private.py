@@ -60,5 +60,67 @@ class BuildRequestTests(unittest.TestCase):
                 max_private._build_request("GET", "/api/v3/info")
 
 
+BTC_RULES = {"market": "btctwd", "base_unit": "btc", "base_precision": 8,
+             "min_base_amount": 0.0001, "min_quote_amount": 250.0, "status": "active"}
+
+
+@patch("backend.integrations.max_public.market_rules", return_value=BTC_RULES)
+class ResolveVolumeTests(unittest.TestCase):
+    """確認卡存的是 volume_twd，MAX 的 /order 只吃 base currency 的 volume。"""
+
+    def ticker(self, last):
+        return patch("backend.integrations.max_public.fetch",
+                     return_value={"data": {"last": str(last)}})
+
+    def test_converts_twd_to_base_volume_at_market_price(self, _rules):
+        with self.ticker(2_000_000):
+            volume, detail = max_private.resolve_volume(
+                {"market": "btctwd", "side": "buy", "volume_twd": 300, "ord_type": "market"})
+        self.assertEqual(volume, "0.00015")
+        self.assertEqual(detail["price_used"], 2_000_000)
+
+    def test_rounds_down_so_spend_never_exceeds_the_confirmed_amount(self, _rules):
+        # 300 / 2069554.8 = 0.000144959…；進位就會超過使用者確認的 NT$300
+        with self.ticker(2_069_554.8):
+            volume, _ = max_private.resolve_volume(
+                {"market": "btctwd", "side": "buy", "volume_twd": 300, "ord_type": "market"})
+        self.assertEqual(volume, "0.00014495")
+        self.assertLessEqual(float(volume) * 2_069_554.8, 300)
+
+    def test_limit_order_uses_the_confirmed_price_not_the_ticker(self, _rules):
+        with patch("backend.integrations.max_public.fetch") as fake_fetch:
+            volume, detail = max_private.resolve_volume(
+                {"market": "btctwd", "side": "buy", "volume_twd": 300,
+                 "ord_type": "limit", "price": 1_500_000})
+        fake_fetch.assert_not_called()
+        self.assertEqual(volume, "0.0002")
+        self.assertEqual(detail["price_used"], 1_500_000)
+
+    def test_rejects_amount_below_market_minimum(self, _rules):
+        with self.ticker(2_000_000):
+            with self.assertRaisesRegex(ValueError, "最低金額"):
+                max_private.resolve_volume(
+                    {"market": "btctwd", "side": "buy", "volume_twd": 100, "ord_type": "market"})
+
+    def test_rejects_when_amount_cannot_reach_min_base_amount(self, _rules):
+        # 幣價高到 NT$300 換不到 0.0001 顆
+        with self.ticker(9_000_000):
+            with self.assertRaisesRegex(ValueError, "最低數量"):
+                max_private.resolve_volume(
+                    {"market": "btctwd", "side": "buy", "volume_twd": 300, "ord_type": "market"})
+
+    def test_missing_volume_twd_raises_instead_of_sending_empty_volume(self, _rules):
+        with self.ticker(2_000_000):
+            with self.assertRaisesRegex(ValueError, "volume_twd"):
+                max_private.resolve_volume(
+                    {"market": "btctwd", "side": "buy", "ord_type": "market"})
+
+    def test_explicit_volume_wins(self, _rules):
+        volume, detail = max_private.resolve_volume(
+            {"market": "btctwd", "side": "sell", "volume": "0.5", "ord_type": "market"})
+        self.assertEqual(volume, "0.5")
+        self.assertIsNone(detail)
+
+
 if __name__ == "__main__":
     unittest.main()

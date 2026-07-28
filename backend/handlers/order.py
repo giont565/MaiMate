@@ -20,7 +20,11 @@ if TABLE:
 
 def _pop_order(token):
     if not TABLE:
-        return tools._pending_orders.pop(token, None)
+        # 記憶體 fallback 也要驗過期，否則本地／單機測出來的 410 行為與線上不同。
+        order = tools._pending_orders.pop(token, None)
+        if order and order.get("expires_at", 0) > time.time():
+            return order
+        return None
     item = _ddb.delete_item(Key={"pk": f"order#{token}"}, ReturnValues="ALL_OLD").get("Attributes")
     if item and item.get("expires_at", 0) > time.time():
         return json.loads(item["order"])

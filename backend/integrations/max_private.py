@@ -21,6 +21,7 @@ import json
 import os
 import time
 import urllib.parse
+from decimal import ROUND_DOWN, Decimal
 
 HOST = "max-api.maicoin.com"
 BASE = f"https://{HOST}"
@@ -87,16 +88,72 @@ def balances():
     return _signed_request("GET", "/api/v3/wallet/spot/accounts")
 
 
+def resolve_volume(order):
+    """把確認卡的 volume_twd 換算成 MAX 要的下單量（base currency）。
+
+    prepare_order 存的是 volume_twd（使用者講的是「用 5000 買 BTC」），但 MAX 的
+    /order 只吃 base currency 的 volume——兩者名字不同，直接 order["volume"] 會拿到空字串，
+    等於送出一張沒有數量的單。
+
+    回傳 (volume_str, detail)；detail 供稽核與確認卡顯示。
+    """
+    from . import max_public
+
+    if order.get("volume"):  # 呼叫端已自行算好就尊重它
+        return str(order["volume"]), None
+
+    market = order["market"]
+    amount_twd = float(order.get("volume_twd") or 0)
+    if amount_twd <= 0:
+        raise ValueError("確認卡缺少 volume_twd，無法換算下單量")
+
+    rules = max_public.market_rules(market)
+    if order["ord_type"] == "limit":
+        price = float(order["price"])
+    else:
+        price = float(max_public.fetch(market, "ticker")["data"].get("last") or 0)
+    if price <= 0:
+        raise ValueError(f"取不到 {market} 現價，無法換算下單量")
+
+    if amount_twd < rules["min_quote_amount"]:
+        raise ValueError(
+            f"{market} 單筆最低金額 NT${rules['min_quote_amount']:,.0f}，"
+            f"這張單只有 NT${amount_twd:,.0f}"
+        )
+
+    # 無條件捨去到該市場的精度：進位會讓實際花費超過使用者在確認卡上看到的金額。
+    step = Decimal(1).scaleb(-rules["base_precision"])
+    volume = (Decimal(str(amount_twd)) / Decimal(str(price))).quantize(step, rounding=ROUND_DOWN)
+    if float(volume) < rules["min_base_amount"]:
+        raise ValueError(
+            f"{market} 單筆最低數量 {rules['min_base_amount']} {rules['base_unit'].upper()}"
+            f"（約 NT${rules['min_base_amount'] * price:,.0f}），"
+            f"NT${amount_twd:,.0f} 只能換到 {volume}"
+        )
+    volume_str = _trim(volume)
+    detail = {"price_used": price, "amount_twd": amount_twd,
+              "volume": volume_str, "base_unit": rules["base_unit"]}
+    return volume_str, detail
+
+
+def _trim(value):
+    """去掉 quantize 補出來的尾隨零。不用 Decimal.normalize()——它會把 100 變成
+    1E+2，而 DOGE 這類最小量就是 100，送出去會被當成無效數量。"""
+    text = format(value, "f")
+    return text.rstrip("0").rstrip(".") if "." in text else text
+
+
 def place_order(order):
     """送出訂單（Write）。order 來自 tools.execute_order 驗證過的確認卡。
 
     僅接受經過確認流程的 order dict；市價單以 TWD 金額換算量。
     """
+    volume, _ = resolve_volume(order)
     params = {
         "market": order["market"],
         "side": order["side"],
         "ord_type": order["ord_type"],
-        "volume": str(order.get("volume") or ""),
+        "volume": volume,
     }
     if order["ord_type"] == "limit":
         params["price"] = str(order["price"])
