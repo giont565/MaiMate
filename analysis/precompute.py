@@ -219,6 +219,110 @@ def activity_profile(rows):
     }
 
 
+def holdings_snapshot(rows):
+    """持倉快照（#29 前端 Screen 5/6/8）：資料最後時點各幣持倉市值與佔比。
+
+    估值採各幣最後一筆成交價（離線資料無外部即時報價，method 如實標注）。
+    """
+    last = {}
+    for r in rows:
+        last[r["currency"]] = (r["balance"], r["price"])
+    values = {c: b * p for c, (b, p) in last.items() if b > 0}
+    tot = sum(values.values())
+    holdings = [
+        {"currency": c, "pct": round(100 * v / tot, 1), "value_twd": round(v, 0)}
+        for c, v in sorted(values.items(), key=lambda kv: -kv[1])
+    ] if tot > 0 else []
+    return {
+        "asOf": datetime.fromtimestamp(rows[-1]["ts"] / 1000, tz=timezone.utc).strftime("%Y-%m-%d"),
+        "method": "各幣最後成交價估值",
+        "holdings": holdings,
+    }
+
+
+def change_attribution(rows):
+    """帳戶變化歸因（#29 前端 Screen 6/8）：最後一個自然月的組合價值變化拆解。
+
+    殘差法：Δ組合市值 = 出入金淨額 + 市價波動（殘差）。pct 以絕對值權重計，
+    value_twd 帶正負。已實現損益是另一會計視角（見 realized_pnl），不與此相加，
+    避免重複計算——type=estimated 如實標注。
+    """
+    last_month = month_of(rows[-1]["ts"])
+    last = {}
+    start_val = None
+    net_flow = 0.0
+    for r in rows:
+        if month_of(r["ts"]) == last_month:
+            if start_val is None:
+                vals = {c: b * p for c, (b, p) in last.items() if b > 0}
+                start_val = sum(vals.values())
+            if r["action"] in ("deposit", "withdrawal"):
+                net_flow += r["change"] * r["price"]
+        last[r["currency"]] = (r["balance"], r["price"])
+    if start_val is None:  # 最後一個月無任何交易列（理論上不會發生）
+        start_val = 0.0
+    end_vals = {c: b * p for c, (b, p) in last.items() if b > 0}
+    delta = sum(end_vals.values()) - start_val
+    market = delta - net_flow
+    base = abs(net_flow) + abs(market)
+    contributors = [
+        {"category": "marketPrice", "pct": round(100 * abs(market) / base, 1) if base else 0.0,
+         "value_twd": round(market, 0)},
+        {"category": "netDeposit", "pct": round(100 * abs(net_flow) / base, 1) if base else 0.0,
+         "value_twd": round(net_flow, 0)},
+    ]
+    return {
+        "period": last_month,
+        "type": "estimated",
+        "delta_twd": round(delta, 0),
+        "contributors": contributors,
+        "note": "殘差法（Δ市值−出入金淨額→市價波動）；已實現損益為另一視角見 realized_pnl，不相加",
+    }
+
+
+def holding_period_distribution(rows):
+    """持有期間分布（#29 前端 Screen 5/8）：FIFO 配對每筆賣出的買入來源，算持有天數。
+
+    以配對市值（數量×賣價）加權分桶；期初無買入紀錄的賣出不計（note 標注）。
+    """
+    edges = [7, 30, 90, 180]  # (0,7], (7,30], (30,90], (90,180], (180,∞)
+    labels = ["0-7", "8-30", "31-90", "91-180", "181+"]
+    fifo = defaultdict(list)  # currency -> [[buy_ts, qty], ...]
+    weights = [0.0] * len(labels)
+    skipped = 0
+    for r in rows:
+        cur = r["currency"]
+        if cur == "twd" or r["action"] not in ("buy", "sell"):
+            continue
+        if r["action"] == "buy":
+            if r["change"] > 0:
+                fifo[cur].append([r["ts"], r["change"]])
+            continue
+        sell_qty = -r["change"]
+        q = fifo[cur]
+        if not q:
+            skipped += 1
+            continue
+        while sell_qty > 1e-12 and q:
+            buy_ts, qty0 = q[0]
+            m = min(sell_qty, qty0)
+            days = (r["ts"] - buy_ts) / 86400_000
+            idx = next((i for i, e in enumerate(edges) if days <= e), len(edges))
+            weights[idx] += m * r["price"]
+            sell_qty -= m
+            if qty0 - m <= 1e-12:
+                q.pop(0)
+            else:
+                q[0][1] = qty0 - m
+    tot = sum(weights)
+    return {
+        "method": "FIFO 配對推估、賣出市值加權",
+        "buckets": [{"range": lab, "pct": round(100 * w / tot, 1) if tot else 0.0}
+                    for lab, w in zip(labels, weights)],
+        "note": f"期初持倉無買入紀錄之賣出不計（{skipped} 筆）",
+    }
+
+
 def main():
     rows = load_rows()
     report = {
@@ -234,6 +338,9 @@ def main():
         "concentration": concentration(rows),
         "cash_flow_behavior": cash_flow_behavior(rows),
         "activity_profile": activity_profile(rows),
+        "holdings_snapshot": holdings_snapshot(rows),
+        "change_attribution": change_attribution(rows),
+        "holding_period_distribution": holding_period_distribution(rows),
     }
     OUT.write_text(json.dumps(report, ensure_ascii=False, indent=2))
     json.dump(report, sys.stdout, ensure_ascii=False, indent=2)

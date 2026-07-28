@@ -141,6 +141,45 @@ check("日常問題 → Haiku", loop.pick_model(msg("BTC 現在多少錢")) == l
 check("深度意圖 → Sonnet", loop.pick_model(msg("幫我分析為什麼去年一直虧")) == loop.MODEL_SONNET)
 check("歸因意圖 → Sonnet", loop.pick_model(msg("做個年度檢討")) == loop.MODEL_SONNET)
 
+print("== precompute（#29 三聚合值，合成資料驗算）==")
+import analysis.precompute as pc
+DAY = 86400_000
+T0 = 1735689600000  # 2025-01-01 UTC
+def row(day, cur, price, action, change, balance):
+    return {"ts": T0 + day * DAY, "currency": cur, "price": price,
+            "action": action, "change": change, "balance": balance}
+# 持倉快照：btc 1顆@100、eth 2顆@50、twd 100——總值 300，佔比 33.3/33.3/33.3
+snap = pc.holdings_snapshot([
+    row(0, "btc", 100.0, "buy", 1.0, 1.0),
+    row(1, "eth", 50.0, "buy", 2.0, 2.0),
+    row(2, "twd", 1.0, "deposit", 100.0, 100.0),
+])
+check("快照佔比加總 100", abs(sum(h["pct"] for h in snap["holdings"]) - 100.0) < 0.2, snap)
+check("快照市值正確（btc=100）",
+      next(h for h in snap["holdings"] if h["currency"] == "btc")["value_twd"] == 100)
+check("快照 asOf 為最後一筆日", snap["asOf"] == "2025-01-03")
+# 變化歸因：1 月建倉；2 月只入金 +1000、btc 價 100→110（Δ=1100−0 淨流 1000→市價 100）
+attr = pc.change_attribution([
+    row(0, "btc", 100.0, "buy", 10.0, 10.0),
+    row(35, "twd", 1.0, "deposit", 1000.0, 1000.0),
+    row(40, "btc", 110.0, "buy", 0.0, 10.0),
+])
+cats = {c["category"]: c for c in attr["contributors"]}
+check("歸因 netDeposit=+1000", cats["netDeposit"]["value_twd"] == 1000, attr)
+check("歸因 marketPrice=+100（殘差）", cats["marketPrice"]["value_twd"] == 100, attr)
+check("歸因 period 為最後月份", attr["period"] == "2025-02")
+# 持有期間：day0 買1、day10 買1；day5 賣0.5（持有5天→0-7）、day50 賣1.5（0.5配day0→31-90、1配day10→31-90）
+hpd = pc.holding_period_distribution(sorted([
+    row(0, "btc", 100.0, "buy", 1.0, 1.0),
+    row(10, "btc", 100.0, "buy", 1.0, 2.0),
+    row(5, "btc", 100.0, "sell", -0.5, 1.5),
+    row(50, "btc", 100.0, "sell", -1.5, 0.0),
+], key=lambda r: r["ts"]))
+bk = {b["range"]: b["pct"] for b in hpd["buckets"]}
+check("FIFO 0-7 桶＝25%（0.5/2.0 市值）", bk["0-7"] == 25.0, hpd)
+check("FIFO 31-90 桶＝75%（1.5/2.0 市值）", bk["31-90"] == 75.0, hpd)
+check("FIFO 桶比例加總 100", abs(sum(b["pct"] for b in hpd["buckets"]) - 100.0) < 0.2)
+
 print()
 if FAILED:
     print(f"✘ {len(FAILED)} 項失敗：{FAILED}")

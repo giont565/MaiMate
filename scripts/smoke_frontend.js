@@ -218,6 +218,19 @@ const server = http.createServer((req, res) => {
   if (offlineBadge === "none") throw new Error("離線標示未亮");
   console.log("離線劇本 OK：三方案→確認→示意成交→軌跡、麥麥切 BULLISH、離線標示亮");
 
+  // 加拍備援 1（DEMO_SCRIPT 三模式）：切換 badge 後重問全賣 → 開場白隨當前模式改變
+  await page.click("#mode-badge");
+  const badgeTxt = await page.$eval("#mode-badge", (e) => e.textContent);
+  const modeKw = badgeTxt.includes("專業效率") ? "歷史對照" : badgeTxt.includes("安心白話") ? "別急，麥麥陪你" : "先陪你看 30 秒";
+  await page.fill("#q", "ETH 跌太多幫我全部賣掉");
+  await page.click(".inputbar button");
+  await page.waitForFunction((kw) => { const m = document.querySelectorAll(".msg.ai"); return m.length && m[m.length - 1].textContent.includes(kw); }, modeKw);
+  // 加拍備援 2（DEMO_SCRIPT RAG）：防詐意圖 → 教育性回覆附出處
+  await page.fill("#q", "這是不是詐騙話術");
+  await page.click(".inputbar button");
+  await page.waitForFunction(() => { const m = document.querySelectorAll(".msg.ai"); return m.length && m[m.length - 1].textContent.includes("出處"); });
+  console.log(`離線加拍 OK：開場白隨模式改變（${badgeTxt}）、防詐意圖附出處`);
+
   await browser.close();
   server.close();
   console.log("全部通過 ✅（截圖 smoke_mobile.png）");
