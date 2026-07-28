@@ -31,7 +31,7 @@ git add data/health_report.json && git commit -m "data: 重跑 health_report（�
 
 | 漏掉什麼 | 症狀 | 為什麼難察覺 |
 |---|---|---|
-| 三個 HTML 的 `API_BASE` | Onboarding 靜默走離線 mock | 畫面正常、數字正常，只是全是假的 |
+| 某個 HTML 的 `API_BASE`（目前 3 頁，PR #32 合併後 4 頁） | 該頁靜默走離線 mock | 畫面正常、數字正常，只是全是假的。用 `frontend/*.html` glob 一次改完別逐檔列名 |
 | ChatFunction 的 MAX 金鑰 | 問持倉答「帳戶 API 未設定」 | 其他對話都正常 |
 | OrderFunction 的 MAX 金鑰 | 下單 500 | 要走到最後一步才發現 |
 
