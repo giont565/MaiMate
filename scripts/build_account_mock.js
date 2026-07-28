@@ -61,7 +61,15 @@ const account = {
     totalMissedTwd: report.opportunity_cost.total_missed_twd,
     worstSell: worst,
   },
+  /* issue #29 的三段聚合：analysis/precompute.py 已實作（commit 741d89c），
+   * 但 data/health_report.json 尚待隊長用官方 CSV 重產。
+   * 這裡先接住鍵名，重產後前端不必改程式：缺就是 null，畫面照樣走「資料不足」。 */
+  holdingsSnapshot: report.holdings_snapshot || null,
+  changeAttribution: report.change_attribution || null,
+  holdingPeriodDistribution: report.holding_period_distribution || null,
 };
+
+if (account.holdingsSnapshot) account.holdings.breakdownAvailable = true;
 
 const banner = `/* 自動生成——請勿手改。
  * 來源：${account.source}（產出於 ${account.generatedAt}）

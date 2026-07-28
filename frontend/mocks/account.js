@@ -90,5 +90,8 @@ window.MM_ACCOUNT = {
       "eoy_price": 64.54,
       "missed_twd": 312924
     }
-  }
+  },
+  "holdingsSnapshot": null,
+  "changeAttribution": null,
+  "holdingPeriodDistribution": null
 };
