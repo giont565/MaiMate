@@ -14,6 +14,7 @@ import json
 import os
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 BASE = "https://max-api.maicoin.com"
@@ -34,17 +35,24 @@ def _signed_request(method, path, params=None):
     body["nonce"] = int(time.time() * 1000)
     payload = base64.b64encode(json.dumps(body).encode()).decode()
     signature = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
-    req = urllib.request.Request(
-        BASE + path if method == "GET" else BASE + path,
-        data=None if method == "GET" else json.dumps(body).encode(),
-        method=method,
-        headers={
-            "X-MAX-ACCESSKEY": key,
-            "X-MAX-PAYLOAD": payload,
-            "X-MAX-SIGNATURE": signature,
-            "Content-Type": "application/json",
-        },
-    )
+    headers = {
+        "X-MAX-ACCESSKEY": key,
+        "X-MAX-PAYLOAD": payload,
+        "X-MAX-SIGNATURE": signature,
+    }
+    url = BASE + path
+    data = None
+    if method == "GET":
+        # GET：參數走 query string，不送 body、也不宣告 Content-Type。
+        # 宣告了 application/json 卻沒有 body，MAX 會拿 payload 去比對不存在的
+        # body 而回 2014「Payload is not consistent with body」。
+        if params:
+            url += "?" + urllib.parse.urlencode(params)
+    else:
+        # POST：body 必須與 payload 內容一致（含 path 與 nonce）。
+        data = json.dumps(body).encode()
+        headers["Content-Type"] = "application/json"
+    req = urllib.request.Request(url, data=data, method=method, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
             return json.loads(resp.read())
