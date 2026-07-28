@@ -17,6 +17,9 @@ const latestMonth = months[months.length - 1];
 const previousMonth = months[months.length - 2];
 const tradeTotal = report.activity_profile.action_counts.buy + report.activity_profile.action_counts.sell;
 const holdings = report.concentration.monthly_top_holding[latestMonth];
+/* 前期快照：Screen 8「資金放在哪裡」要做期間對照，比較值必須同樣指得出來源，
+ * 不得由前端自行推估。報告沒有前一個月時留 null，畫面改成「沒有可對照的前期資料」。 */
+const previousHoldings = report.concentration.monthly_top_holding[previousMonth] || null;
 const worst = report.opportunity_cost.worst_single_sell;
 
 const account = {
@@ -46,6 +49,9 @@ const account = {
     topPct: holdings.top_pct,
     portfolioTwd: holdings.portfolio_twd,
     otherPct: round(100 - holdings.top_pct, 1),
+    previousMonth: previousHoldings ? previousMonth : null,
+    previousCurrency: previousHoldings ? previousHoldings.top_currency : null,
+    previousPct: previousHoldings ? previousHoldings.top_pct : null,
     breakdownAvailable: false,
     peak: report.concentration.peak_concentration,
   },

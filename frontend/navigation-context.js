@@ -24,6 +24,8 @@
     profileVersion: SAFE_ID,
     resultVersion: SAFE_ID,
     insightType: SAFE_ID,
+    /* Screen 7 →（Screen 8）→ Screen 7 的來回：只帶對話 ID，不帶訊息內容。 */
+    conversationId: SAFE_ID,
     relatedAsset: SAFE_ASSET,
   });
 

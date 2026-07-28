@@ -111,13 +111,11 @@
         button.type = "button";
         button.onclick = () => {
           track("maimate_insight_link_opened", { src: ui.conversation && ui.conversation.source });
-          // 保留來源脈絡，Screen 8 回來時不重新生成回答
+          // 保留來源脈絡與對話 ID，Screen 8 回來時回到同一段對話，不重新生成回答
           if (window.MM_NAVIGATION) {
-            window.MM_NAVIGATION.navigate({
-              id: link.id,
-              route: link.route,
-              context: { source: "chat_insight_link", relatedInsightId: link.id },
-            });
+            const context = { source: "chat_insight_link", relatedInsightId: link.id };
+            if (ui.conversation && ui.conversation.id) context.conversationId = ui.conversation.id;
+            window.MM_NAVIGATION.navigate({ id: link.id, route: link.route, context });
           }
         };
         wrap.append(button);
@@ -730,12 +728,18 @@
         sourceQuestionId: envelope.questionId,
       }, state);
       ui.context = { requestContext: context };
-      await startConversation(envelope.context && envelope.context.relatedInsightId ? "insight" : "suggestedQuestion",
-        context, envelope.question);
+      /* 從 Screen 8 回來時帶著原本的 conversationId：接回同一段對話，不另開新的。 */
+      const resumeId = envelope.context && envelope.context.conversationId;
+      const resumed = resumeId ? await services.conversation.getConversation(resumeId) : null;
+      if (resumed) await loadConversation(resumed.id);
+      else {
+        await startConversation(envelope.context && envelope.context.relatedInsightId ? "insight" : "suggestedQuestion",
+          context, envelope.question);
+      }
       renderContextBanner(envelope);
       // 規格 §6：預填但不自動送出，讓使用者可以先改
       if (envelope.question) { byId("q").value = envelope.question; updateCount(); }
-      else renderEmptyState();
+      else if (!resumed) renderEmptyState();
     } else {
       renderEmptyState();
     }

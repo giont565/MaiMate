@@ -523,9 +523,10 @@ function collectKeys(value, target) {
     await openDemo(page, base);
     await page.locator("#contextual-learning-card .module-action").click();
     await page.waitForURL(/insights\.html$/);
-    await page.waitForSelector("#insight-detail.on");
-    assert((await page.locator("#detail-title").innerText()).includes("持倉集中"), "Learning 未開啟對應 Screen 8");
-    assert(await page.locator("#insight-source.on").count(), "Screen 8 未顯示來源 Context");
+    await page.waitForSelector("#detail-root:not([hidden])");
+    // Screen 8 已改為真實頁面：名詞頁標題取自共用知識庫（「什麼是資產集中」）
+    assert((await page.locator("#hero-title").innerText()).includes("資產集中"), "Learning 未開啟對應 Screen 8");
+    assert(await page.locator("#source-card:not([hidden])").count(), "Screen 8 未顯示來源卡");
     await page.goto(`${base}/home.html?demo=STEADY_PLANNER`);
     await page.waitForSelector("#today-relevant-card");
     await page.locator('[data-home-nav="/maimate/settings"]').click();

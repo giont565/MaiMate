@@ -234,7 +234,7 @@
         { id: "q_attribution_split", text: "今天主要是市場影響，還是我的交易？" },
         { id: "q_concentration_basics", text: "什麼是資產集中？" },
       ],
-      insightLinks: [{ id: "insight_allocation_impact", title: "查看完整配置影響", route: "/maimate/insights" }],
+      insightLinks: [{ id: "insight_allocation_impact", title: "查看完整配置影響", route: "/maimate/insights/cash-concentration" }],
     };
   }
 
@@ -274,7 +274,7 @@
         { id: "q_trading_rhythm", text: "我最近的交易節奏有變快嗎？" },
         { id: "q_portfolio_impact", text: "目前的資金分布對帳戶有什麼影響？" },
       ],
-      insightLinks: [],
+      insightLinks: [{ id: "insight_attribution_gap", title: "看麥麥還缺哪些資料", route: "/maimate/insights/account-change" }],
     };
   }
 
@@ -307,7 +307,7 @@
         { id: "q_trading_rhythm", text: "我最近的交易節奏有變快嗎？" },
         { id: "q_portfolio_impact", text: "為什麼主要持倉的影響比較大？" },
       ],
-      insightLinks: [{ id: "insight_attribution", title: "查看完整變化來源拆解", route: "/maimate/insights" }],
+      insightLinks: [{ id: "insight_attribution", title: "查看完整變化來源拆解", route: "/maimate/insights/account-change" }],
     };
   }
 
@@ -349,7 +349,7 @@
         { id: "q_plan_alignment", text: "我的實際做法和原本的方向一致嗎？" },
         { id: "q_similar_moment", text: "過去遇到類似情況時我怎麼做？" },
       ],
-      insightLinks: [],
+      insightLinks: [{ id: "insight_trading_rhythm", title: "看完整的 12 個月交易節奏", route: "/maimate/insights/trading-rhythm" }],
     };
   }
 
@@ -389,7 +389,7 @@
         { id: "q_trading_rhythm", text: "我最近的交易節奏有變快嗎？" },
         { id: "q_portfolio_impact", text: "目前配置對帳戶的影響有多大？" },
       ],
-      insightLinks: [],
+      insightLinks: [{ id: "insight_plan_alignment", title: "看完整的方向對照", route: "/maimate/insights/plan-alignment" }],
     };
   }
 
@@ -428,13 +428,23 @@
         { id: "q_trading_rhythm", text: "我最近的交易節奏有變快嗎？" },
         { id: "q_attribution_split", text: "今天的變化主要來自哪裡？" },
       ],
-      insightLinks: [{ id: "insight_similar_moment", title: "比較這次與那次的完整脈絡", route: "/maimate/insights" }],
+      insightLinks: [{ id: "insight_similar_moment", title: "比較這次與那次的完整脈絡", route: "/maimate/insights/notable-sell" }],
     };
   }
+
+  /* 知識庫條目 → Screen 8 名詞頁的 insightId（同一份教材，兩個畫面共用） */
+  const KB_INSIGHT_ROUTES = {
+    kb_concentration: "/maimate/insights/concentration-basics",
+    kb_market_depth: "/maimate/insights/market-depth",
+    kb_order_type: "/maimate/insights/order-types",
+    kb_weight_volatility: "/maimate/insights/weight-volatility",
+    kb_fee: "/maimate/insights/fee-basics",
+  };
 
   function answerKnowledge(text) {
     const entry = AgentTools.knowledge(text);
     if (!entry) return null;
+    const route = KB_INSIGHT_ROUTES[entry.id] || "/maimate/insights";
     return {
       tools: ["knowledge"],
       answer: { directAnswer: entry.excerpt.split("。")[0] + "。", explanation: entry.excerpt },
@@ -443,7 +453,7 @@
           title: entry.title,
           sourceId: entry.sourceId,
           updatedAt: entry.updatedAt,
-          route: "/maimate/insights",
+          route,
         }),
       ],
       evidence: [evidenceRef("ev_kb_" + entry.id, "knowledgeBase", entry.title, entry.sourceId, entry.updatedAt)],
@@ -452,7 +462,7 @@
         { id: "q_portfolio_impact", text: "那我目前的配置狀況如何？" },
         { id: "q_today_relevant", text: "今天有哪些變化和我有關？" },
       ],
-      insightLinks: [{ id: "insight_glossary", title: "深入了解「" + entry.title + "」", route: "/maimate/insights" }],
+      insightLinks: [{ id: "insight_glossary", title: "深入了解「" + entry.title + "」", route }],
     };
   }
 
@@ -503,7 +513,7 @@
         { id: "q_attribution_split", text: "今天帳戶變化主要來自哪裡？" },
         { id: "q_portfolio_impact", text: "目前的資金分布對帳戶有什麼影響？" },
       ],
-      insightLinks: [],
+      insightLinks: [{ id: "insight_cash_concentration", title: "看你的資金目前放在哪裡", route: "/maimate/insights/cash-concentration" }],
     };
   }
 

@@ -24,6 +24,11 @@
       asOfMonth: holdings.asOfMonth,
       portfolioTwd: holdings.portfolioTwd,
       breakdownAvailable: holdings.breakdownAvailable,
+      /* 前期快照（Screen 8 期間對照用）。報告沒有前一個月時為 null，畫面就不做對照。 */
+      previousAsOfMonth: holdings.previousMonth || null,
+      previousTopWeight: Number.isFinite(Number(holdings.previousPct))
+        ? Number(holdings.previousPct) / 100
+        : null,
       assets: [
         {
           symbol: holdings.topCurrency.toUpperCase(),

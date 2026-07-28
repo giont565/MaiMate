@@ -58,6 +58,9 @@ window.MM_ACCOUNT = {
     "topPct": 98.6,
     "portfolioTwd": 118168980,
     "otherPct": 1.4,
+    "previousMonth": "2025-11",
+    "previousCurrency": "twd",
+    "previousPct": 98.5,
     "breakdownAvailable": false,
     "peak": {
       "month": "2025-12",

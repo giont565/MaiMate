@@ -212,6 +212,11 @@ const PortfolioAdapter = Object.freeze({
       // 報告只有最大持有標的，其餘未細分
       breakdownAvailable: Boolean(source && source.breakdownAvailable),
       asOfMonth: source && source.asOfMonth,
+      /* 前期快照：Screen 8 的期間對照要用，報告沒有就是 null（不得由前端推估）。 */
+      previousAsOfMonth: (source && source.previousAsOfMonth) || null,
+      previousTopAssetRatio: Number.isFinite(Number(source && source.previousTopWeight))
+        ? Number(source.previousTopWeight)
+        : null,
     };
   },
 });
@@ -266,6 +271,8 @@ const TransactionAdapter = Object.freeze({
       averagePerMonth: Number(activity.averagePerMonth),
       buyTotal: Number(activity.buyTotal),
       sellTotal: Number(activity.sellTotal),
+      /* 每月買賣筆數（Screen 8 交易節奏圖用真值畫柱狀，不重新取樣、不內插）。 */
+      perMonth: Object.assign({}, activity.perMonth),
       byCurrency: Object.assign({}, activity.byCurrency),
       busiestMonth: activity.busiestMonth,
       /* 報告只給每月筆數，沒有「最後一筆交易」的日期——用資料期間末日冒充會是編造，
