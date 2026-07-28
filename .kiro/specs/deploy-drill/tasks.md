@@ -5,6 +5,17 @@
 
 ## 準備
 
+- [ ] 0. 🤖 **盤點現有環境**（唯讀，不改動任何東西——之前部署過就從這步開始）：
+  ```bash
+  aws sts get-caller-identity --query Account --output text          # 確認是哪個帳號
+  aws cloudformation list-stacks \
+    --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE UPDATE_ROLLBACK_COMPLETE \
+    --query 'StackSummaries[].{Name:StackName,Time:LastUpdatedTime}' --output table
+  aws cloudformation describe-stacks --stack-name maimate \
+    --query 'Stacks[0].{Status:StackStatus,Outputs:Outputs}' --output json
+  ```
+  - 先看清楚有幾套環境、叫什麼、狀態是否健康，再決定要更新哪一套
+  - 狀態若是 `*_IN_PROGRESS` 或 `ROLLBACK_FAILED`，**先處理完再部署**，不要疊上去
 - [ ] 1. 🤖 確認在最新 main：`git checkout main && git pull --rebase origin main && git log -1 --oneline`
   - 預期看到最新的 merge commit；**若本地有舊 `main` 分支會靜默帶你回舊版**，一定要看 log 確認
 - [ ] 2. 🤖 環境自檢：`bash scripts/setup.sh`
@@ -30,6 +41,8 @@
   - 首次在此機器上跑要 `sam deploy --guided`；**stack 名沿用 `maimate`**，換名字會開出第二套環境
 - [ ] 8. 👤 抄下 Outputs 的 **ApiUrl** 與 **FrontendUrl**（後面兩步都要用；FrontendUrl 同時是隊友要的測試網址）
 - [ ] 9. 👤 主控台設 MAX 金鑰——**ChatFunction 與 OrderFunction 兩支都要**
+  - ⚠️ **每次重新部署都要重做這步**：CloudFormation 會把函式設定收斂回模板，
+    手動加的金鑰不在模板裡（鐵則2）會被移除。之前設過不代表現在還在
   - Lambda → 函式 → Configuration → Environment variables → **Edit → Add**（新增，不是取代）
   - 🚨 不要用 CLI `--environment`（整組取代，會清掉 `TABLE_NAME`／`KB_ID`／`BEDROCK_REGION`）
   - 🚨 金鑰不進檔案、不貼進 Kiro 對話、截圖不入鏡（鐵則2）

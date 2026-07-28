@@ -37,6 +37,10 @@ sam deploy --guided     # 第一次；之後 sam deploy 即可
 
 ### 部署後手動設定（模板刻意不含，金鑰嚴禁進版控）
 
+🚨 **每次 `sam deploy` 之後都要重做這一節**——CloudFormation 更新時會把函式設定收斂回
+模板宣告的內容，手動加的 `MAX_API_KEY`／`MAX_API_SECRET` 不在模板裡（鐵則2），**會被移除**。
+症狀：昨天還能查持倉，今天重部署後又變成「帳戶 API 未設定」。
+
 🚨 **一律用主控台的「Add environment variable」新增**，不要用
 `aws lambda update-function-configuration --environment`——該參數是**整組取代**，
 會把模板設好的 `TABLE_NAME`／`KB_ID`／`BEDROCK_REGION` 全部清掉（RAG 會無聲失效）。
