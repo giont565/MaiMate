@@ -13,6 +13,7 @@ import hmac
 import json
 import os
 import time
+import urllib.error
 import urllib.request
 
 BASE = "https://max-api.maicoin.com"
@@ -44,8 +45,18 @@ def _signed_request(method, path, params=None):
             "Content-Type": "application/json",
         },
     )
-    with urllib.request.urlopen(req, timeout=10) as resp:
-        return json.loads(resp.read())
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        # MAX 把真正的原因（簽章錯／權限不足／nonce 超時）放在 response body，
+        # 預設的 str(HTTPError) 只有「HTTP Error 401」等狀態列，查不出所以然。
+        detail = ""
+        try:
+            detail = e.read().decode()[:300]
+        except Exception:
+            pass
+        raise RuntimeError(f"MAX API {e.code} {path}：{detail or '(無回應內容)'}") from None
 
 
 def balances():
