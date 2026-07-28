@@ -67,7 +67,8 @@ def main():
     print()
     if not ok_paths:
         print("全部失敗。對照：")
-        print("  2014 → payload 與 body 不一致／path 寫錯（簽章組法或路徑問題）")
+        print("  2014 → payload 與 body 不一致／path 寫錯。已知成因：GET 沒送 body。")
+        print("         若這版仍 2014，跑 python3 scripts/probe_max_signing.py 掃其餘變體")
         print("  2004 → 簽章不符：secret 貼錯或前後有空白")
         print("  2006 → nonce 超出伺服器時間 ±30 秒：檢查本機時鐘")
         print("  2001 → 金鑰無效或已刪除")
