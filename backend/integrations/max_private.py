@@ -10,14 +10,14 @@ signature = HMAC-SHA256(secret, payload)。細節以官方 v3 文件為準。
 import base64
 import hashlib
 import hmac
+import http.client
 import json
 import os
 import time
-import urllib.error
 import urllib.parse
-import urllib.request
 
-BASE = "https://max-api.maicoin.com"
+HOST = "max-api.maicoin.com"
+BASE = f"https://{HOST}"
 
 
 def _keys():
@@ -40,31 +40,32 @@ def _signed_request(method, path, params=None):
         "X-MAX-PAYLOAD": payload,
         "X-MAX-SIGNATURE": signature,
     }
-    url = BASE + path
+    target = path
     data = None
     if method == "GET":
         # GET：參數走 query string，不送 body、也不宣告 Content-Type。
-        # 宣告了 application/json 卻沒有 body，MAX 會拿 payload 去比對不存在的
-        # body 而回 2014「Payload is not consistent with body」。
         if params:
-            url += "?" + urllib.parse.urlencode(params)
+            target += "?" + urllib.parse.urlencode(params)
     else:
         # POST：body 必須與 payload 內容一致（含 path 與 nonce）。
         data = json.dumps(body).encode()
         headers["Content-Type"] = "application/json"
-    req = urllib.request.Request(url, data=data, method=method, headers=headers)
+
+    # 用 http.client 而非 urllib：urllib 的 Request.add_header 會把 header 名稱
+    # 做 .capitalize()（X-MAX-PAYLOAD → X-max-payload）。HTTP 規範雖不分大小寫，
+    # 但簽章類 header 遇到嚴格比對的閘道就會讀不到，症狀是「payload 裡沒有 path」。
+    conn = http.client.HTTPSConnection(HOST, timeout=10)
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            return json.loads(resp.read())
-    except urllib.error.HTTPError as e:
-        # MAX 把真正的原因（簽章錯／權限不足／nonce 超時）放在 response body，
-        # 預設的 str(HTTPError) 只有「HTTP Error 401」等狀態列，查不出所以然。
-        detail = ""
-        try:
-            detail = e.read().decode()[:300]
-        except Exception:
-            pass
-        raise RuntimeError(f"MAX API {e.code} {path}：{detail or '(無回應內容)'}") from None
+        conn.request(method, target, body=data, headers=headers)
+        resp = conn.getresponse()
+        raw = resp.read()
+        if resp.status >= 400:
+            # MAX 把真正的原因（簽章錯／權限不足／nonce 超時）放在 response body，
+            # 只看狀態碼查不出所以然。
+            raise RuntimeError(f"MAX API {resp.status} {path}：{raw.decode()[:300] or '(無回應內容)'}")
+        return json.loads(raw)
+    finally:
+        conn.close()
 
 
 def balances():
