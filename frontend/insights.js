@@ -74,6 +74,57 @@
     } catch (_) { return null; }
   }
 
+  /* 堆疊單條：一條 100% 橫條切成數段，用在某一段極度獨大的分布。
+   * 極小的段（0.1%）在條上只有 1px 級寬度、手指點不到，所以真正可點的是下面的圖例列——
+   * 條本身只當視覺，數值一律從圖例與 readout 讀得到，不靠精準點擊。 */
+  function renderStackedBar(payload) {
+    const card = el("section", "chart-card");
+    card.dataset.chart = "stackedBar";
+    card.append(el("h2", "", payload.title));
+    card.append(el("p", "sum", payload.summary));
+
+    const summaryText = payload.items.map((item) => item.label + " " + item.valueText).join("、");
+    const bar = el("div", "stack-bar");
+    bar.setAttribute("role", "img");
+    bar.setAttribute("aria-label", payload.title + " " + summaryText);
+    const readout = el("div", "chart-readout", "點任一項看數值：" + summaryText);
+    const legend = el("div", "stack-legend");
+
+    payload.items.forEach((item, index) => {
+      const pct = Math.max(0, Math.min(100, Number(item.pct)));
+      const seg = el("div", "stack-seg");
+      seg.dataset.segIndex = String(index);
+      seg.style.width = pct + "%";
+      /* 0% 的區間必須完全看不見：CSS 的 min-width 是為了讓 0.1% 這種
+       * 極小但存在的段還看得到，套到 0% 上就變成「畫出一塊不存在的東西」。 */
+      if (pct === 0) { seg.style.minWidth = "0"; seg.style.borderRight = "0"; }
+      seg.setAttribute("aria-hidden", "true");
+      bar.append(seg);
+
+      const row = el("button", "stack-item");
+      row.type = "button";
+      row.dataset.segIndex = String(index);
+      row.setAttribute("aria-pressed", "false");
+      row.setAttribute("aria-label", item.label + " " + item.valueText);
+      row.append(el("i", "swatch"));
+      row.append(el("span", "", item.label));
+      row.append(el("b", "", item.valueText));
+      row.onclick = () => {
+        legend.querySelectorAll(".stack-item").forEach((node) =>
+          node.setAttribute("aria-pressed", String(node === row)));
+        bar.querySelectorAll(".stack-seg").forEach((node) =>
+          node.classList.toggle("on", node.dataset.segIndex === row.dataset.segIndex));
+        readout.textContent = item.label + "：" + item.valueText;
+        track2("maimate_insight_chart_inspected");
+      };
+      legend.append(row);
+    });
+    card.append(bar);
+    card.append(legend);
+    card.append(readout);
+    return card;
+  }
+
   /* ── 圖表：純 CSS 橫條／柱狀。每張圖都有 role="img" 與文字摘要，可點看數值 ── */
   function renderAllocationBar(payload) {
     const card = el("section", "chart-card");
@@ -246,6 +297,7 @@
     comparison: (payload) => renderKvCard(payload.title, payload.items),
     evidenceList: (payload) => renderKvCard(payload.title, payload.items),
     allocationBar: renderAllocationBar,
+    stackedBar: renderStackedBar,
     rhythmTimeline: renderRhythmTimeline,
     insufficientData: renderInsufficient,
   };

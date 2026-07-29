@@ -78,6 +78,21 @@
   .alloc-bar .fill{height:100%;border-radius:12px;background:var(--bar)}
   .alloc-bar[aria-pressed="true"] .fill{background:var(--blue)}
 
+  /* 堆疊單條：一條切成數段。極小的段（0.1%）寬度只有 1px 級，
+     所以每段給 min-width:2px 讓它至少看得見，真正可點的是下面的圖例列（≥44px）。 */
+  .stack-bar{display:flex;height:16px;border-radius:12px;overflow:hidden;background:var(--tint);margin-top:14px}
+  .stack-seg{min-width:2px;background:var(--bar);border-right:1px solid var(--card)}
+  .stack-seg:last-child{border-right:0}
+  .stack-seg.on{background:var(--blue)}
+  .stack-legend{display:flex;flex-direction:column;gap:2px;margin-top:10px}
+  .stack-item{display:flex;align-items:center;gap:9px;width:100%;min-height:44px;border:0;background:none;
+    padding:6px 0;cursor:pointer;text-align:left}
+  .stack-item .swatch{width:10px;height:10px;border-radius:3px;background:var(--bar);flex:none}
+  .stack-item[aria-pressed="true"] .swatch{background:var(--blue)}
+  .stack-item span{font-size:12.5px;color:var(--sub);flex:1;min-width:0;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .stack-item b{font-size:13px;font-weight:800;color:var(--blue);flex:none}
+
   .rhythm-chart{position:relative;display:flex;align-items:flex-end;gap:3px;height:152px;margin-top:14px;
     border-bottom:1px solid var(--line);padding-bottom:2px}
   .rhythm-avg{position:absolute;left:0;right:0;border-top:1px dashed var(--blue);pointer-events:none}

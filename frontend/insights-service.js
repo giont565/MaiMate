@@ -955,9 +955,11 @@
     ];
 
     const sections = [
-      section("sec_holding_dist", "allocationBar", {
+      /* 用堆疊單條而不是並列橫條：這個帳戶 99.9% 落在 0-7 天，
+       * 並列會變成一條滿的加四條看不見的線（隊長在 issue #29 指出）。 */
+      section("sec_holding_dist", "stackedBar", {
         title: "你的賣出，大多在買進後多久發生？",
-        summary: "橫條長度是該區間占所有可配對賣出的比重，以賣出市值加權；區間邊界依報告原樣呈現。",
+        summary: "整條代表所有可配對的賣出，切成五段就是各區間的比重（以賣出市值加權）；區間邊界依報告原樣呈現。",
         items: buckets.map((item) => ({
           label: item.label,
           pct: item.pct,

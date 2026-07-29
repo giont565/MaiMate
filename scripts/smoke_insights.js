@@ -291,8 +291,12 @@ const assert = (ok, message) => { if (!ok) throw new Error(message); };
       tag: document.querySelector(".gap-card .tag") ? document.querySelector(".gap-card .tag").textContent : "",
       missing: [...document.querySelectorAll(".gap-card .bullet li")].map((node) => node.textContent),
       alternatives: [...document.querySelectorAll(".gap-alts button")].map((node) => node.textContent),
-      charts: document.querySelectorAll("[data-chart], .alloc-bar, .alloc-list, .rhythm-chart, .rhythm-bar, .fill, .track").length,
-      bars: [...document.querySelectorAll(".alloc-bar")].map((node) => node.querySelector(".row b").textContent),
+      charts: document.querySelectorAll("[data-chart], .alloc-bar, .alloc-list, .rhythm-chart, .rhythm-bar, .fill, .track, .stack-bar, .stack-seg, .stack-item").length,
+      /* 兩頁的圖表型別不同：歸因是並列橫條（allocationBar），
+       * 持有期間是堆疊單條（stackedBar，數值在圖例列上）。 */
+      bars: [...document.querySelectorAll(".alloc-bar")].map((node) => node.querySelector(".row b").textContent)
+        .concat([...document.querySelectorAll(".stack-item")].map((node) => node.querySelector("b").textContent)),
+      segWidths: [...document.querySelectorAll(".stack-seg")].map((node) => node.style.width),
       all: document.querySelector("main").textContent,
     }));
     if (page4.data) {
@@ -306,6 +310,15 @@ const assert = (ok, message) => { if (!ok) throw new Error(message); };
             `${page4.id} 第 ${index + 1} 條和報告不符：「${gap.bars[index]}」應含有「${part}」`);
         });
       });
+      /* 持有期間用堆疊單條：五段寬度必須合計 100%，且 0.1% 那段不能被壓成 0 寬度看不見。 */
+      if (page4.id === "holding-pattern") {
+        assert(gap.segWidths.length === expected.length,
+          `堆疊條段數不符：${gap.segWidths.length} 應為 ${expected.length}`);
+        const total = gap.segWidths.reduce((sum, w) => sum + parseFloat(w || "0"), 0);
+        assert(Math.abs(total - 100) <= 0.5, `堆疊條寬度合計不是 100%：${total}`);
+        const nonZero = page4.data.buckets.filter((b) => Number(b.pct) > 0).length;
+        assert(nonZero >= 2, "報告只有一個非零區間，堆疊條無法呈現對照（請改回數字表）");
+      }
       /* 報告標 estimated（殘差法），畫面必須照實說是估算，不得寫成會計歸因。 */
       if (page4.id === "account-change") {
         assert(/估算/.test(gap.all) && !/會計歸因(?!，)/.test(gap.all.replace(/不等同正式會計損益[^。]*。/g, "")),

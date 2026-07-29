@@ -11,7 +11,7 @@
 /** @typedef {'personal'|'general'|'limited'|'lastKnown'} InsightAccessMode */
 /** @typedef {{id:string, label:string, value:string, sourceLabel:string, updatedAt?:string}} InsightSource */
 /** @typedef {{conclusion:string, primaryMetric?:{label:string, value:string, note?:string}}} InsightHero */
-/** @typedef {'text'|'metricList'|'allocationBar'|'rhythmTimeline'|'comparison'|'knowledgeExplanation'|'evidenceList'|'limitationList'|'insufficientData'} InsightSectionType */
+/** @typedef {'text'|'metricList'|'allocationBar'|'stackedBar'|'rhythmTimeline'|'comparison'|'knowledgeExplanation'|'evidenceList'|'limitationList'|'insufficientData'} InsightSectionType */
 /** @typedef {{id:string, type:InsightSectionType, payload:Object}} InsightSection */
 /** @typedef {{id:string, text:string}} InsightLimitation */
 /** @typedef {{id:string, insightId:string, title:string, summary:string}} RelatedTerm */
@@ -24,7 +24,7 @@
 
 (function initInsightsCore() {
   const SECTION_TYPES = [
-    "text", "metricList", "allocationBar", "rhythmTimeline", "comparison",
+    "text", "metricList", "allocationBar", "stackedBar", "rhythmTimeline", "comparison",
     "knowledgeExplanation", "evidenceList", "limitationList", "insufficientData",
   ];
 
@@ -116,6 +116,14 @@
       Array.isArray(p.items) && p.items.length > 0 &&
       p.items.every((item) => item && isText(item.label) && isText(item.valueText) &&
         isNumber(item.pct) && Number(item.pct) >= 0 && Number(item.pct) <= 100),
+    /* stackedBar：一條 100% 的橫條切成數段，用在「某一段極度獨大」的分布
+     * （並列橫條會變成一條滿的加幾條看不見的線）。各段 pct 必須合計 100±0.5，
+     * 不足或超過就是上游算錯，寧可整段不渲染也不畫一條對不上的圖。 */
+    stackedBar: (p) => isQuestion(p.title) && isText(p.summary) &&
+      Array.isArray(p.items) && p.items.length > 0 &&
+      p.items.every((item) => item && isText(item.label) && isText(item.valueText) &&
+        isNumber(item.pct) && Number(item.pct) >= 0 && Number(item.pct) <= 100) &&
+      Math.abs(p.items.reduce((sum, item) => sum + Number(item.pct), 0) - 100) <= 0.5,
     rhythmTimeline: (p) => isQuestion(p.title) && isText(p.summary) &&
       isNumber(p.averageValue) && isText(p.averageText) &&
       Array.isArray(p.items) && p.items.length > 0 &&
@@ -145,7 +153,7 @@
   }
 
   /** 圖表區塊（會畫出視覺元素的那幾類）——資料不足時畫面上一個都不該有 */
-  const CHART_SECTION_TYPES = Object.freeze(["allocationBar", "rhythmTimeline"]);
+  const CHART_SECTION_TYPES = Object.freeze(["allocationBar", "stackedBar", "rhythmTimeline"]);
 
   window.MM_INSIGHTS_CORE = Object.freeze({
     SECTION_TYPES: Object.freeze(SECTION_TYPES.slice()),
