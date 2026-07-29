@@ -70,7 +70,7 @@ mockup HTML 在 `docs/mockups/`＝C 包前端起點，畫面中所有數字皆�
 - 🔨 #12 audit.py＋GET /audit endpoint（A 埋點、C 面板）
 - 🧪 #2 max_public 三 endpoint 實測（ticker/kline/depth 對官方文件核對）
 - 🧪 max_private 簽章實作對照 max-mcp-server 源碼核對（真下單 E2E 歸 D）
-- 🧪 thirdparty CMC 冒煙（無金鑰自動略過路徑）
+- ✅ thirdparty CMC 冒煙（07/29 無金鑰略過＋BTC/TWD 真實 API 驗證；重跑見 `scripts/verify_cmc_smoke.py`）
 
 **C｜前端與品牌**（地盤 `frontend/` `docs/mockups/` `docs/brand/`，估 4 天）
 - 🔨 #13 手機版 RWD 改版（照 mockups 三畫面實作）
