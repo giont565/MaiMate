@@ -59,11 +59,11 @@ function statusTable(s, rows, y, colW, rowH) {
 {
   const s = pres.addSlide();
   s.background = { color: WHITE };
-  bigTitle(s, "總覽：上線實測抓出三個「線上必定失敗」的結構性 bug——都修好了，但還沒部署上去");
+  bigTitle(s, "總覽：下單鏈路已上線並自動驗過 21 項——但 RAG 知識庫在線上是掛的");
   const stats = [
-    { n: "16", l: "已完成並驗證", c: GREEN, d: "行為分析、Bedrock迴圈、RAG KB、MAX 簽章、確認卡…" },
-    { n: "14", l: "寫好但沒測過", c: GOLD, d: "三方案、Profile、Audit、路由、RWD（線上跑的仍是舊版）…" },
-    { n: "5", l: "待做", c: RED, d: "Guardrails、全員 KYC、影片、簡報修正、Kiro 證據" },
+    { n: "17", l: "已完成並驗證", c: GREEN, d: "行為分析、Bedrock迴圈、MAX 簽章、確認卡、決策軌跡、程式層護欄…" },
+    { n: "12", l: "寫好但沒測過", c: GOLD, d: "Profile、路由、離線備援、RWD D5–D18、真實下單…" },
+    { n: "6", l: "待做", c: RED, d: "RAG KB 重建(#34)、Guardrails、全員 KYC、影片、簡報、Kiro 證據" },
     { n: "5", l: "純測試項", c: BLUE, d: "E2E、雙層護欄、部署計時…" },
   ];
   stats.forEach((st, i) => {
@@ -76,7 +76,7 @@ function statusTable(s, rows, y, colW, rowH) {
   card(s, M, 4.7, W - 2 * M, 1.0, "FDF0EF");
   s.addText([
     { text: "最大隱藏風險：", options: { bold: true, color: RED } },
-    { text: "修好了 ≠ 上線了。07/28–29 部署後實測抓到三個結構性 bug（簽章 2014／volume 空字串／確認憑證沒寫進 DynamoDB＝線上按確認必定 410），修正全在 PR #33 未 merge——**線上此刻跑的仍是壞版本**。下一步只有一條路：merge → sam deploy → 重設兩支 Lambda 金鑰 → 跑 TEST_CHECKLIST D 段。距 7/31 code freeze 剩 2 天。", options: { color: INK } },
+    { text: "RAG 知識庫在線上是掛的（#34）：Bedrock 回「KB DSIYBVI1IX 不存在」，模型改用一般知識回答——**畫面看不出異常，只是安靜地少掉「附出處」這個賣點**，而 F3 是評分紅線。這種「優雅降級」的壞法最危險：不跑驗收就發現不了。修法要 B 包重建 KB 再帶參數部署。距 7/31 code freeze 剩 2 天。", options: { color: INK } },
   ], { x: M + 0.3, y: 4.85, w: W - 2 * M - 0.6, h: 0.7, fontFace: FONT, fontSize: 14, valign: "middle", margin: 0 });
   s.addText("本週原則：先讓 🧪 變 ✅（把寫好的測到能動），再開 🔨 新工。", {
     x: M, y: 6.0, w: W - 2 * M, h: 0.45, fontFace: FONT, fontSize: 15, bold: true, color: NAVY, margin: 0 });
@@ -90,14 +90,14 @@ function statusTable(s, rows, y, colW, rowH) {
   statusTable(s, [
     ["Converse tool-use 迴圈", "done", "07/19 線上跑通：真模型多輪工具呼叫＋引用真實數據", "agent/loop.py"],
     ["工具定義×5＋dispatch", "done", "隨迴圈上線；key_findings 摘要（答非所問保險）；KB_ID 設定時自動加掛 query_knowledge", "agent/tools.py"],
-    ["prepare/execute 下單分離", "code", "07/29 補齊兩個致命缺口：憑證改寫進 DynamoDB（原本只存 ChatFunction 記憶體、OrderFunction 讀不到＝必 410）＋volume_twd→下單量換算；待重部署 E2E", "tools+order"],
-    ["程式層護欄（明牌/PII）", "code", "正則可測，未寫測試", "guardrails.py"],
+    ["prepare/execute 下單分離", "done", "07/29 線上自動驗過：確認卡→取消→憑證消耗→軌跡留痕全串起來（verify_live.py D12/D13/D15）。剩真實成交未測", "tools+order"],
+    ["程式層護欄（明牌/PII）", "done", "07/29 線上驗過 F1/F2/F4/F5：不報明牌、不背書、教育題不誤攔、手機號不落回覆與軌跡", "guardrails.py"],
     ["confirm 欄位帶出前端", "done", "07/29 線上實測確認卡確實跳出（D 段走查，並據此修好 TTL 文案／取消留痕）", "#1"],
     ["Haiku/Sonnet 路由", "code", "07/21 意圖路由完成＋單元測；caching 開關待真環境驗證", "#5"],
     ["Bedrock Guardrails", "todo", "程式層誤判修正二輪＋測試（PR #20/#23）；Bedrock 層主控台待建", "#6"],
     ["Profile Engine 簡版", "code", "07/21 三模式分類＋prompt 注入＋徽章切換完成；實測劇本待部署", "#10"],
-    ["三方案生成", "code", "07/21 引擎＋工具＋前端卡完成、18 項單元測綠；整合測試待部署", "#11"],
-    ["Audit Log", "code", "07/21 留痕＋/audit＋軌跡面板完成；DynamoDB 路徑待部署驗", "#12"],
+    ["三方案生成", "code", "07/29 線上實測三卡出得來、手續費驗算正確（14,140×0.16%≈23）；但同一句話 7 次有 1 次不出卡，DEMO_SCRIPT 別寫死", "#11"],
+    ["Audit Log", "done", "07/29 線上驗過：tool_call→draft_created→user_cancelled 依序留痕，PII 不落軌跡", "#12"],
   ], 1.6, [3.1, 1.5, 5.7, 1.83], 0.49);
 }
 
@@ -111,8 +111,8 @@ function statusTable(s, rows, y, colW, rowH) {
     ["health_report.json", "done", "07/28 已用官方 CSV 重產並進 main：已實現損益 +117,482（981勝/493負）、最痛真虧僅 963；三聚合值齊全（#27/#29 已解）", "data/"],
     ["setup.sh 環境檢查", "done", "已實測", "scripts/"],
     ["RAG 語料蒐集", "code", "初版語料已入 KB（護欄誤判由實測發現）；完整度待 B 確認", "#9"],
-    ["Knowledge Base + S3 Vectors", "done", "07/22 KB 建成＋SAM 參數化＋IAM（PR #21，B 包）", "#9"],
-    ["query_knowledge 工具", "done", "07/22 接上真 KB 實測；防詐語境誤判已修（PR #20）", "#9"],
+    ["Knowledge Base + S3 Vectors", "todo", "🚨 07/29 實測：KB DSIYBVI1IX 在帳號裡已不存在（Bedrock 回 ResourceNotFound）——07/22 建成後迴歸，需重建再帶 KnowledgeBaseId 部署（#34）", "#9"],
+    ["query_knowledge 工具", "code", "程式正確（有註冊、模型也會呼叫），但線上因 KB 不存在而每次 error；KB 一補回來即通", "#9"],
     ["Lambda×5 handlers 全數上線", "done", "07/28 五支皆部署：/chat /health /market /audit 線上實測皆正常（/audit 不再 404）；/order 待真單", "handlers/"],
     ["MAX Public API（快取+退避）", "code", "ticker 已線上實測（任務6）；kline/depth 待對文件核驗", "#2"],
     ["MAX Private API 簽章（HMAC）", "done", "07/29 對真 API 實測通過（/api/v3/info 回 level:2）。2014 真因＝MAX 先比對「payload 解碼後 == request body」再驗簽章，GET 也必須送 body", "#4"],
@@ -134,7 +134,7 @@ function statusTable(s, rows, y, colW, rowH) {
     ["三方案卡片／模式徽章／軌跡面板", "code", "07/29 實測抓到「推薦卡看起來可點卻沒反應」已修為 role=button；重部署後複驗", "—"],
     ["SAM 模板", "done", "07/19 首次 deploy＋07/28 重部署成功（stack maimate，五支 Lambda 全上）", "infra/"],
     ["自家 AWS 帳號＋Bedrock 開通", "done", "隊長帳號出線，Bedrock 已開通（07/19）", "—"],
-    ["部署 SOP＋驗收清單", "code", "07/28 實戰後再修：重部署會洗掉手動金鑰、macOS sed 要空引號、CLI --environment 會清空模板變數；deploy-drill spec 17 項可交 Kiro 跑；<1hr 計時演練待做", "#14"],
+    ["部署 SOP＋驗收清單", "code", "07/29 新增 scripts/verify_live.py：C/D/F 共 21 項自動判定、3 分鐘跑完，且永不送真單；人工只剩視覺項。<1hr 計時演練待做", "#14"],
     ["提案簡報 16 頁", "done", "含評審兩題頁；視覺本機過一次", "docs/"],
     ["上手指南／架構文件／法規檢討", "done", "三份皆完成", "docs/"],
     ["整合簡報修正", "todo", "Skill 標示＋補兩頁", "#15"],
