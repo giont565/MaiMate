@@ -1,5 +1,5 @@
 /* 自動生成——請勿手改。
- * 來源：data/health_report.json（產出於 2026-07-19T15:08:24.939845+00:00）
+ * 來源：data/health_report.json（產出於 2026-07-28T14:37:12.356285+00:00）
  * 重生：npm run build:account
  * 這是隊友共用的同一個帳戶：2025-01-01 ～ 2025-12-31，
  * 共 10000 列紀錄、4674 筆買賣。
@@ -9,7 +9,7 @@
 
 window.MM_ACCOUNT = {
   "source": "data/health_report.json",
-  "generatedAt": "2026-07-19T15:08:24.939845+00:00",
+  "generatedAt": "2026-07-28T14:37:12.356285+00:00",
   "period": {
     "start": "2025-01-01",
     "end": "2025-12-31"
@@ -61,7 +61,7 @@ window.MM_ACCOUNT = {
     "previousMonth": "2025-11",
     "previousCurrency": "twd",
     "previousPct": 98.5,
-    "breakdownAvailable": false,
+    "breakdownAvailable": true,
     "peak": {
       "month": "2025-12",
       "top_currency": "twd",
@@ -91,7 +91,89 @@ window.MM_ACCOUNT = {
       "missed_twd": 312924
     }
   },
-  "holdingsSnapshot": null,
-  "changeAttribution": null,
-  "holdingPeriodDistribution": null
+  "holdingsSnapshot": {
+    "asOf": "2025-12-31",
+    "method": "各幣最後成交價估值",
+    "holdings": [
+      {
+        "currency": "twd",
+        "pct": 98.6,
+        "value_twd": 116530466
+      },
+      {
+        "currency": "usdt",
+        "pct": 0.4,
+        "value_twd": 444940
+      },
+      {
+        "currency": "eth",
+        "pct": 0.3,
+        "value_twd": 405305
+      },
+      {
+        "currency": "doge",
+        "pct": 0.3,
+        "value_twd": 327441
+      },
+      {
+        "currency": "usdc",
+        "pct": 0.2,
+        "value_twd": 264490
+      },
+      {
+        "currency": "btc",
+        "pct": 0.1,
+        "value_twd": 101744
+      },
+      {
+        "currency": "sol",
+        "pct": 0.1,
+        "value_twd": 94592
+      }
+    ]
+  },
+  "changeAttribution": {
+    "period": "2025-12",
+    "type": "estimated",
+    "delta_twd": 12249913,
+    "contributors": [
+      {
+        "category": "marketPrice",
+        "pct": 0.3,
+        "value_twd": 36394
+      },
+      {
+        "category": "netDeposit",
+        "pct": 99.7,
+        "value_twd": 12213519
+      }
+    ],
+    "note": "殘差法（Δ市值−出入金淨額→市價波動）；已實現損益為另一視角見 realized_pnl，不相加"
+  },
+  "holdingPeriodDistribution": {
+    "method": "FIFO 配對推估、賣出市值加權",
+    "buckets": [
+      {
+        "range": "0-7",
+        "pct": 99.9
+      },
+      {
+        "range": "8-30",
+        "pct": 0.1
+      },
+      {
+        "range": "31-90",
+        "pct": 0
+      },
+      {
+        "range": "91-180",
+        "pct": 0
+      },
+      {
+        "range": "181+",
+        "pct": 0
+      }
+    ],
+    "note": "期初持倉無買入紀錄之賣出不計（792 筆）"
+  }
 };

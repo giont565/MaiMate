@@ -206,9 +206,26 @@ function collectKeys(value, target) {
     assert(plan.payload.recentBehaviorItems.some((item) => item.label.includes("持有時間仍需更多")),
       "持有資料不足時仍下了結論");
 
-    /* health_report.json 沒有各幣種持倉明細＝拆不出帳戶變化來源，必須走「資料不足」。 */
-    assert(attribution.payload.unavailable === true && !attribution.payload.contributors,
-      `報告缺明細時仍產生歸因比例：${JSON.stringify(attribution.payload)}`);
+    /* 有 change_attribution（issue #29 重跑後才有）就必須逐項對上報告；沒有就必須走「資料不足」。 */
+    const reportAttribution = account.changeAttribution;
+    if (reportAttribution) {
+      const byCategory = {};
+      attribution.payload.contributors.forEach((item) => { byCategory[item.category] = item; });
+      /* 報告的 netDeposit 在前端對應 funding，比重必須一字不差地對上報告。 */
+      const CATEGORY_MAP = { netDeposit: "funding", marketPrice: "marketPrice", realizedPnl: "recentTrades" };
+      reportAttribution.contributors.forEach((source) => {
+        const shown = byCategory[CATEGORY_MAP[source.category]];
+        assert(shown, `歸因缺少報告有的來源：${source.category}`);
+        assert(Math.round(shown.contributionRatio * 1000) / 10 === source.pct,
+          `歸因比重和報告不符：${source.category} 畫面 ${shown.contributionRatio} vs 報告 ${source.pct}%`);
+      });
+      assert(attribution.payload.attributionType === "estimated",
+        `報告標 ${reportAttribution.type}，畫面卻宣稱是精算：${attribution.payload.attributionType}`);
+      assert(!attribution.payload.unavailable, "報告已有歸因值卻仍顯示資料不足");
+    } else {
+      assert(attribution.payload.unavailable === true && !attribution.payload.contributors,
+        `報告缺明細時仍產生歸因比例：${JSON.stringify(attribution.payload)}`);
+    }
 
     const worstSell = account.opportunityCost.worstSell;
     assert(similar.payload.historicalContext.startDate.startsWith(worstSell.date),
@@ -224,9 +241,14 @@ function collectKeys(value, target) {
       snapshot.payload.topAssetRatio === account.holdings.topPct / 100 &&
       snapshot.payload.topAssetLabel.includes("現金"),
     `Account Snapshot 最大持有與報告不一致：${JSON.stringify(snapshot.payload)}`);
-    /* 報告沒有各幣種明細與最後交易日期 → 一律 null，畫面顯示「報告未提供」而不是補值。 */
-    assert(snapshot.payload.assetCount === null && snapshot.payload.topTwoAssetsRatio === null &&
-      snapshot.payload.lastTransactionAt === null && snapshot.payload.lastTransactionDaysAgo === null &&
+    /* 持有項數只能等於報告快照的項數；報告沒有快照時必須是 null（畫面顯示「報告未提供」）。
+     * 最後交易日期報告始終沒有（只有每月聚合），永遠是 null，不得補值。 */
+    const holdingsSnapshot = account.holdingsSnapshot;
+    const expectedAssetCount = holdingsSnapshot ? holdingsSnapshot.holdings.length : null;
+    assert(snapshot.payload.assetCount === expectedAssetCount &&
+      (holdingsSnapshot ? snapshot.payload.topTwoAssetsRatio > 0 : snapshot.payload.topTwoAssetsRatio === null),
+    `Account Snapshot 持有項數與報告不符（應為 ${expectedAssetCount}）：${JSON.stringify(snapshot.payload)}`);
+    assert(snapshot.payload.lastTransactionAt === null && snapshot.payload.lastTransactionDaysAgo === null &&
       snapshot.payload.latestTransactionLabel.includes(account.trades.latestMonth),
     `Account Snapshot 把報告沒有的欄位補成了假值：${JSON.stringify(snapshot.payload)}`);
     const fullText = await page.locator("body").innerText();

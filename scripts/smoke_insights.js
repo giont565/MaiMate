@@ -71,8 +71,10 @@ const assert = (ok, message) => { if (!ok) throw new Error(message); };
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
   // 後端一律斷線：Screen 8 必須在離線下走完
-  await page.route("**/api/**", (r) => r.abort());
-  await page.route("**/execute-api**", (r) => r.abort());
+  /* 只放行本機測試伺服器，其餘一律斷線（同 smoke_chat 的說明：
+   * "**\/execute-api**" 這種 glob 攔不到主機名裡的 execute-api）。 */
+  await page.route("**/*", (route) =>
+    route.request().url().startsWith(base) ? route.continue() : route.abort());
 
   const openInsight = async (id) => {
     await page.evaluate((target) => window.MM_INSIGHTS_UI.open(target), id);
@@ -161,11 +163,23 @@ const assert = (ok, message) => { if (!ok) throw new Error(message); };
     kv: [...document.querySelectorAll(".kv")].map((node) => node.textContent),
     all: document.querySelector("main").textContent,
   }));
-  assert(cash.bars.length === 2, `比例條數量異常：${cash.bars.length}`);
+  /* 有各幣種快照（issue #29）→ 每一種都要有自己的比例條，且逐條對上報告；
+   * 沒有快照 → 只准兩條（最大持有＋其餘合計），不得把「其餘」自行拆開。 */
+  const SNAPSHOT = account.holdingsSnapshot;
+  assert(cash.bars.length === (SNAPSHOT ? SNAPSHOT.holdings.length : 2),
+    `比例條數量異常：${cash.bars.length}`);
   assert(cash.bars[0].value === TOP_PCT && cash.bars[0].width === TOP_PCT,
     `最大持有比例條和帳戶真值不符：${JSON.stringify(cash.bars[0])} 應為 ${TOP_PCT}`);
-  assert(cash.bars[1].value === OTHER_PCT && cash.bars[1].width === OTHER_PCT,
-    `其餘部位比例條和帳戶真值不符：${JSON.stringify(cash.bars[1])} 應為 ${OTHER_PCT}`);
+  if (SNAPSHOT) {
+    SNAPSHOT.holdings.forEach((holding, index) => {
+      const expected = oneDecimal(holding.pct) + "%";
+      assert(cash.bars[index] && cash.bars[index].value === expected,
+        `第 ${index + 1} 條比例條和報告不符：${JSON.stringify(cash.bars[index])} 應為 ${holding.currency.toUpperCase()} ${expected}`);
+    });
+  } else {
+    assert(cash.bars[1].value === OTHER_PCT && cash.bars[1].width === OTHER_PCT,
+      `其餘部位比例條和帳戶真值不符：${JSON.stringify(cash.bars[1])} 應為 ${OTHER_PCT}`);
+  }
   assert(cash.metric === TOP_PCT, `Hero 主要 Metric 不是帳戶真值：${cash.metric}`);
   assert(/[？?]$/.test(cash.chartTitle.trim()), `圖表標題不是問句：${cash.chartTitle}`);
   assert(cash.chartRole === "img" && cash.chartAria.includes(TOP_PCT), "比例圖缺少 role=img 或文字摘要");
@@ -259,25 +273,55 @@ const assert = (ok, message) => { if (!ok) throw new Error(message); };
   assert(plan.all.includes(LATEST_TEXT) && plan.all.includes(AVG_TEXT), "方向對照未帶入交易真值");
   console.log(`plan-alignment OK：狀態「${plan.metric}」為列舉字面值、無分數與一致度百分比`);
 
-  // ── 4. 資料不足的兩頁：明說缺什麼，且畫面上沒有任何圖表元素
-  for (const id of ["account-change", "holding-pattern"]) {
-    await openInsight(id);
+  /* ── 4. 這兩頁的狀態由報告決定：issue #29 的聚合值補齊前走「資料不足」，
+   * 補齊後必須畫出圖並逐條對上報告。兩種狀態都不准出現「介於兩者之間」的半成品。 */
+  const GAP_PAGES = [
+    /* expected 的每一項是「這條比例條的文字必須含有的片段」——歸因那頁除了比重還要帶金額，
+     * 讓「99.7%」旁邊一定看得到 NT$12,213,519，避免只剩一個沒有量體感的百分比。 */
+    { id: "account-change", data: account.changeAttribution,
+      expected: (d) => d.contributors.slice().sort((a, b) => b.pct - a.pct)
+        .map((item) => [oneDecimal(item.pct) + "%", "NT$" + Math.round(item.value_twd).toLocaleString("en-US")]) },
+    { id: "holding-pattern", data: account.holdingPeriodDistribution,
+      expected: (d) => d.buckets.map((item) => [oneDecimal(item.pct) + "%"]) },
+  ];
+  let sawInsufficient = false;
+  for (const page4 of GAP_PAGES) {
+    await openInsight(page4.id);
     const gap = await page.evaluate(() => ({
       tag: document.querySelector(".gap-card .tag") ? document.querySelector(".gap-card .tag").textContent : "",
-      reason: document.querySelector(".gap-card p") ? document.querySelector(".gap-card p").textContent : "",
       missing: [...document.querySelectorAll(".gap-card .bullet li")].map((node) => node.textContent),
       alternatives: [...document.querySelectorAll(".gap-alts button")].map((node) => node.textContent),
       charts: document.querySelectorAll("[data-chart], .alloc-bar, .alloc-list, .rhythm-chart, .rhythm-bar, .fill, .track").length,
+      bars: [...document.querySelectorAll(".alloc-bar")].map((node) => node.querySelector(".row b").textContent),
       all: document.querySelector("main").textContent,
     }));
-    assert(gap.tag === "資料不足", `${id} 未標示資料不足：${gap.tag}`);
-    assert(gap.missing.length >= 2, `${id} 未列出缺少的資料`);
-    assert(gap.alternatives.length >= 2, `${id} 未提供替代動作`);
-    assert(gap.charts === 0, `${id} 資料不足卻仍畫出 ${gap.charts} 個圖表元素`);
-    assert(/issue #29/.test(gap.all), `${id} 未說明已向後端請求（issue #29）`);
-    assert(!/約\s*\d+(\.\d+)?%\s*(來自|與市場)/.test(gap.all), `${id} 仍給出歸因比重`);
+    if (page4.data) {
+      const expected = page4.expected(page4.data);
+      assert(gap.tag !== "資料不足", `${page4.id} 報告已有聚合值，卻仍標示資料不足`);
+      assert(gap.bars.length === expected.length,
+        `${page4.id} 比例條數量與報告不符：${gap.bars.length} 應為 ${expected.length}`);
+      expected.forEach((parts, index) => {
+        parts.forEach((part) => {
+          assert(String(gap.bars[index]).includes(part),
+            `${page4.id} 第 ${index + 1} 條和報告不符：「${gap.bars[index]}」應含有「${part}」`);
+        });
+      });
+      /* 報告標 estimated（殘差法），畫面必須照實說是估算，不得寫成會計歸因。 */
+      if (page4.id === "account-change") {
+        assert(/估算/.test(gap.all) && !/會計歸因(?!，)/.test(gap.all.replace(/不等同正式會計損益[^。]*。/g, "")),
+          `${page4.id} 未標示為估算，或把估算寫成會計歸因`);
+      }
+    } else {
+      sawInsufficient = true;
+      assert(gap.tag === "資料不足", `${page4.id} 未標示資料不足：${gap.tag}`);
+      assert(gap.missing.length >= 2, `${page4.id} 未列出缺少的資料`);
+      assert(gap.alternatives.length >= 2, `${page4.id} 未提供替代動作`);
+      assert(gap.charts === 0, `${page4.id} 資料不足卻仍畫出 ${gap.charts} 個圖表元素`);
+      assert(/issue #29/.test(gap.all), `${page4.id} 未說明已向後端請求（issue #29）`);
+      assert(!/約\s*\d+(\.\d+)?%\s*(來自|與市場)/.test(gap.all), `${page4.id} 仍給出歸因比重`);
+    }
   }
-  console.log("4 資料不足 OK：account-change／holding-pattern 皆標示資料不足、列出缺項與替代動作、零圖表元素");
+  console.log(`4 兩頁狀態 OK：account-change／holding-pattern 皆為「${account.changeAttribution ? "已補齊、逐條對上報告" : "資料不足、零圖表"}」`);
 
   // ── 6. 相關名詞可跳到下一個 insight，返回堆疊保留
   await openInsight("cash-concentration");
@@ -344,9 +388,15 @@ const assert = (ok, message) => { if (!ok) throw new Error(message); };
   assert(!bad, `事件含未允許欄位：${JSON.stringify(bad)}`);
   const raw = JSON.stringify(events);
   assert(!/98\.6|312,?924|389\.5|資金分布|DOGE/.test(raw), "事件疑似記錄了問題原文或金融數字");
-  for (const name of ["maimate_insight_viewed", "maimate_insight_term_opened",
+  /* insufficient_shown 只有真的顯示過「資料不足」才該出現；報告補齊後沒有任何一頁缺料，
+   * 這時要求它反而會逼出一個不存在的狀態。 */
+  const expectedEvents = ["maimate_insight_viewed", "maimate_insight_term_opened",
     "maimate_insight_question_clicked", "maimate_insight_chat_opened",
-    "maimate_insight_chart_inspected", "maimate_insight_insufficient_shown"]) {
+    "maimate_insight_chart_inspected"];
+  if (sawInsufficient) expectedEvents.push("maimate_insight_insufficient_shown");
+  else assert(!raw.includes("maimate_insight_insufficient_shown"),
+    "沒有任何一頁缺料，卻記錄了 insufficient_shown 事件");
+  for (const name of expectedEvents) {
     assert(raw.includes(name), `事件未記錄：${name}`);
   }
   console.log(`事件 OK：6 類 Screen 8 事件有記、僅列舉值欄位、無問題原文與金融數字（共 ${events.length} 筆）`);

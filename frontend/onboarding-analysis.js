@@ -629,6 +629,9 @@ const AnalysisUI = (() => {
       // 報告只給最大持有標的與占比時 assetCount 是 null → 明說未提供，不補數字
       ["持有資產", !coverage.portfolioAvailable ? "未使用持倉資料"
         : coverage.assetCount == null ? "報告未提供各幣種比例" : coverage.assetCount + " 項"],
+      /* 交易一律只有每月聚合，沒有逐筆明細——這件事要一直講明白，
+       * 否則使用者會以為上面那個交易筆數是可以逐筆追溯的。 */
+      ["交易明細", coverage.transactionDetailAvailable ? "已使用逐筆紀錄" : "報告未提供逐筆明細（僅每月聚合）"],
       ["問卷狀態", coverage.questionnaireCompleted ? "已完成 " + coverage.questionnaireAnswerCount + " / " + coverage.questionnaireAnswerCount : "稍後補充"],
       ["入出金資料", coverage.fundingHistoryAvailable ? "已使用" : "未使用"],
       ["分析時間", formatDate(activeResult.createdAt)],

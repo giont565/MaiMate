@@ -283,12 +283,21 @@
     if (!attribution) return answerAttributionUnavailable();
     const evidence = attribution.contributors.map((item, index) =>
       evidenceRef("ev_attr_" + index, "market", item.label, pct(item.contributionRatio), attribution.periodEnd));
+    /* 期間本身帶數字（2025-12），一併列進 evidence，否則數字一致性護欄會擋掉整段回答。 */
+    evidence.push(evidenceRef("ev_attr_period", "market", "估算期間",
+      attribution.periodLabel || "最近 24 小時", attribution.periodEnd));
+    /* 期間照上游給的寫：health_report 的歸因是整月聚合，講成「今天」會對不上。 */
+    const periodLabel = attribution.periodLabel || "這段期間";
     const main = attribution.contributors[0];
     const trades = attribution.contributors.find((item) => item.category === "recentTrades");
-    const directAnswer = "今天帳戶的變化主要來自「" + main.label + "」，約占 " + pct(main.contributionRatio) + "。";
+    const funding = attribution.contributors.find((item) => item.category === "funding");
+    const directAnswer = periodLabel + "帳戶的變化主要來自「" + main.label + "」，約占 " +
+      pct(main.contributionRatio) + "。";
     const explanation = trades
       ? "近期交易的影響約 " + pct(trades.contributionRatio) + "，相對小很多，所以這次變化比較像是市場與配置造成的，而不是你最近做了什麼。"
-      : "其餘來源的比重都比較小。";
+      : funding && funding === main
+        ? "也就是說，帳戶數字的變化主要是資金搬進搬出造成的，不是市場給的報酬——變大不代表投資成果變好。"
+        : "其餘來源的比重都比較小。";
     return {
       tools: ["attribution", "market", "portfolio"],
       answer: { directAnswer, explanation },
@@ -301,7 +310,7 @@
       evidence,
       limitations: [
         "帳戶變化來源為依目前資料估算，不等同正式會計損益歸因。",
-        "估算期間為最近 24 小時。",
+        "估算期間為" + periodLabel + "。",
       ],
       followUps: [
         { id: "q_trading_rhythm", text: "我最近的交易節奏有變快嗎？" },

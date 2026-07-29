@@ -28,6 +28,8 @@
     return Math.round((Number(currentRatio) - Number(previousRatio)) * 1000) / 10;
   }
   const count = (value) => Number(value).toLocaleString("en-US") + " 筆";
+  /* 金額一律取整數元並加千分位；報告給的就是整數，前端不做任何四捨五入以外的加工。 */
+  const money = (value) => "NT$" + Math.round(Number(value)).toLocaleString("en-US");
   const section = (id, type, payload) => ({ id, type, payload });
   const ev = (id, label, value, sourceLabel, updatedAt) =>
     ({ id, label, value: String(value), sourceLabel, updatedAt });
@@ -156,8 +158,15 @@
     "trading-rhythm": ["你的交易節奏是什麼樣子？", "用每月買賣筆數看整段期間的節奏。"],
     "notable-sell": ["2025 年 1 月那筆賣出，後來怎麼了？", "報告裡唯一有明細的一筆交易回顧。"],
     "plan-alignment": ["最近的我，還沿著原本方向嗎？", "把問卷寫的方向和可確認的行為擺在一起看。"],
-    "account-change": ["今天的帳戶變化從哪裡來？", "目前資料不足以拆解，麥麥說明缺什麼。"],
-    "holding-pattern": ["你通常持有多久？", "目前沒有逐筆紀錄可以配對，資料不足。"],
+    /* 兩則摘要依報告有沒有補上聚合值切換（issue #29）；沒有就照實說資料不足。 */
+    "account-change": ["今天的帳戶變化從哪裡來？",
+      account() && account().changeAttribution
+        ? "把帳戶變化拆成市價波動與資金搬移兩個來源。"
+        : "目前資料不足以拆解，麥麥說明缺什麼。"],
+    "holding-pattern": ["你通常持有多久？",
+      account() && account().holdingPeriodDistribution
+        ? "把每一筆賣出配回買入，看持有天數落在哪些區間。"
+        : "目前沒有逐筆紀錄可以配對，資料不足。"],
     "concentration-basics": ["什麼是資產集中", "資金偏向少數幾種資產時會怎麼樣。"],
     "market-depth": ["什麼是市場深度", "掛單多寡怎麼影響成交價格。"],
     "order-types": ["市價單和限價單的差別", "成交速度與成交價格之間的取捨。"],
@@ -217,11 +226,18 @@
   function buildCashConcentration() {
     const portfolio = adapters().portfolio.read(readState());
     if (!portfolio.available) return null;
+    /* 報告補上各幣種快照（issue #29）後走 detailed：每一種都畫得出來；
+     * 沒有快照時退回「最大持有＋其餘合計」兩塊，其餘那塊不得再往下拆。 */
+    const detailed = Boolean(portfolio.breakdownAvailable) && portfolio.assets.length > 1;
+    const rest = portfolio.assets.slice(1);
     const other = portfolio.assets[1] || null;
     const topLabel = portfolio.topAssetLabel;
     const topPct = pct(portfolio.topAssetRatio);
-    const otherPct = pct(other ? other.weight : 1 - portfolio.topAssetRatio);
-    const otherLabel = other ? other.label : "其他資產（未細分）";
+    const restRatio = detailed
+      ? rest.reduce((sum, asset) => sum + asset.weight, 0)
+      : other ? other.weight : 1 - portfolio.topAssetRatio;
+    const otherPct = pct(restRatio);
+    const otherLabel = detailed ? "其餘 " + rest.length + " 種資產合計" : other ? other.label : "其他資產（未細分）";
     const hasPrevious = Number.isFinite(Number(portfolio.previousTopAssetRatio)) &&
       Boolean(portfolio.previousAsOfMonth);
     const prevPct = hasPrevious ? pct(portfolio.previousTopAssetRatio) : null;
@@ -236,6 +252,17 @@
       ev("ev_other", otherLabel + " 占比（" + portfolio.asOfMonth + "）", otherPct, "持倉摘要", generatedAt()),
       ev("ev_period", "資料期間", periodLabel(), "帳戶健檢報告", generatedAt()),
     ];
+    if (detailed) {
+      /* 圖上每一條的占比都會出現在畫面文字裡，逐項列進 evidence，
+       * 否則數字一致性護欄會判定「有數字沒來源」而整頁擋掉。 */
+      evidence.splice(2, 0, ev("ev_count", "持有項數（" + portfolio.asOfMonth + "）",
+        portfolio.assets.length + " 種（其餘 " + rest.length + " 種合計 " + otherPct + "）",
+        "持倉摘要", generatedAt()));
+      rest.forEach((asset, index) => {
+        evidence.splice(3 + index, 0, ev("ev_asset_" + index, asset.label + " 占比（" + portfolio.asOfMonth + "）",
+          pct(asset.weight), "持倉摘要", generatedAt()));
+      });
+    }
     if (hasPrevious) {
       evidence.splice(2, 0, ev("ev_prev", "前期快照（" + portfolio.previousAsOfMonth + "）最大持有占比",
         prevPct, "持倉摘要", generatedAt()));
@@ -245,14 +272,16 @@
       section("sec_cash_alloc", "allocationBar", {
         title: "你的資金分成哪幾塊？",
         summary: "以 " + portfolio.asOfMonth + " 的快照為準；橫條長度就是占比。",
-        items: [
-          { label: topLabel, pct: Math.round(portfolio.topAssetRatio * 1000) / 10, valueText: topPct },
-          {
-            label: otherLabel,
-            pct: Math.round((other ? other.weight : 1 - portfolio.topAssetRatio) * 1000) / 10,
-            valueText: otherPct,
-          },
-        ],
+        items: detailed
+          ? portfolio.assets.map((asset) => ({
+              label: asset.label,
+              pct: Math.round(asset.weight * 1000) / 10,
+              valueText: pct(asset.weight),
+            }))
+          : [
+              { label: topLabel, pct: Math.round(portfolio.topAssetRatio * 1000) / 10, valueText: topPct },
+              { label: otherLabel, pct: Math.round(restRatio * 1000) / 10, valueText: otherPct },
+            ],
       }),
     ];
     if (hasPrevious) {
@@ -265,11 +294,17 @@
         ],
       }));
     }
-    const limitations = [
-      "這份報告只有每月最大持有標的與占比，沒有各幣種持倉比例，所以其餘 " + otherPct + " 沒辦法再往下拆。",
-      "已在 issue #29 向後端請求各幣種持倉比例，補齊後這一頁會自動顯示。",
-      "占比是資金分布的描述，不是投資能力、風險等級或健康分數。",
-    ];
+    const limitations = detailed
+      ? [
+          "占比以「" + (portfolio.snapshotMethod || "各幣最後成交價估值") + "」計算，是估值不是結算金額，和交易所頁面可能有小幅出入。",
+          "這是 " + (portfolio.snapshotAsOf || portfolio.asOfMonth) + " 當下的快照，不代表整個期間都是這個分布。",
+          "占比是資金分布的描述，不是投資能力、風險等級或健康分數。",
+        ]
+      : [
+          "這份報告只有每月最大持有標的與占比，沒有各幣種持倉比例，所以其餘 " + otherPct + " 沒辦法再往下拆。",
+          "已在 issue #29 向後端請求各幣種持倉比例，補齊後這一頁會自動顯示。",
+          "占比是資金分布的描述，不是投資能力、風險等級或健康分數。",
+        ];
     sections.push(section("sec_cash_limit", "limitationList", {
       title: "這份分析有哪些限制",
       items: limitations,
@@ -302,9 +337,13 @@
       simpleExplanation: {
         title: "用簡單一點的方式說",
         paragraphs: simpleParagraphs({
-          core: "你手上的錢，大約 " + topPct + " 是" + topLabel + "，剩下 " + otherPct + " 是其他資產（報告沒有再細分）。",
+          core: detailed
+            ? "你手上的錢，大約 " + topPct + " 是" + topLabel + "，剩下 " + otherPct + " 分散在另外 " + rest.length + " 種資產。"
+            : "你手上的錢，大約 " + topPct + " 是" + topLabel + "，剩下 " + otherPct + " 是其他資產（報告沒有再細分）。",
           analogy: "可以把帳戶想成一個籃子：現在籃子裡大部分是還沒放進市場的資金，所以市場搖晃時，整個籃子跟著搖的幅度比較小。",
-          detail: "計算方式是把該月最大持有標的的市值除以帳戶總值；其餘部位在報告裡沒有再細分到各幣種，所以只能以合計呈現。",
+          detail: detailed
+            ? "計算方式是把每一種資產的市值除以帳戶總值；市值採「" + (portfolio.snapshotMethod || "各幣最後成交價估值") + "」，所以是估值而不是結算金額。"
+            : "計算方式是把該月最大持有標的的市值除以帳戶總值；其餘部位在報告裡沒有再細分到各幣種，所以只能以合計呈現。",
         }, currentStyle()),
       },
       evidence,
@@ -701,7 +740,124 @@
   }
 
   /* ── 5. 今天的帳戶變化從哪裡來？（資料不足）── */
+  /* 帳戶變化歸因的分類名稱：報告只用英文 key，畫面要中文，但比重與金額一字不動。 */
+  const ATTRIBUTION_LABELS = Object.freeze({
+    marketPrice: "市價波動",
+    netDeposit: "出入金淨額",
+    realizedPnl: "已實現損益",
+    fee: "手續費",
+  });
+
+  /* issue #29 補上 change_attribution 後走這條；沒有就退回下面的「資料不足」版本。
+   * 報告標 type=estimated（殘差法），所以全篇一律講「估算」，不得寫成會計歸因。 */
+  function buildAccountChangeDetailed(attribution) {
+    const contributors = attribution.contributors
+      .slice()
+      .sort((a, b) => Number(b.pct) - Number(a.pct))
+      .map((item) => ({
+        label: ATTRIBUTION_LABELS[item.category] || item.category,
+        pct: Number(item.pct),
+        valueTwd: Number(item.value_twd),
+      }));
+    const lead = contributors[0];
+    const deltaTwd = Number(attribution.delta_twd);
+    const rising = deltaTwd >= 0;
+    const deltaText = money(Math.abs(deltaTwd));
+    const estimated = attribution.type === "estimated";
+
+    const evidence = [
+      ev("ev_delta", attribution.period + " 帳戶市值變化", (rising ? "增加 " : "減少 ") + deltaText,
+        "帳戶變化歸因", generatedAt()),
+      ...contributors.map((item, index) => ev("ev_attr_" + index, item.label + " 貢獻",
+        item.pct + "%（" + money(item.valueTwd) + "）", "帳戶變化歸因", generatedAt())),
+      ev("ev_period", "資料期間", periodLabel(), "帳戶健檢報告", generatedAt()),
+    ];
+
+    const limitations = [
+      estimated
+        ? "這是用殘差法做的估算：先算整體市值變化，扣掉出入金淨額，剩下的才歸給市價波動。它不是會計結算，和交易所對帳單可能有出入。"
+        : "歸因比重來自報告的聚合值，不是交易所的正式結算。",
+      "已實現損益是另一個視角，和這裡的歸因不相加——同一筆錢不會被算兩次。",
+      "這一段講的是「錢從哪裡來」，不是賺賠，也不是投資能力評價。",
+    ];
+
+    const sections = [
+      section("sec_change_split", "allocationBar", {
+        title: attribution.period + " 的帳戶變化，是誰造成的？",
+        summary: "橫條長度就是各來源占這次變化的比重；以報告的 " + attribution.period + " 聚合值為準。",
+        items: contributors.map((item) => ({
+          label: item.label,
+          pct: item.pct,
+          valueText: item.pct + "%（" + money(item.valueTwd) + "）",
+        })),
+      }),
+      section("sec_change_have", "metricList", {
+        title: "這次變化的組成",
+        items: [
+          { label: attribution.period + " 市值變化", value: (rising ? "增加 " : "減少 ") + deltaText },
+          ...contributors.map((item) => ({ label: item.label, value: money(item.valueTwd) })),
+        ],
+      }),
+      section("sec_change_limit", "limitationList", {
+        title: "這份分析有哪些限制",
+        items: limitations,
+      }),
+    ];
+
+    return finalize({
+      id: "account-change",
+      kind: "personal",
+      title: "今天的帳戶變化從哪裡來？",
+      question: "今天的帳戶變化從哪裡來？",
+      source: ev("src_change", "資料來源", "你的帳戶健檢報告（" + attribution.period + " 歸因）",
+        "帳戶變化歸因", generatedAt()),
+      hero: {
+        conclusion: attribution.period + " 帳戶市值" + (rising ? "增加" : "減少") + "約 " + deltaText +
+          "，其中約 " + lead.pct + "% 來自" + lead.label + "。",
+        primaryMetric: {
+          label: lead.label + "占比（" + attribution.period + "）",
+          value: lead.pct + "%",
+          note: money(lead.valueTwd),
+        },
+      },
+      whyItMatters: {
+        title: "為什麼這和你有關",
+        paragraphs: [
+          "帳戶變多變少，可能是市場漲跌，也可能只是你把錢搬進搬出。這兩件事的意義完全不同，混在一起看容易誤判。",
+          lead.label === "出入金淨額"
+            ? "這段期間的變化主要來自資金搬移，不是市場給你的報酬——帳戶數字變大不代表投資成果變好。"
+            : "這段期間的變化主要來自市場價格的漲跌，而不是你搬動資金造成的。",
+          "把來源拆開，你才看得出哪一部分是自己的決定、哪一部分只是市場。",
+        ],
+      },
+      sections,
+      simpleExplanation: {
+        title: "用簡單一點的方式說",
+        paragraphs: simpleParagraphs({
+          core: attribution.period + " 你的帳戶" + (rising ? "多了" : "少了") + "約 " + deltaText +
+            "，其中約 " + lead.pct + "% 是" + lead.label + "造成的。",
+          analogy: "就像水位上升，可能是下雨，也可能是你自己拿水桶倒進去——同樣是變高，原因不一樣。",
+          detail: estimated
+            ? "算法是殘差法：先取整段期間的市值變化，扣掉可確認的出入金淨額，剩下的差額才歸給市價波動，所以它是估算而不是逐筆結算。"
+            : "算法是把各來源的貢獻金額除以整體變化金額。",
+        }, currentStyle()),
+      },
+      evidence,
+      limitations: limitations.map((text, index) => ({ id: "lim_change_" + index, text })),
+      relatedTerms: relatedTerms(["cash-concentration", "weight-volatility", "concentration-basics"]),
+      suggestedQuestions: [
+        { id: "q_portfolio_impact", text: "目前的資金分布對我的帳戶有什麼影響？" },
+        { id: "q_attribution_split", text: "現在能確認哪些和帳戶變化有關的資料？" },
+      ],
+      dataStatus: "available",
+    });
+  }
+
   function buildAccountChange() {
+    const attribution = account() && account().changeAttribution;
+    if (attribution && Array.isArray(attribution.contributors) && attribution.contributors.length) {
+      return buildAccountChangeDetailed(attribution);
+    }
     const portfolio = adapters().portfolio.read(readState());
     const evidence = [];
     const have = [];
@@ -757,7 +913,110 @@
   }
 
   /* ── 6. 你通常持有多久？（資料不足）── */
+  /* 區間名稱：報告用 "0-7" 這種天數字串，畫面要看得懂，但區間邊界一字不動。 */
+  const BUCKET_LABELS = Object.freeze({
+    "0-7": "7 天以內",
+    "8-30": "8～30 天",
+    "31-90": "31～90 天",
+    "91-180": "91～180 天",
+    "181+": "181 天以上",
+  });
+
+  /* issue #29 補上 holding_period_distribution 後走這條。
+   * 報告是 FIFO 推估、且明說有 792 筆賣出不計入，這兩件事必須寫在畫面上。 */
+  function buildHoldingPatternDetailed(distribution) {
+    const buckets = distribution.buckets.map((item) => ({
+      key: item.range,
+      label: BUCKET_LABELS[item.range] || item.range + " 天",
+      pct: Number(item.pct),
+    }));
+    const lead = buckets.slice().sort((a, b) => b.pct - a.pct)[0];
+    const shortTerm = buckets.find((item) => item.key === "0-7") || lead;
+    const method = distribution.method || "FIFO 配對推估";
+
+    const evidence = [
+      /* 每個區間都要列（含 0%）：圖上畫得出來的每個數字都必須查得到來源，
+       * 只列非零的話 0% 那幾條會被數字一致性護欄判定沒有來源而整頁擋掉。 */
+      ...buckets.map((item, index) => ev("ev_bucket_" + index, "持有 " + item.label + " 的比重",
+        item.pct + "%", "持有期間分布", generatedAt())),
+      ev("ev_method", "計算方式", method, "持有期間分布", generatedAt()),
+      ev("ev_period", "資料期間", periodLabel(), "帳戶健檢報告", generatedAt()),
+    ];
+    if (distribution.note) {
+      evidence.push(ev("ev_note", "不計入的部分", distribution.note, "持有期間分布", generatedAt()));
+    }
+
+    const limitations = [
+      "這是用「" + method + "」推估的，不是交易所提供的持有期間，和逐筆對帳可能有出入。",
+      distribution.note
+        ? "期初就已經持有、報告裡找不到對應買入紀錄的賣出不計入（" + distribution.note + "）。"
+        : "找不到對應買入紀錄的賣出不計入。",
+      "持有期間長短沒有好壞之分，這裡只描述你實際的做法。",
+    ];
+
+    const sections = [
+      section("sec_holding_dist", "allocationBar", {
+        title: "你的賣出，大多在買進後多久發生？",
+        summary: "橫條長度是該區間占所有可配對賣出的比重，以賣出市值加權；區間邊界依報告原樣呈現。",
+        items: buckets.map((item) => ({
+          label: item.label,
+          pct: item.pct,
+          valueText: item.pct + "%",
+        })),
+      }),
+      section("sec_holding_limit", "limitationList", {
+        title: "這份分析有哪些限制",
+        items: limitations,
+      }),
+    ];
+
+    return finalize({
+      id: "holding-pattern",
+      kind: "personal",
+      title: "你通常持有多久？",
+      question: "你通常持有多久？",
+      source: ev("src_holding", "資料來源", "你的帳戶健檢報告（持有期間分布）", "持有期間分布", generatedAt()),
+      hero: {
+        conclusion: "你的賣出有約 " + shortTerm.pct + "% 發生在買進後 " + shortTerm.label + "。",
+        primaryMetric: {
+          label: "持有 " + shortTerm.label + "的比重",
+          value: shortTerm.pct + "%",
+          note: method,
+        },
+      },
+      whyItMatters: {
+        title: "為什麼這和你有關",
+        paragraphs: [
+          "持有多久，決定了你實際上是在跟市場的哪一種波動打交道：幾天內的起伏，和幾個月的趨勢，是兩件不同的事。",
+          "這張圖是把每一筆賣出配回買入後算出來的實際結果，不是你自認的習慣——兩者常常不一樣。",
+          "它不代表哪一種比較好，重點是這個分布是不是你原本打算的做法。",
+        ],
+      },
+      sections,
+      simpleExplanation: {
+        title: "用簡單一點的方式說",
+        paragraphs: simpleParagraphs({
+          core: "你賣掉的部位裡，大約 " + shortTerm.pct + "% 是在買進後 " + shortTerm.label + "就賣掉的。",
+          analogy: "就像買了東西多久會轉手：大部分在很短的時間內就出手，很少放到後面。",
+          detail: "算法是把買入與賣出用「" + method + "」配成一對，取中間相隔的天數落在哪個區間，再以賣出市值加權。",
+        }, currentStyle()),
+      },
+      evidence,
+      limitations: limitations.map((text, index) => ({ id: "lim_holding_" + index, text })),
+      relatedTerms: relatedTerms(["trading-rhythm", "order-types", "plan-alignment"]),
+      suggestedQuestions: [
+        { id: "q_trading_rhythm", text: "我最近的交易節奏有變快嗎？" },
+        { id: "q_holding_pattern", text: "現在能從我的交易紀錄看出什麼？" },
+      ],
+      dataStatus: "available",
+    });
+  }
+
   function buildHoldingPattern() {
+    const distribution = account() && account().holdingPeriodDistribution;
+    if (distribution && Array.isArray(distribution.buckets) && distribution.buckets.length) {
+      return buildHoldingPatternDetailed(distribution);
+    }
     const market = adapters().market.read();
     const tx = adapters().transactions.read(readState(), market.observedAt);
     const evidence = [ev("ev_period", "資料期間", periodLabel(), "帳戶健檢報告", generatedAt())];

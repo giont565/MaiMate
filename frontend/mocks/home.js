@@ -4,6 +4,48 @@
  */
 "use strict";
 
+/* 把報告的 change_attribution 轉成 Adapter 吃的 components 形狀。
+ * effectUnits 直接用報告的金額（絕對值），比重由 Adapter 自己算，
+ * 前端不重算也不四捨五入，避免出現和報告對不上的第二套數字。 */
+function mmHomeBuildAttributionInput() {
+  const attribution = window.MM_ACCOUNT && window.MM_ACCOUNT.changeAttribution;
+  if (!attribution || !Array.isArray(attribution.contributors) || !attribution.contributors.length) return null;
+  const MAP = {
+    marketPrice: { category: "marketPrice", label: "市價波動" },
+    netDeposit: { category: "funding", label: "出入金淨額" },
+    realizedPnl: { category: "recentTrades", label: "近期交易" },
+  };
+  const components = attribution.contributors
+    .map((item) => {
+      const mapped = MAP[item.category];
+      if (!mapped) return null;
+      return {
+        id: "attr_" + item.category,
+        label: mapped.label,
+        category: mapped.category,
+        effectUnits: Math.abs(Number(item.value_twd)),
+      };
+    })
+    .filter(Boolean)
+    /* 由大到小排序：下游一律拿 contributors[0] 當「主要來源」，順序錯了文案就會說反。 */
+    .sort((a, b) => b.effectUnits - a.effectUnits);
+  if (!components.length) return null;
+  /* 報告的 period 是月份（2025-12），Adapter 要 ISO 日期，換算成該月起訖。 */
+  const [year, month] = String(attribution.period).split("-").map(Number);
+  const monthStart = attribution.period + "-01T00:00:00+08:00";
+  const monthEnd = new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10) + "T23:59:59+08:00";
+  return {
+    id: "attribution_health_report_" + attribution.period,
+    period: attribution.period,
+    periodStart: monthStart,
+    periodEnd: monthEnd,
+    /* 報告標 estimated＝殘差法估算，UI 必須照實說，不得寫成會計歸因。 */
+    type: attribution.type === "calculated" ? "calculated" : "estimated",
+    note: attribution.note || "",
+    components,
+  };
+}
+
 window.MM_HOME_MOCK = Object.freeze({
   dataVersion: "home-context-health-report-2025-v1",
   narrativeVersion: "home-narrative-rules-v1",
@@ -65,10 +107,10 @@ window.MM_HOME_MOCK = Object.freeze({
       sourceLabel: "示範市場情境",
     },
   },
-  /* 帳戶變化歸因：需要各幣種持倉明細才能拆解，但 health_report.json 只給
-   * 「最大持有標的與占比」。缺料就不提供輸入，Adapter 會回 null，
-   * 首頁該模組顯示「資料不足」——不用估算值假裝拆得出來。 */
-  attributionInput: null,
+  /* 帳戶變化歸因：直接取 health_report.json 的 change_attribution（issue #29 重跑後才有）。
+   * 報告只給 marketPrice／netDeposit 兩類，netDeposit 對應 Adapter 的 funding。
+   * 報告沒這段時維持 null，Adapter 回 null，畫面顯示「資料不足」——不用估算值假裝拆得出來。 */
+  attributionInput: mmHomeBuildAttributionInput(),
   similarMomentInput: {
     id: "moment_health_report_20250108",
     title: "這個情況，你以前遇過",
@@ -119,7 +161,9 @@ window.MM_HOME_MOCK = Object.freeze({
       explanation: "2025 年 12 月的紀錄顯示最大持有是現金（TWD），占比約 98.6%；示範行情中 BTC 今日約變動 -1.8%，但你的加密部位很小，因此帳戶不會跟著明顯移動。",
     },
     planAlignmentSummary: "可確認的是交易相當頻繁，而資金多數時間停在現金；持有時間仍需要逐筆紀錄才能完整對照。",
-    attributionSummary: "這份報告沒有各幣種持倉明細，因此不拆解帳戶變化來源。",
+    /* 依 health_report 的 change_attribution（2025-12，殘差法估算）；
+     * 報告標 estimated，所以一律說「估算」，不得寫成會計歸因。 */
+    attributionSummary: "2025-12 的帳戶變化約有 99.7% 來自出入金淨額、0.3% 來自市價波動，屬依報告聚合值的估算，不等同正式會計損益。",
     similarMomentSummary: "2025 年 1 月那筆 DOGE 賣出是報告裡唯一有明細的事件，可以拿來回顧當時的決定。",
     contextualQuestions: [
       { id: "question_cash_impact", text: "資金停在現金對我的帳戶有什麼影響？", contextType: "portfolio" },

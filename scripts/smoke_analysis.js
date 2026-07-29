@@ -159,16 +159,27 @@ async function assertNoHorizontalScroll(page, width) {
     const tradeTotalText = tradeTotal.toLocaleString("en-US");
     const topPctText = String(Math.round(ACCOUNT.holdings.topPct * 10) / 10);
     const otherPctText = String(Math.round(ACCOUNT.holdings.otherPct * 10) / 10);
+    /* issue #29 重跑後報告才有各幣種快照；兩種情況的期望值不同，一律以報告現況為準。 */
+    const snapshot = ACCOUNT.holdingsSnapshot;
+    const expectedAssetCount = snapshot ? snapshot.holdings.length : null;
     if (saved.analysisJob.id !== firstJobId || saved.analysisJob.status !== "succeeded") throw new Error("分析完成 Job 異常");
     if (saved.profileResult.coverage.transactionCount !== tradeTotal || saved.profileResult.coverage.questionnaireAnswerCount !== 6) throw new Error(`Coverage 數量異常：${JSON.stringify(saved.profileResult.coverage)}`);
-    // 報告沒有各幣種持倉明細 → 持有項數必須是 null（畫面顯示「報告未提供」），不得補值
-    if (saved.profileResult.coverage.assetCount !== null || saved.profileResult.coverage.assetBreakdownAvailable !== false)
-      throw new Error(`缺各幣種明細時仍補出持有項數：${JSON.stringify(saved.profileResult.coverage)}`);
+    /* 持有項數只能等於報告的快照項數；報告沒有快照時必須是 null（畫面顯示「報告未提供」），兩邊都不得補值。 */
+    if (saved.profileResult.coverage.assetCount !== expectedAssetCount ||
+        saved.profileResult.coverage.assetBreakdownAvailable !== Boolean(snapshot))
+      throw new Error(`持有項數與報告不符（應為 ${expectedAssetCount}）：${JSON.stringify(saved.profileResult.coverage)}`);
     const allocation = saved.profileResult.dimensions.find((item) => item.key === "allocationPattern");
     const evidenceText = allocation.evidence.map((item) => item.label + "=" + item.value).join("/");
-    if (!evidenceText.includes(topPctText + "%") || !evidenceText.includes(otherPctText + "%") || !evidenceText.includes("報告未提供"))
-      throw new Error(`配置證據異常：${evidenceText}`);
-    if (/前兩項資產合計/.test(evidenceText)) throw new Error(`沒有各幣種比例時不得宣稱「前兩項合計」：${evidenceText}`);
+    if (!evidenceText.includes(topPctText + "%")) throw new Error(`配置證據缺最大持有占比：${evidenceText}`);
+    if (snapshot) {
+      if (!evidenceText.includes("前兩項資產合計") || !evidenceText.includes(`${expectedAssetCount} 項資產`))
+        throw new Error(`有各幣種快照時應列出前兩項合計與持有項數：${evidenceText}`);
+      if (evidenceText.includes("報告未提供")) throw new Error(`快照已補齊卻仍標示報告未提供：${evidenceText}`);
+    } else {
+      if (!evidenceText.includes(otherPctText + "%") || !evidenceText.includes("報告未提供"))
+        throw new Error(`配置證據異常：${evidenceText}`);
+      if (/前兩項資產合計/.test(evidenceText)) throw new Error(`沒有各幣種比例時不得宣稱「前兩項合計」：${evidenceText}`);
+    }
     // 現金占比高＝資金多停在現金，不能被寫成「持倉過度集中」
     if (!allocation.descriptor.includes("現金") || /集中/.test(allocation.descriptor + allocation.summary))
       throw new Error(`現金帳戶被描述成持倉集中：${allocation.descriptor}｜${allocation.summary}`);
@@ -177,13 +188,15 @@ async function assertNoHorizontalScroll(page, width) {
     if (holding.dataSufficient || volatility.dataSufficient || !holding.descriptor.includes("更多資料")) throw new Error("資料不足面向被硬產生結論");
     const resultText = await page.locator("#profile-result-content").innerText();
     if (!resultText.includes(saved.profileResult.profileHeadline) || !resultText.includes(saved.profileResult.summary)) throw new Error("Headline 或 Summary 未呈現 API 結果");
+    const expectedAssetChip = snapshot ? `${expectedAssetCount} 項持有資產` : "無各幣種持倉明細";
     if (!resultText.includes("示範資料") || !resultText.includes(tradeTotalText + " 筆交易") ||
-        !resultText.includes("無各幣種持倉明細") || !resultText.includes("6 題補充回答"))
-      throw new Error("動態 Coverage Chips 或示範標示缺失");
+        !resultText.includes(expectedAssetChip) || !resultText.includes("6 題補充回答"))
+      throw new Error(`動態 Coverage Chips 或示範標示缺失（持倉 chip 應為「${expectedAssetChip}」）`);
     if (/48 筆|96 天|1\.6 倍|前兩項.*78%|52%|72%|4 項持有資產/.test(resultText)) throw new Error("頁面出現規格範例或舊示範帳戶的虛構數字");
     const tagCount = await page.locator("#profile-tags .profile-tag").count();
     if (tagCount < 3 || tagCount > 5) throw new Error(`Profile Tags 數量異常：${tagCount}`);
-    console.log(`5–9 Result OK：Headline／Summary／Tags／${tradeTotalText} 筆／${topPctText}% 現金 可追溯；不足處不補造`);
+    console.log(`5–9 Result OK：Headline／Summary／Tags／${tradeTotalText} 筆／${topPctText}% 現金／` +
+      `持倉 ${snapshot ? expectedAssetCount + " 項" : "報告未提供"} 可追溯；不足處不補造`);
 
     // 10. 四張 reusable Dimension 可展開、Evidence 有來源、Accordion ARIA 完整。
     const cards = page.locator(".dimension");
@@ -215,7 +228,10 @@ async function assertNoHorizontalScroll(page, width) {
     await page.click("#header-profile-basis");
     await page.waitForFunction(() => document.getElementById("basis-root").classList.contains("sheet-open"));
     const basis = await page.locator("#basis-content").innerText();
-    if (!basis.includes(tradeTotalText + " 筆交易紀錄") || !basis.includes("報告未提供") || !basis.includes(saved.profileResult.resultVersion) ||
+    /* 持有資產列依報告現況；「報告未提供」必須仍在——逐筆交易明細永遠不在報告裡。 */
+    const expectedBasisAsset = snapshot ? `${expectedAssetCount} 項` : "報告未提供各幣種比例";
+    if (!basis.includes(tradeTotalText + " 筆交易紀錄") || !basis.includes(expectedBasisAsset) ||
+        !basis.includes("報告未提供逐筆明細") || !basis.includes(saved.profileResult.resultVersion) ||
         !basis.includes("資料完整程度") || basis.includes("Internal Job ID")) throw new Error("分析依據內容異常");
     const focusInSheet = await page.evaluate(() => document.getElementById("basis-root").contains(document.activeElement));
     if (!focusInSheet) throw new Error("Bottom Sheet 開啟後焦點未移入");

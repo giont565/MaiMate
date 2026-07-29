@@ -42,8 +42,11 @@ const ALLOWED_EVENT_KEYS = ["e", "q", "src", "intent", "tool", "style", "status"
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
   // 後端一律斷線：Screen 7 必須在離線下走完（決賽保險）
-  await page.route("**/api/**", (r) => r.abort());
-  await page.route("**/execute-api**", (r) => r.abort());
+  /* 只放行本機測試伺服器，其餘一律斷線。
+   * 不能用 "**\/execute-api**" 這種 glob——主機名裡 execute-api 前面是「.」不是「/」，
+   * 那個模式從來沒攔到任何請求；一旦 API_BASE 指到真的存在的網址，煙測就會偷偷連上線上後端。 */
+  await page.route("**/*", (route) =>
+    route.request().url().startsWith(base) ? route.continue() : route.abort());
 
   const ask = async (text) => {
     await page.fill("#q", text);
@@ -69,6 +72,13 @@ const ALLOWED_EVENT_KEYS = ["e", "q", "src", "intent", "tool", "style", "status"
   const OTHER_PCT = oneDecimal(account.holdings.otherPct) + "%";
   const TRADE_TOTAL = account.trades.total.toLocaleString("en-US");
   const LATEST_MONTH = account.trades.latestMonth;
+  /* issue #29 重跑後報告才有各幣種快照。有快照＝要講得出項數與前兩項合計；
+   * 沒有＝只能講最大持有＋其餘未細分，並明說「報告未提供」。兩種都不准補假明細。 */
+  const SNAPSHOT = account.holdingsSnapshot;
+  const ASSET_COUNT = SNAPSHOT ? SNAPSHOT.holdings.length : null;
+  const BREAKDOWN_NEEDS = SNAPSHOT
+    ? [TOP_PCT, `${ASSET_COUNT} 項`, oneDecimal(SNAPSHOT.holdings[0].pct + SNAPSHOT.holdings[1].pct) + "%"]
+    : [TOP_PCT, OTHER_PCT, "報告未提供"];
 
   // ── 3/5/6. 從 Screen 6 帶問題進入：Context Banner＋預填不自動送出
   await page.evaluate(() => {
@@ -100,8 +110,8 @@ const ALLOWED_EVENT_KEYS = ["e", "q", "src", "intent", "tool", "style", "status"
   await page.click("#chat-send");
   await page.waitForFunction(() => document.getElementById("chat-stop").hidden, null, { timeout: 15000 });
   const answer = await lastCard();
-  // 現金帳戶：最大持有占比＋未細分的其餘部位＋明說「各幣種比例報告未提供」，不得補假明細
-  for (const need of [TOP_PCT, OTHER_PCT, "報告未提供"])
+  // 現金帳戶：每個占比都必須是工具算出來的，缺料時明說「報告未提供」，兩種情況都不得補假明細
+  for (const need of BREAKDOWN_NEEDS)
     if (!answer.includes(need)) throw new Error(`回答缺少工具算出的數字 ${need}：${answer.slice(0, 160)}`);
   if (/持倉(過度)?集中|配置較集中/.test(answer))
     throw new Error(`資金停在現金被寫成持倉集中：${answer.slice(0, 160)}`);
@@ -127,11 +137,19 @@ const ALLOWED_EVENT_KEYS = ["e", "q", "src", "intent", "tool", "style", "status"
   const idx = (cls) => seq.findIndex((item) => item.includes(cls));
   if (!(idx("blk") < idx("followups") && idx("followups") < idx("insight-links") && idx("insight-links") < idx("msg-acts")))
     throw new Error(`區塊順序不符規格畫面：${blocks.order}`);
-  // health_report.json 沒有各幣種明細 → 拆不出歸因，不得再宣稱「市場占 XX%」
-  if (/帳戶變化中約 \d+(\.\d+)?% 與/.test(answer)) throw new Error("報告缺明細時仍給出歸因比重");
+  /* 歸因比重只有在報告真的有 change_attribution 時才准出現，且必須對得上報告的市價波動比重。 */
+  const attributionMatch = answer.match(/帳戶變化中約 (\d+(?:\.\d+)?)% 與/);
+  if (account.changeAttribution) {
+    const marketPct = (account.changeAttribution.contributors.find((c) => c.category === "marketPrice") || {}).pct;
+    if (!attributionMatch) throw new Error("報告已有歸因值，回答卻沒帶出市價波動比重");
+    if (Number(attributionMatch[1]) !== Number(marketPct))
+      throw new Error(`歸因比重和報告不符：回答 ${attributionMatch[1]}% vs 報告 ${marketPct}%`);
+  } else if (attributionMatch) {
+    throw new Error("報告缺明細時仍給出歸因比重");
+  }
   if (!answer.includes(TRADE_TOTAL + " 筆買賣")) throw new Error(`回答未帶入交易節奏：${answer.slice(0, 160)}`);
   if (/最近 30 天/.test(answer)) throw new Error("交易節奏仍用「30 天」為單位（報告只有每月聚合）");
-  console.log(`7/8/11/13 回答 OK：${TOP_PCT}/${OTHER_PCT}/報告未提供 皆來自工具、結構化區塊齊（${blocks.kv} 列指標、${blocks.follow} 個追問）、無工具原名`);
+  console.log(`7/8/11/13 回答 OK：${BREAKDOWN_NEEDS.join("/")} 皆來自工具、結構化區塊齊（${blocks.kv} 列指標、${blocks.follow} 個追問）、無工具原名`);
 
   // ── 12. Evidence Sheet：顯示資料來源與時間，不顯示完整明細
   await page.click(".card-ai .ref-link");
@@ -145,7 +163,7 @@ const ALLOWED_EVENT_KEYS = ["e", "q", "src", "intent", "tool", "style", "status"
   // ── 23. 同一問題固定結果（不使用 Math.random）
   await ask("為什麼 BTC 會影響我的帳戶比較多？");
   const second = await lastCard();
-  if (!second.includes(TOP_PCT) || !second.includes(OTHER_PCT)) throw new Error("同一問題結果不穩定");
+  if (BREAKDOWN_NEEDS.some((need) => !second.includes(need))) throw new Error("同一問題結果不穩定");
   console.log("23 固定結果 OK：同一問題兩次得到相同數字");
 
   // ── 15. 追問帶入 context（點追問→自動送出並得到新回答）

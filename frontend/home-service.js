@@ -209,9 +209,11 @@ const PortfolioAdapter = Object.freeze({
       topAssetIsCash: assets[0].isCash,
       topAssetRatio: assets[0].weight,
       topTwoAssetsRatio: assets.slice(0, 2).reduce((sum, asset) => sum + asset.weight, 0),
-      // 報告只有最大持有標的，其餘未細分
+      /* issue #29 重跑後報告才有各幣種快照；沒有時只有最大持有標的，其餘未細分。 */
       breakdownAvailable: Boolean(source && source.breakdownAvailable),
       asOfMonth: source && source.asOfMonth,
+      snapshotAsOf: (source && source.snapshotAsOf) || null,
+      snapshotMethod: (source && source.snapshotMethod) || null,
       /* 前期快照：Screen 8 的期間對照要用，報告沒有就是 null（不得由前端推估）。 */
       previousAsOfMonth: (source && source.previousAsOfMonth) || null,
       previousTopAssetRatio: Number.isFinite(Number(source && source.previousTopWeight))
@@ -476,13 +478,17 @@ const AttributionAdapter = Object.freeze({
     const result = {
       title: "今天的帳戶變化從哪裡來？",
       summary: "",
+      /* 下游文案要用這個標籤講期間，不得自己寫死「今天」。 */
+      periodLabel: source.period ? source.period + " 整月" : "最近 24 小時",
       attributionType: source.type === "calculated" ? "calculated" : "estimated",
       contributors,
       evidence: [
         {
+          /* 期間必須照上游給的來源寫，不得寫死成「最近 24 小時」——
+           * health_report 的歸因是整月聚合，寫死會讓畫面數字對不上期間。 */
           id: "attribution-period",
           label: "估算期間",
-          value: "最近 24 小時",
+          value: source.period ? source.period + " 整月" : "最近 24 小時",
           source: "marketContext",
         },
         {
@@ -670,6 +676,21 @@ function mmHomeValidateStructuredOutput(source, facts) {
   return window.MM_HOME_CORE.clone(source);
 }
 
+/* 帳戶變化來源：報告補上 change_attribution（issue #29）後才講得出來源比重。
+ * 報告標 type=estimated（殘差法），所以一律說「估算」，不得寫成會計歸因。 */
+function mmHomeAttributionSummary() {
+  const attribution = window.MM_ACCOUNT && window.MM_ACCOUNT.changeAttribution;
+  if (!attribution || !Array.isArray(attribution.contributors) || !attribution.contributors.length) {
+    return "這份報告沒有各幣種持倉明細，因此不拆解帳戶變化來源。";
+  }
+  const lead = attribution.contributors.slice().sort((a, b) => Number(b.pct) - Number(a.pct))[0];
+  const label = lead.category === "netDeposit" ? "出入金淨額"
+    : lead.category === "marketPrice" ? "市價波動"
+      : lead.category;
+  return attribution.period + " 的帳戶變化約有 " + lead.pct + "% 來自" + label +
+    "，屬依報告聚合值的估算，不等同正式會計損益。";
+}
+
 function mmHomeRuleNarrative(facts) {
   const portfolio = facts.portfolio;
   const transactions = facts.transactions;
@@ -689,7 +710,7 @@ function mmHomeRuleNarrative(facts) {
     },
     planAlignmentSummary: mmHomeRhythmTitle(transactions).replace("最近的交易次數", "可確認的交易次數") +
       "；持有時間仍需要更多資料才能完整對照。",
-    attributionSummary: "這份報告沒有各幣種持倉明細，因此不拆解帳戶變化來源。",
+    attributionSummary: mmHomeAttributionSummary(),
     similarMomentSummary: "只有一次留有完整明細的紀錄可以回顧；資產與變動幅度都和這次不同。",
     contextualQuestions: [
       {
