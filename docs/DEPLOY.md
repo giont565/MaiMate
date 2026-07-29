@@ -57,6 +57,79 @@ sam deploy --guided     # 第一次；之後 sam deploy 即可
 > **不用手動設的**（模板已自動帶入，PR #21 之後）：`KB_ID`（參數 `KnowledgeBaseId`，
 > 預設 `DSIYBVI1IX`，RAG 部署完即通）、`BEDROCK_REGION`（跟隨部署 region）、`TABLE_NAME`。
 
+### 2.1 RAG Knowledge Base 是外部資源：新帳號必須先建立
+
+🚨 `infra/template.yaml` **只引用** `KnowledgeBaseId`，不會建立或擁有 Bedrock Knowledge
+Base、S3 Vectors、語料 S3 bucket。CloudFormation 因此可能在 KB 不存在時仍顯示部署成功。
+目前驗證可用的 `DSIYBVI1IX` 位於帳號 `022289351970`／`us-east-1`；官方新帳號不能
+假設可以沿用這個 ID。
+
+語料遵守鐵則 1：原始檔只放授權的 Drive／S3，**不得加入 git、SAM build context 或 PR
+附件**。目前可工作的參考規格如下：
+
+| 資源 | 參考設定 |
+|---|---|
+| Knowledge Base | `maimate-rag-kb`，Amazon Titan Text Embeddings V2，1024 維 |
+| Vector store | S3 Vectors，index `maimate-rag-index`，FLOAT32 |
+| Data source | `maimate-rag-s3`，S3 prefix `corpus/` |
+| Chunking | Fixed size：300 tokens，10% overlap |
+| 語料物件 | `corpus/chunks.jsonl`（從團隊 Drive 取得，不進 git） |
+
+#### A. 先判斷是帳號／region 錯誤，還是真的不存在
+
+```bash
+aws sts get-caller-identity
+aws bedrock-agent get-knowledge-base \
+  --knowledge-base-id DSIYBVI1IX --region us-east-1
+aws bedrock-agent list-knowledge-bases --region us-east-1
+```
+
+- `get-knowledge-base` 回 `ACTIVE`：不用重建，確認部署 region、`KnowledgeBaseId` 與 Lambda
+  的 `KB_ID` 指向同一個 ID。
+- 回 `ResourceNotFoundException`：先確認 `get-caller-identity` 的帳號及部署 region。KB ID
+  是帳號＋region 範圍資源；不要看到 NotFound 就立刻建立第二套。
+- 已確認是官方新帳號或所有預定 region 都不存在：執行下一節。
+
+#### B. 在 Bedrock 主控台重建（一次性）
+
+1. 在與 SAM 部署相同的 region（預設 `us-east-1`）建立一般 S3 bucket，Block Public
+   Access 全開；從 Drive 下載 `chunks.jsonl` 到 repo 外的暫存目錄，再上傳到
+   `s3://<corpus-bucket>/corpus/chunks.jsonl`。上傳完成即刪除本機暫存副本。
+2. 建立 S3 Vectors vector bucket 與 index；index 使用 1024 維、FLOAT32、cosine
+   distance，名稱可用 `maimate-rag-index`。
+3. Bedrock → Knowledge bases → Create，名稱 `maimate-rag-kb`：
+   - embedding model：Amazon Titan Text Embeddings V2；
+   - execution role：新建或指定只能讀取上述 corpus bucket、寫入上述 S3 Vectors index，
+     並可呼叫 embedding model 的 role；
+   - vector store：選擇剛建立的 S3 Vectors bucket／index。
+4. 新增 S3 data source `maimate-rag-s3`，prefix 設 `corpus/`；chunking 選 fixed size，
+   300 tokens、10% overlap。
+5. 執行 Sync，等待 ingestion job `COMPLETE`；確認 scanned ≥ 1、indexed ≥ 1、
+   failed = 0。記下新 KB ID。
+6. 用 Retrieve 測試確認不是空索引：
+
+```bash
+aws bedrock-agent-runtime retrieve \
+  --knowledge-base-id <新KB_ID> --region <REGION> \
+  --retrieval-query 'text=投資詐騙有哪些常見警訊？' \
+  --retrieval-configuration 'vectorSearchConfiguration={numberOfResults=3}'
+```
+
+#### C. 交給部署者並做唯一驗收
+
+```bash
+cd infra
+sam deploy --parameter-overrides KnowledgeBaseId=<新KB_ID>
+cd ..
+python3 scripts/verify_live.py --only F
+```
+
+Windows PowerShell 若 `✔` 因 CP950 報 `UnicodeEncodeError`，先執行
+`$env:PYTHONUTF8='1'` 再跑同一條指令。Linux/macOS 也可用
+`PYTHONUTF8=1 python3 scripts/verify_live.py --only F`。`F3` 必須為 `✔`；失敗訊息會
+分辨工具未註冊、工具呼叫失敗或檢索回空。每次換 AWS 帳號／region 都要重做 A；若是
+新帳號，必須完成 B 才能部署。
+
 ## 3. 前端部署｜預估 10 分
 
 ```bash
