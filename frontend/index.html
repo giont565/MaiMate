@@ -70,7 +70,9 @@
   .tool .ok{color:var(--green)}
 
   /* 三方案卡（README §3 scenarios） */
-  .scen{background:#fff;border:1.5px solid #E3E9F5;border-radius:14px;padding:12px 14px;margin-bottom:9px;box-shadow:0 1px 5px rgba(22,34,77,.05)}
+  .scen{background:#fff;border:1.5px solid #E3E9F5;border-radius:14px;padding:12px 14px;margin-bottom:9px;box-shadow:0 1px 5px rgba(22,34,77,.05);cursor:pointer}
+  .scen:active{transform:scale(.99)}
+  .scen .hint{font-size:10px;color:var(--mut);margin-top:7px;text-align:right}
   .scen.pick{border-color:var(--gold);background:#FFFDF6}
   .scen .t{display:flex;align-items:center;font-size:13.5px;font-weight:800;color:var(--navy);margin-bottom:6px}
   .scen .tag{margin-left:auto;font-size:9.5px;font-weight:700;border-radius:999px;padding:2px 8px;background:var(--ice);color:var(--navy)}
