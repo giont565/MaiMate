@@ -31,6 +31,14 @@ class OutputGuardrailTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertTrue(hits)
 
+    def test_allows_guaranteed_profit_as_anti_fraud_warning(self):
+        text = (
+            "**保證獲利 = 重大警訊**`n「保證獲利」本身就是重大警訊。任何「保證獲利、穩賺不賠」"
+            "的說法都應視為重大警訊。"
+        )
+        ok, hits = check_output(text, educational=True)
+        self.assertTrue(ok)
+        self.assertEqual(hits, [])
     def test_allows_generic_dca_education_from_knowledge_base(self):
         text = "定期定額是固定時間投入固定金額。一般會建議你現在買入並長期持有。"
         ok, hits = check_output(text, educational=True)

@@ -44,5 +44,5 @@ def handler(event, context):
 
 def _resp(status, payload):
     return {"statusCode": status,
-            "headers": {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"},
+            "headers": {"Content-Type": "application/json; charset=utf-8", "Access-Control-Allow-Origin": "*"},
             "body": json.dumps(payload, ensure_ascii=False)}

@@ -29,6 +29,13 @@ _SAFETY_CONTEXT = re.compile(
 )
 
 
+# 安全分類可能出現在敏感詞之後，例如：
+# 「保證獲利」本身就是重大警訊／應視為詐騙話術。
+_SAFETY_CLASSIFICATION_AFTER = re.compile(
+    r"[^。！？\n]{0,48}(?:應視為|視為|屬於|通常是|可能是|就是|是|=|＝|:|：)"
+    r"[^。！？\n]{0,12}(?:詐騙|話術|警訊|警示|風險)"
+)
+
 def _is_safety_context(text, match):
     """Return True when an advice-like phrase is governed by nearby safety language."""
     sentence_start = max(
@@ -38,7 +45,21 @@ def _is_safety_context(text, match):
         text.rfind("\\n", 0, match.start()),
     )
     prefix = text[sentence_start + 1:match.start()]
-    return bool(_SAFETY_CONTEXT.search(prefix))
+    if _SAFETY_CONTEXT.search(prefix):
+        return True
+
+    ends = [
+        pos for pos in (
+            text.find("。", match.end()),
+            text.find("！", match.end()),
+            text.find("？", match.end()),
+            text.find("\n", match.end()),
+        )
+        if pos >= 0
+    ]
+    sentence_end = min(ends) if ends else len(text)
+    suffix = text[match.end():sentence_end]
+    return bool(_SAFETY_CLASSIFICATION_AFTER.search(suffix))
 
 
 def _sentence_containing(text, match):
