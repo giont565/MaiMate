@@ -12,7 +12,9 @@ from decimal import Decimal, InvalidOperation
 
 BASE = "https://max-api.maicoin.com"
 CACHE_TTL = 5.0
+MARKETS_TTL = 3600.0  # 下單限制幾乎不變，不需要跟行情一樣每 5 秒重抓
 _cache = {}
+_markets_cache = {}
 
 ENDPOINTS = {
     "ticker": "/api/v3/ticker?market={market}",
@@ -122,6 +124,31 @@ def _get(url, retries=3):
                 raise
             time.sleep(delay)
             delay *= 2
+
+
+def market_rules(market):
+    """回傳該市場的下單限制：最小量、最小金額、數量精度。
+
+    來源 /api/v3/markets（公開端點，免簽章）。TWD 金額換算下單量時必須用它，
+    憑空取整會被 MAX 以低於最小量退件。
+    """
+    now = time.time()
+    hit = _markets_cache.get("all")
+    if not hit or hit[0] <= now:
+        rows = _get(BASE + "/api/v3/markets")
+        hit = (now + MARKETS_TTL, {row["id"]: row for row in rows})
+        _markets_cache["all"] = hit
+    rules = hit[1].get(market)
+    if rules is None:
+        raise ValueError(f"MAX 沒有這個市場：{market}")
+    return {
+        "market": market,
+        "base_unit": rules["base_unit"],
+        "base_precision": int(rules["base_unit_precision"]),
+        "min_base_amount": float(rules["min_base_amount"]),
+        "min_quote_amount": float(rules["min_quote_amount"]),
+        "status": rules.get("status"),
+    }
 
 
 def fetch(market, kind, period=None):

@@ -52,18 +52,18 @@ function statusTable(s, rows, y, colW, rowH) {
   s.addText("隊伍「第五名」團隊會議", { x: M, y: 1.6, w: 8, h: 0.4, fontFace: FONT, fontSize: 14, color: GOLD, margin: 0 });
   s.addText("MaiMate 開發手冊", { x: M, y: 2.1, w: W - 2 * M, h: 1.0, fontFace: FONT, fontSize: 46, bold: true, color: WHITE, margin: 0 });
   s.addText("狀態・分工・架構・成本・驗收・Kiro 教學——隊內唯一簡報", { x: M, y: 3.3, w: 10, h: 0.5, fontFace: FONT, fontSize: 18, color: ICE, margin: 0 });
-  s.addText("2026/07/28 更新｜決賽 8/1–8/2｜文字完整版：repo 首頁 README.md", { x: M, y: 6.4, w: 10, h: 0.4, fontFace: FONT, fontSize: 13, color: "8FA0C9", margin: 0 });
+  s.addText("2026/07/29 更新｜決賽 8/1–8/2｜文字完整版：repo 首頁 README.md", { x: M, y: 6.4, w: 10, h: 0.4, fontFace: FONT, fontSize: 13, color: "8FA0C9", margin: 0 });
 }
 
 // ============ 2 總覽 ============
 {
   const s = pres.addSlide();
   s.background = { color: WHITE };
-  bigTitle(s, "總覽：五 PR 全數 merge，main＝完整決賽版——只剩「部署上去、照表測完」");
+  bigTitle(s, "總覽：下單鏈路已上線並自動驗過 21 項——但 RAG 知識庫在線上是掛的");
   const stats = [
-    { n: "17", l: "已完成並驗證", c: GREEN, d: "行為分析、Bedrock迴圈、RAG KB、query_knowledge…" },
-    { n: "13", l: "寫好但沒測過", c: GOLD, d: "三方案、Profile、Audit、路由、RWD＋Onboarding（全在 main，待部署驗）…" },
-    { n: "4", l: "待做", c: RED, d: "Bedrock Guardrails、KYC、影片、簡報修正" },
+    { n: "17", l: "已完成並驗證", c: GREEN, d: "行為分析、Bedrock迴圈、MAX 簽章、確認卡、決策軌跡、程式層護欄…" },
+    { n: "12", l: "寫好但沒測過", c: GOLD, d: "Profile、路由、離線備援、RWD D5–D18、真實下單…" },
+    { n: "6", l: "待做", c: RED, d: "RAG KB 重建(#34)、Guardrails、全員 KYC、影片、簡報、Kiro 證據" },
     { n: "5", l: "純測試項", c: BLUE, d: "E2E、雙層護欄、部署計時…" },
   ];
   stats.forEach((st, i) => {
@@ -76,7 +76,7 @@ function statusTable(s, rows, y, colW, rowH) {
   card(s, M, 4.7, W - 2 * M, 1.0, "FDF0EF");
   s.addText([
     { text: "最大隱藏風險：", options: { bold: true, color: RED } },
-    { text: "程式碼已無 blocker：#19/#26/#28/#25/#30 全數進 main（07/27–28）。剩下全是「人要做的事」——①跑 CSV 重產 health_report（#27/#29）②重部署（三個 API_BASE＋兩支 Lambda 金鑰）③照 docs/TEST_CHECKLIST.md 打勾。距 7/31 code freeze 剩 3 天。", options: { color: INK } },
+    { text: "RAG 知識庫在線上是掛的（#34）：Bedrock 回「KB DSIYBVI1IX 不存在」，模型改用一般知識回答——**畫面看不出異常，只是安靜地少掉「附出處」這個賣點**，而 F3 是評分紅線。這種「優雅降級」的壞法最危險：不跑驗收就發現不了。修法要 B 包重建 KB 再帶參數部署。距 7/31 code freeze 剩 2 天。", options: { color: INK } },
   ], { x: M + 0.3, y: 4.85, w: W - 2 * M - 0.6, h: 0.7, fontFace: FONT, fontSize: 14, valign: "middle", margin: 0 });
   s.addText("本週原則：先讓 🧪 變 ✅（把寫好的測到能動），再開 🔨 新工。", {
     x: M, y: 6.0, w: W - 2 * M, h: 0.45, fontFace: FONT, fontSize: 15, bold: true, color: NAVY, margin: 0 });
@@ -86,18 +86,18 @@ function statusTable(s, rows, y, colW, rowH) {
 {
   const s = pres.addSlide();
   s.background = { color: WHITE };
-  bigTitle(s, "Agent 核心（10 項）｜主責 A", "07/19 迴圈已對真模型跑通（Haiku@us-east-1）——重心轉 confirm E2E・路由・三方案");
+  bigTitle(s, "Agent 核心（10 項）｜主責 A", "07/29 線上實測：確認卡確實出現，但按下去必定 410——三個斷點已修，待重部署");
   statusTable(s, [
     ["Converse tool-use 迴圈", "done", "07/19 線上跑通：真模型多輪工具呼叫＋引用真實數據", "agent/loop.py"],
     ["工具定義×5＋dispatch", "done", "隨迴圈上線；key_findings 摘要（答非所問保險）；KB_ID 設定時自動加掛 query_knowledge", "agent/tools.py"],
-    ["prepare/execute 下單分離", "code", "架構完成，待端到端驗證", "tools+order"],
-    ["程式層護欄（明牌/PII）", "code", "正則可測，未寫測試", "guardrails.py"],
-    ["confirm 欄位帶出前端", "code", "後端 07/19 完成上線（任務5）；待一次下單對話 E2E", "#1"],
+    ["prepare/execute 下單分離", "done", "07/29 線上自動驗過：確認卡→取消→憑證消耗→軌跡留痕全串起來（verify_live.py D12/D13/D15）。剩真實成交未測", "tools+order"],
+    ["程式層護欄（明牌/PII）", "done", "07/29 線上驗過 F1/F2/F4/F5：不報明牌、不背書、教育題不誤攔、手機號不落回覆與軌跡", "guardrails.py"],
+    ["confirm 欄位帶出前端", "done", "07/29 線上實測確認卡確實跳出（D 段走查，並據此修好 TTL 文案／取消留痕）", "#1"],
     ["Haiku/Sonnet 路由", "code", "07/21 意圖路由完成＋單元測；caching 開關待真環境驗證", "#5"],
     ["Bedrock Guardrails", "todo", "程式層誤判修正二輪＋測試（PR #20/#23）；Bedrock 層主控台待建", "#6"],
     ["Profile Engine 簡版", "code", "07/21 三模式分類＋prompt 注入＋徽章切換完成；實測劇本待部署", "#10"],
-    ["三方案生成", "code", "07/21 引擎＋工具＋前端卡完成、18 項單元測綠；整合測試待部署", "#11"],
-    ["Audit Log", "code", "07/21 留痕＋/audit＋軌跡面板完成；DynamoDB 路徑待部署驗", "#12"],
+    ["三方案生成", "code", "07/29 線上實測三卡出得來、手續費驗算正確（14,140×0.16%≈23）；但同一句話 7 次有 1 次不出卡，DEMO_SCRIPT 別寫死", "#11"],
+    ["Audit Log", "done", "07/29 線上驗過：tool_call→draft_created→user_cancelled 依序留痕，PII 不落軌跡", "#12"],
   ], 1.6, [3.1, 1.5, 5.7, 1.83], 0.49);
 }
 
@@ -105,20 +105,21 @@ function statusTable(s, rows, y, colW, rowH) {
 {
   const s = pres.addSlide();
   s.background = { color: WHITE };
-  bigTitle(s, "資料・RAG・API 整合（11 項）｜主責 B（Private E2E:D、KYC:全員）");
+  bigTitle(s, "資料・RAG・API 整合（12 項）｜主責 B（Private E2E:D、KYC:全員）");
   statusTable(s, [
     ["CSV 解析＋行為指標預計算", "done", "10,000 筆，真數字已驗證（追高65%等）", "analysis/"],
-    ["health_report.json", "done", "五組指標齊全並驗證；realized_pnl＋#29 三聚合值程式已就緒，待跑 CSV 重產（#27/#29）", "data/"],
+    ["health_report.json", "done", "07/28 已用官方 CSV 重產並進 main：已實現損益 +117,482（981勝/493負）、最痛真虧僅 963；三聚合值齊全（#27/#29 已解）", "data/"],
     ["setup.sh 環境檢查", "done", "已實測", "scripts/"],
     ["RAG 語料蒐集", "code", "初版語料已入 KB（護欄誤判由實測發現）；完整度待 B 確認", "#9"],
-    ["Knowledge Base + S3 Vectors", "done", "07/22 KB 建成＋SAM 參數化＋IAM（PR #21，B 包）", "#9"],
-    ["query_knowledge 工具", "done", "07/22 接上真 KB 實測；防詐語境誤判已修（PR #20）", "#9"],
-    ["Lambda×5 handlers（×4 上線）", "done", "07/19 SAM×4 部署；/chat /health /market 線上實測；/audit 已寫好待重部署，/order 待 #4", "handlers/"],
+    ["Knowledge Base + S3 Vectors", "todo", "🚨 07/29 實測：KB DSIYBVI1IX 在帳號裡已不存在（Bedrock 回 ResourceNotFound）——07/22 建成後迴歸，需重建再帶 KnowledgeBaseId 部署（#34）", "#9"],
+    ["query_knowledge 工具", "code", "程式正確（有註冊、模型也會呼叫），但線上因 KB 不存在而每次 error；KB 一補回來即通", "#9"],
+    ["Lambda×5 handlers 全數上線", "done", "07/28 五支皆部署：/chat /health /market /audit 線上實測皆正常（/audit 不再 404）；/order 待真單", "handlers/"],
     ["MAX Public API（快取+退避）", "code", "ticker 已線上實測（任務6）；kline/depth 待對文件核驗", "#2"],
-    ["MAX Private API（HMAC）", "code", "簽章未驗證——對照 max-mcp-server 核對", "#4"],
+    ["MAX Private API 簽章（HMAC）", "done", "07/29 對真 API 實測通過（/api/v3/info 回 level:2）。2014 真因＝MAX 先比對「payload 解碼後 == request body」再驗簽章，GET 也必須送 body", "#4"],
+    ["Private 下單 place_order", "code", "volume 換算＋憑證持久化已補；線上跑的仍是 2014 舊版，最小額度真單待重部署後執行", "#4"],
     ["CoinMarketCap 延伸", "code", "無金鑰自動略過，未測", "thirdparty.py"],
-    ["全員 Lv2 KYC＋API Key", "todo", "人工項，審核有等待期——最急", "#3"],
-  ], 1.5, [3.1, 1.5, 5.7, 1.83], 0.465);
+    ["全員 Lv2 KYC＋API Key", "todo", "隊長 07/29 已驗證通過（level:2，權限「個人及帳戶[讀取]」）；其餘隊員未回報——加分證據五張截圖也還沒存 Drive", "#3"],
+  ], 1.5, [3.1, 1.5, 5.7, 1.83], 0.43);
 }
 
 // ============ 5 前端＋部署＋交付 ============
@@ -129,11 +130,11 @@ function statusTable(s, rows, y, colW, rowH) {
   statusTable(s, [
     ["桌機三欄 SPA", "done", "07/19 上線實測＋UX 修正（行情就地更新/氣泡渲染）", "frontend/"],
     ["離線 mock 備援", "code", "07/21 Golden Path 劇本＋07/26 加拍備援（三模式開場白/RAG 防詐）皆煙測綠；真環境拔網路待驗", "app.js"],
-    ["手機版 RWD＋Onboarding 五屏", "code", "haoting777 #26 健康分 hero 卡＋#28 入口/授權/問卷/分析/Profile 已 merge（07/27，四組煙測全綠）；部署驗收待做", "#13"],
-    ["三方案卡片／模式徽章／軌跡面板", "code", "07/21 完成＋mock 煙測綠（本表 07/27 補正歸類）；部署後真資料驗收待做", "—"],
-    ["SAM 模板", "done", "07/19 首次 deploy 成功（us-east-1 API+S3）", "infra/"],
+    ["手機版 RWD＋Onboarding 五屏", "code", "07/28 已部署上線，D1–D4 過（健康分圓環正常、顯示 +NT$117,482）；D5–D18＋E 段五屏未測", "#13"],
+    ["三方案卡片／模式徽章／軌跡面板", "code", "07/29 實測抓到「推薦卡看起來可點卻沒反應」已修為 role=button；重部署後複驗", "—"],
+    ["SAM 模板", "done", "07/19 首次 deploy＋07/28 重部署成功（stack maimate，五支 Lambda 全上）", "infra/"],
     ["自家 AWS 帳號＋Bedrock 開通", "done", "隊長帳號出線，Bedrock 已開通（07/19）", "—"],
-    ["部署 SOP＋驗收清單", "code", "DEPLOY.md（07/28 修正 API_BASE 三處陷阱）＋TEST_CHECKLIST.md A–G 段已出稿；<1hr 計時演練待做", "#14"],
+    ["部署 SOP＋驗收清單", "code", "07/29 新增 scripts/verify_live.py：C/D/F 共 21 項自動判定、3 分鐘跑完，且永不送真單；人工只剩視覺項。<1hr 計時演練待做", "#14"],
     ["提案簡報 16 頁", "done", "含評審兩題頁；視覺本機過一次", "docs/"],
     ["上手指南／架構文件／法規檢討", "done", "三份皆完成", "docs/"],
     ["整合簡報修正", "todo", "Skill 標示＋補兩頁", "#15"],
@@ -150,7 +151,7 @@ function statusTable(s, rows, y, colW, rowH) {
   statusTable(s, [
     ["Bedrock 迴圈首次實跑", "done", "07/19 完成：Haiku 多工具對話、線上引用真實數據", "已達成"],
     ["Guardrails 雙層攔截", "test", "「推薦我買哪個幣」兩層各自單獨擋住", "#6 後"],
-    ["憑證安全", "test", "token 過期/重放回 410；60 秒邊界", "#1 #4 後"],
+    ["憑證安全", "test", "過期／重放／未知 token 皆回 410 已有回歸測試（tests/test_order_flow.py）；線上 DynamoDB 路徑待重部署驗", "#1 #4 後"],
     ["離線備援切換", "test", "Golden Path 離線劇本＋煙測已過（07/21）；真環境拔網路實測待做", "部署後"],
     ["E2E Golden Path", "test", "全賣→三方案→確認→最小額度成交→軌跡完整（TEST_CHECKLIST D 段 18 項）", "幾乎全部後"],
     ["從零部署計時", "test", "乾淨帳號 <1 小時上線（決賽日保險）", "#14"],
@@ -169,7 +170,7 @@ function statusTable(s, rows, y, colW, rowH) {
     { text: "✅ Bedrock 迴圈首跑——07/19 完成", options: { bullet: true, bold: true, color: GREEN, breakLine: true } },
     { text: "🧪 tools dispatch／護欄 單元測試", options: { bullet: true, breakLine: true } },
     { text: "🧪 prepare/execute 單元驗證（E2E 歸 D）", options: { bullet: true, breakLine: true } },
-    { text: "🧪 #1 confirm 後端✅待E2E｜#5 路由✅待部署", options: { bullet: true, breakLine: true } },
+    { text: "✅ #1 confirm 確認卡 07/29 線上實測跳出｜🧪 #5 路由待部署", options: { bullet: true, breakLine: true } },
     { text: "🧪 #10 Profile 三模式——07/21 完成待部署實測", options: { bullet: true, breakLine: true } },
     { text: "🧪 #11 三方案引擎——07/21 完成、單元測 18 項綠", options: { bullet: true, breakLine: true } },
     { text: "✅ B/D 接點就緒：KB_ID／GUARDRAIL_ID 環境變數設定即通", options: { bullet: true } },
@@ -183,7 +184,7 @@ function statusTable(s, rows, y, colW, rowH) {
     { text: "✅ #9 query_knowledge 接真 KB 實測——07/22", options: { bullet: true, breakLine: true } },
     { text: "🧪 #12 audit＋/audit＋面板——07/21 完成，DynamoDB 待部署驗", options: { bullet: true, breakLine: true } },
     { text: "✅ #2 max_public：三 endpoint 正規化＋實測（PR #18）", options: { bullet: true, breakLine: true } },
-    { text: "🧪 max_private 簽章對照 max-mcp-server 核對", options: { bullet: true, breakLine: true } },
+    { text: "✅ max_private 簽章 07/29 對真 API 實測通過（level:2）", options: { bullet: true, breakLine: true } },
     { text: "🧪 thirdparty CMC 冒煙", options: { bullet: true } },
   ], { x: M + 6.55, y: 2.65, w: 5.4, h: 4.1, fontFace: FONT, fontSize: 11.5, color: INK, paraSpaceAfter: 8, margin: 0 });
 }
@@ -197,7 +198,7 @@ function statusTable(s, rows, y, colW, rowH) {
   s.addText("C｜前端與品牌　4 天", { x: M + 0.3, y: 1.85, w: 5.3, h: 0.4, fontFace: FONT, fontSize: 15, bold: true, color: NAVY, margin: 0 });
   s.addText("地盤：frontend/ + docs/mockups/ + docs/brand/", { x: M + 0.3, y: 2.25, w: 5.3, h: 0.3, fontFace: "Courier New", fontSize: 10.5, color: MUT, margin: 0 });
   s.addText([
-    { text: "🧪 #13 RWD＋Onboarding：#26/#28 已 merge，待部署驗", options: { bullet: true, breakLine: true } },
+    { text: "🧪 #13 RWD＋Onboarding：07/28 已上線，D1–D4 過、D5–D18 未測", options: { bullet: true, breakLine: true } },
     { text: "✅ 三方案卡渲染——07/21 完成（mock 煙測）", options: { bullet: true, breakLine: true } },
     { text: "✅ 模式徽章切換｜軌跡面板——07/21 完成（mock 煙測）", options: { bullet: true, breakLine: true } },
     { text: "✅ 麥麥視覺整合（成交切 BULLISH）——07/21 完成", options: { bullet: true, breakLine: true } },
@@ -209,8 +210,8 @@ function statusTable(s, rows, y, colW, rowH) {
   s.addText("地盤：infra/ + docs/", { x: M + 6.55, y: 2.25, w: 5.3, h: 0.3, fontFace: "Courier New", fontSize: 10.5, color: MUT, margin: 0 });
   s.addText([
     { text: "✅ AWS 帳號＋Bedrock 開通——07/19 完成（隊長帳號）", options: { bullet: true, bold: true, color: GREEN, breakLine: true } },
-    { text: "✅ SAM 部署上線 07/19（/order 冒煙待真單）", options: { bullet: true, breakLine: true } },
-    { text: "🔨 #6 Guardrails｜🧪 #14 DEPLOY＋TEST_CHECKLIST 已出稿、演練待做", options: { bullet: true, breakLine: true } },
+    { text: "✅ SAM 重部署 07/28 全站上線（/order 待真單）", options: { bullet: true, breakLine: true } },
+    { text: "🔨 #6 Guardrails｜🧪 #14 DEPLOY 已依實戰修正、計時演練待做", options: { bullet: true, breakLine: true } },
     { text: "🔬 #4 Private E2E 成交｜憑證 410｜雙層護欄測試", options: { bullet: true, breakLine: true } },
     { text: "🔬 E2E Golden Path 主導｜從零部署計時", options: { bullet: true, breakLine: true } },
     { text: "🔨 #8 預錄影片｜#15 簡報修正＋Kiro 證據", options: { bullet: true } },
@@ -228,14 +229,14 @@ function statusTable(s, rows, y, colW, rowH) {
 {
   const s = pres.addSlide();
   s.background = { color: WHITE };
-  bigTitle(s, "交棒地圖：哪個工項完成，交付給誰", "✅=已交棒｜🧪=就緒待部署驗證｜🔨=待做（07/21 盤點）。流程圖版在 README §1");
+  bigTitle(s, "交棒地圖：哪個工項完成，交付給誰", "✅=已交棒｜🧪=就緒待部署驗證｜🔨=待做（07/29 盤點）。流程圖版在 README §1");
   const header = ["完成的工項", "交付物", "交給", "對方拿去做什麼"].map(t =>
     ({ text: t, options: { bold: true, color: WHITE, fill: { color: NAVY } } }));
   const rows = [
     ["✅ D：AWS 帳號＋Bedrock 開通（07/19）", "帳號憑證", "A／B／D", "Bedrock 首跑✅｜KB 建置｜SAM 部署✅"],
-    ["🔨 全員：Lv2 KYC＋Key（#3）——最上游", "各自 API Key", "D", "Private API E2E（#4）"],
+    ["🧪 全員：Lv2 KYC＋Key（#3）隊長已通過", "各自 API Key", "D", "Private API E2E（#4）——其餘隊員待辦"],
     ["🧪 B：max_public 實測（#2）ticker✅", "可靠的行情工具", "A", "kline/depth 核對後全放心用"],
-    ["🔨 B：簽章對照核對", "簽章確認", "D", "E2E 真下單前置"],
+    ["✅ A：簽章 2014 解決（07/29 實測 level:2）", "可用的 Private API", "D", "只差重部署即可跑最小額度真單"],
     ["✅ A：Bedrock 迴圈首跑（07/19）", "跑通的迴圈", "A 自己", "已解鎖：#1 #5 #10 #11 全數開發完"],
     ["✅ B：KB 建置（07/22，PR #21）", "KB_ID 已入 SAM 參數", "A", "query_knowledge 已接上真 KB 實測"],
     ["✅ A：audit＋/audit＋面板（07/21 代 B/C 完成）", "audit schema", "C", "決策軌跡面板已接上"],
@@ -648,7 +649,7 @@ function statusTable(s, rows, y, colW, rowH) {
   const phases = [
     { t: "～7/22", n: "定案與就位", d: "KYC・環境設定・AWS帳號・架構拍板・#1 #2 開工", c: GOLD },
     { t: "7/23–27", n: "核心構建週", d: "Golden Path 全鏈路＋RAG＋手機版；7/27 晚自家 AWS 跑通全程", c: GOLD },
-    { t: "7/28–30", n: "整合排練週", d: "E2E・離線備援・預錄影片 v1・簡報定稿・pitch 兩輪", c: GREEN },
+    { t: "7/28–30", n: "整合排練週（現在）", d: "07/28 上線＋D 段實測抓三個結構性 bug；剩：重部署驗證・E2E・影片・pitch", c: GREEN },
     { t: "7/31", n: "凍結日", d: "code freeze・DEPLOY.md 定稿・部署演練・早睡", c: BLUE },
     { t: "8/1–8/2", n: "決賽 30hr", d: "官方環境重部署(1hr)・現場調整・最終錄影・上台", c: RED },
   ];

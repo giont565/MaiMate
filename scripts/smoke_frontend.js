@@ -171,6 +171,11 @@ const server = http.createServer((req, res) => {
   if (scens.length !== 3 || !scens[0].includes("NT$35,920") || !scens[1].includes("NT$143,680")) throw new Error(`三方案卡異常：${scens}`);
   const pick = await page.$$eval(".scen.pick", (els) => els.length);
   if (pick !== 1) throw new Error("pick 高亮異常");
+  // 方案卡必須真的可點：pick 曾經只是高亮樣式、沒掛任何行為，使用者點下去毫無反應
+  const tappable = await page.$$eval(".scen", (els) =>
+    els.map((e) => ({ label: e.dataset.label, role: e.getAttribute("role"), wired: e.dataset.wired })));
+  if (tappable.some((s) => !s.label || s.role !== "button" || s.wired !== "1"))
+    throw new Error(`三方案卡未接上點擊：${JSON.stringify(tappable)}`);
   const confirmTxt = await page.$eval(".confirm", (e) => e.textContent);
   if (!confirmTxt.includes("NT$35,920") || !confirmTxt.includes("確認賣出")) throw new Error("確認卡異常");
   // 落差 2（screen3）：手續費取方案真值 fee_twd；市價單數量誠實標「依成交價定」，不編造

@@ -197,16 +197,45 @@ def calculate_trade_scenarios(market, side, fraction=1.0, amount_twd=None):
     return scenarios.calculate_trade_scenarios(market, side, fraction=fraction, amount_twd=amount_twd)
 
 
+TABLE = os.environ.get("TABLE_NAME")
+
+
+def _store_order(token, order):
+    """存確認憑證。**必須跨 Lambda 存活**：prepare_order 跑在 ChatFunction，
+    /order 跑在 OrderFunction，兩者是不同 process——只寫 _pending_orders 的話
+    OrderFunction 永遠查不到，每一次真實下單都會回 410。
+    （order.py 的讀取端一直是讀 DynamoDB，但寫入端從來沒有實作。）
+    """
+    if not TABLE:
+        _pending_orders[token] = order
+        return
+    import boto3
+    boto3.resource("dynamodb").Table(TABLE).put_item(Item={
+        "pk": f"order#{token}",
+        "order": json.dumps(order, ensure_ascii=False),
+        "expires_at": int(order["expires_at"]),
+    })
+
+
 def prepare_order(market, side, volume_twd, ord_type, price=None):
     token = str(uuid.uuid4())
     order = {"market": market, "side": side, "volume_twd": volume_twd,
              "ord_type": ord_type, "price": price, "expires_at": time.time() + CONFIRM_TTL_SEC}
-    _pending_orders[token] = order
+    _store_order(token, order)
     from . import audit
     audit.log("draft_created", market=market, side=side, volume_twd=volume_twd,
               ord_type=ord_type, confirm_token=token)
+    # notice 是給模型看的。原本只寫「於介面上確認」，模型會腦補成「請到 MAX 介面確認」，
+    # 把使用者導離本 App；expires_at 是絕對時間戳，模型換算不出來就自己猜（實測猜成「約 2 分鐘」）。
+    # 兩件事都直接寫死在這裡，不要讓模型推。
     return {"confirm_token": token, "confirmation_card": order,
-            "notice": "已產生確認卡片，等待使用者於介面上確認後才會送出訂單。"}
+            "ttl_seconds": CONFIRM_TTL_SEC,
+            "notice": (
+                f"確認卡片已顯示在 MaiMate 對話畫面中，{CONFIRM_TTL_SEC} 秒內有效。"
+                "請使用者直接在這個畫面上按下確認按鈕即可，"
+                "**不要**叫使用者去 MAX 或任何其他平台操作。"
+                f"提到有效期間時一律說「{CONFIRM_TTL_SEC} 秒」，不要自行推算或改寫。"
+            )}
 
 
 def execute_order(confirm_token):

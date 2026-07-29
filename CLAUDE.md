@@ -38,22 +38,41 @@ cd docs/brand && python3 render_pixel_bot.py   # 重出麥麥像素吉祥物
 簡報改版流程：改 build_*.js → node 重跑 → `python3 /root/.claude/skills/pptx/scripts/office/validate.py <檔>`
 （本環境 LibreOffice 渲染壞的，視覺 QA 只能靠使用者本機開）。pptx 建完記得刪 node_modules 再 commit。
 
-## 團隊與分工現況（2026-07-27 更新）
+## 團隊與分工現況（2026-07-28 更新）
 
-- **B 包實質認領：chaocongyang-oss**（#2/#9 完成關單；kline/depth 正規化、RAG KB=DSIYBVI1IX、護欄誤判修正兩輪，走分支+PR 紀律）
-- **C 包收尾認領：haoting777**（07/26 交 #26 hero 健康分卡＋#28 Onboarding 五屏，兩 PR open、四組煙測 07/27 代驗全綠；另開 #27 要求重跑 health_report 補 realized_pnl——需隊長跑 CSV）
-- **A 包核心＋C 包主體：Claude 完成**（四引擎/新前端/離線劇本＋加拍備援，已 merge 或在 PR #25）；jack79112 交過 A 包文件（已導向驗收/#6）
-- Issues 14 張 open（#2/#9 已關、#27 新增）；**四 PR 待 merge：#19（CI）/#25（docs＋加拍）/#26/#28**——#25 與 #26 撞 app.js，建議 #19→#26→#28 先 merge、#25 最後由 Claude rebase
-- 真實數據已驗證：追高 65%、機會成本 NT$26,598,877、最痛單筆 DOGE NT$312,924（P6 級素材，別改壞）
+- **B 包：chaocongyang-oss**（#2/#9 關單；kline/depth 正規化、RAG KB=DSIYBVI1IX、護欄誤判修正兩輪）
+- **C 包：haoting777**（#26 hero 卡＋#28 Onboarding 五屏已 merge；**PR #32 open**＝Screen 6–8＋
+  全站改用真實帳戶，11k 行 42 檔，隊長尚未決定是否在 code freeze 前納入）
+- **A 包核心＋部署除錯：Claude**（四引擎、新前端、離線劇本、CI、驗收清單、deploy-drill spec）
+- Issues 15 張 open；PR #19/#25/#26/#28/#30/#31 皆已 merge，**PR #32/#33 open**
+- 真實數據已驗證：追高 65%、機會成本 NT$26,598,877、最痛少賺 DOGE NT$312,924；
+  **07/28 新增**：已實現損益 **+117,482**（981勝/493負）、最痛真實虧損僅 **963**（2025-10-01 USDT）
+  —— 「你以為在虧錢，其實賺了十一萬；真正虧的只有 963，少賺卻有兩千六百萬」是最強敘事
 
-## 待辦交接（上一個 session 留下的）
+## 線上環境（2026-07-28 部署完成）
 
-- [ ] Claude Design「MaiMate」專案的三張卡還是舊版（🐣 頂欄）——DesignSync 權限流在非互動環境失敗，
-      互動 session 可重試 finalize_plan+write_files（來源 `docs/mockups/ds/`）
-- [ ] ai-assistant repo 的 PR #13 是個人備份存檔（內容已被本 repo 取代），使用者決定合併或關閉
-- [ ] 全員 Lv2 KYC 尚未定案（#4 真實成交 E2E 的上游，最急）；AWS 帳號已定（隊長）
-- [ ] **重部署待做**（main 新功能全未上線；照 docs/DEPLOY.md，兩支 Lambda 都要 MAX 金鑰）
-- [ ] PR #19（CI）待 merge；#6 Bedrock Guardrails 主控台待建（程式接點就緒）
+| 項目 | 值 |
+|---|---|
+| AWS 帳號／區域 | `525237381533` / us-east-1 |
+| Stack | `maimate`（**沿用此名，換名會開出第二套環境**） |
+| ApiUrl | `https://ywm2d396r8.execute-api.us-east-1.amazonaws.com` |
+| FrontendUrl | `http://maimate-frontendbucket-39yr2d3jy0yz.s3-website-us-east-1.amazonaws.com`（**只支援 http**） |
+| ChatFunction | `maimate-ChatFunction-uyN5hgOddqPe`（5 個環境變數，含 MAX 金鑰） |
+| OrderFunction | `maimate-OrderFunction-CorZvWA9xVI7`（3 個環境變數，含 MAX 金鑰） |
+
+已驗證：`/health` 為 07-28 資料含 realized_pnl／`/market` 含 fetched_at_taipei／`/audit` 不回 404／
+前端健康分卡圓環正常、顯示 +NT$117,482。**驗收清單 D1–D4 已過，D5–D18 未測。**
+
+## 待辦交接（2026-07-28 session 結束時）
+
+- [ ] **#4 MAX Private API 回 2014 未解**——詳細除錯紀錄見 issue #4 留言，接手先讀那則
+- [ ] **驗收未跑完**：`docs/TEST_CHECKLIST.md` D5–D18、E（Onboarding 五屏）、F（AI 安全六項）
+- [ ] **PR #32 決策**（haoting 的 Screen 6–8，11k 行）——距 code freeze 剩 3 天，要不要納入
+- [ ] PR #33（macOS sed 文件修正）待 merge；分支上另有 MAX 除錯的多個 commit 未開 PR
+- [ ] 全員 Lv2 KYC（#3）；#6 Bedrock Guardrails 主控台待建（設 `GUARDRAIL_ID` 即生效）
+- [ ] #8 影片（分鏡稿已備）、#14 部署計時演練、#15 Drive 整合簡報修正
+- [ ] 加分證據截圖：Lv2 五張 A–E、Kiro 五張 F–J（清單見 `docs/CAPTAIN_TODO.md` Part 2）
+- [ ] Claude Design 三張卡仍是舊版（DesignSync 權限流在非互動環境失敗）
 
 ## 溝通慣例
 
