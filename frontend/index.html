@@ -16,6 +16,10 @@
   .topbar h1{font-size:17px;font-weight:700}
   .topbar .sub{font-size:10px;color:#A9B7D9}
   .badge{margin-left:auto;background:#22315E;border:1px solid var(--gold);color:var(--gold);font-size:10.5px;padding:3px 10px;border-radius:999px;font-weight:700;white-space:nowrap}
+  /* 模式徽章可點（app.js cycleMode），但視覺是小膠囊：用透明 ::after 只放大可點範圍，
+     視覺不動。寬度已 64px≥44，只補高度；頂欄同高沒有其他控件，不會壓到別的熱區。 */
+  .badge{position:relative}
+  .badge::after{content:"";position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:46px}
   .offline{font-size:10px;color:#FF9AA2;display:none;margin-left:8px}
 
   /* ── 版面：手機單欄，桌機（≥900px）雙欄 ── */
@@ -110,7 +114,8 @@
   /* 底部輸入列：手機固定、桌機貼齊對話欄 */
   .inputbar{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:10px 14px calc(14px + env(safe-area-inset-bottom));display:flex;gap:8px;border-top:1px solid #E3E9F5;z-index:20}
   .inputbar input{flex:1;background:var(--bg);border:1px solid #D5DEF0;border-radius:999px;padding:10px 16px;font-size:13px;font-family:inherit}
-  .inputbar button{width:42px;height:42px;border-radius:999px;background:var(--navy);color:#fff;border:0;font-size:16px;cursor:pointer;flex:none}
+  /* 44px 是 Apple HIG 的最小觸控目標；原本 42px 差兩格，手機上按送出容易點空 */
+  .inputbar button{width:44px;height:44px;border-radius:999px;background:var(--navy);color:#fff;border:0;font-size:16px;cursor:pointer;flex:none}
   @media (min-width:900px){
     .inputbar{position:sticky;bottom:0;border:1px solid #E3E9F5;border-radius:16px;margin-top:8px}
   }

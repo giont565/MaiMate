@@ -138,6 +138,46 @@ const server = http.createServer((req, res) => {
   await page.setViewportSize({ width: 390, height: 844 });
   console.log("360px 不跑版 OK");
 
+  /* 9b. 觸控目標 ≥44px（#13）。
+   * 熱區 = 自身盒子 ∪ ::after 覆蓋層——徽章／頁尾連結／底線文字鈕刻意保留小視覺，
+   * 用透明 ::after 放大可點範圍。用 computedStyle 讀 pseudo 尺寸而不是 elementFromPoint：
+   * 後者只在可視區內有效，頁尾的連結會量到錯的值（實測過，會假通過）。 */
+  const taps = await page.evaluate(() => {
+    const measure = (node) => {
+      const rect = node.getBoundingClientRect();
+      const after = getComputedStyle(node, "::after");
+      return {
+        w: Math.max(rect.width, parseFloat(after.width) || 0),
+        h: Math.max(rect.height, parseFloat(after.height) || 0),
+        rect,
+      };
+    };
+    const label = (node) => (node.id ? "#" + node.id : node.tagName.toLowerCase()) +
+      ' "' + (node.textContent || "").trim().slice(0, 10) + '"';
+    const nodes = [...document.querySelectorAll("button, a, [role=button]")].filter((n) => n.offsetParent !== null);
+    const zones = nodes.map((node) => ({ node, label: label(node), ...measure(node) }));
+    const small = zones.filter((z) => z.h < 44 || z.w < 44)
+      .map((z) => `${z.label} → ${Math.round(z.w)}x${Math.round(z.h)}`);
+    /* 放大熱區最容易出的錯是「兩個控件的熱區疊在一起，點哪個都不確定」。
+     * 同一個 sheet 之外的元素兩兩比對；不同 sheet 的關閉鈕會重疊是正常的
+     * （同時只有一個 sheet 開著），所以用最近的 .sheet 祖先分組後排除同位比較。 */
+    const clashes = [];
+    for (let i = 0; i < zones.length; i++) {
+      for (let j = i + 1; j < zones.length; j++) {
+        const a = zones[i], b = zones[j];
+        if (a.node.closest(".sheet") !== b.node.closest(".sheet")) continue;
+        const ay = a.rect.top + a.rect.height / 2, by = b.rect.top + b.rect.height / 2;
+        const ox = Math.min(a.rect.right, b.rect.right) - Math.max(a.rect.left, b.rect.left);
+        const oy = Math.min(ay + a.h / 2, by + b.h / 2) - Math.max(ay - a.h / 2, by - b.h / 2);
+        if (ox > 0.5 && oy > 0.5) clashes.push(`${a.label} × ${b.label} 重疊 ${Math.round(ox)}x${Math.round(oy)}px`);
+      }
+    }
+    return { count: zones.length, small, clashes };
+  });
+  if (taps.small.length) throw new Error(`觸控目標小於 44px：${taps.small.join("；")}`);
+  if (taps.clashes.length) throw new Error(`熱區互相重疊，點擊會不確定：${taps.clashes.join("；")}`);
+  console.log(`觸控目標 OK：${taps.count} 個可點元素熱區皆 ≥44px 且互不重疊`);
+
   await page.screenshot({ path: "smoke_welcome.png", fullPage: true });
 
   // 10. 三個導向：示範帳戶／主 CTA／證據卡「好，帶我看看」（後兩者接 Screen 2 資料授權頁）

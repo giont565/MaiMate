@@ -203,6 +203,25 @@ const server = http.createServer((req, res) => {
   if (steps.length !== 4 || !steps[1].includes("NT$35,920") || hls !== 3) throw new Error(`軌跡面板異常：${steps} hl=${hls}`);
   console.log("成交→軌跡 OK：4 步驟、訂單事件 hl×3、金額千分位");
 
+  /* 觸控目標 ≥44px（#13）。在成交後量：這時三方案卡／確認卡／軌跡面板都在畫面上，
+   * 涵蓋的可點元素最多。熱區 = 自身盒子 ∪ ::after 覆蓋層（模式徽章刻意保留小視覺，
+   * 用透明 ::after 放大可點範圍）。 */
+  const taps = await page.evaluate(() => {
+    const nodes = [...document.querySelectorAll("button, a, [role=button]")].filter((n) => n.offsetParent !== null);
+    return nodes.map((node) => {
+      const rect = node.getBoundingClientRect();
+      const after = getComputedStyle(node, "::after");
+      return {
+        label: (node.id ? "#" + node.id : node.tagName.toLowerCase()) + ' "' + (node.textContent || "").trim().slice(0, 10) + '"',
+        w: Math.round(Math.max(rect.width, parseFloat(after.width) || 0)),
+        h: Math.round(Math.max(rect.height, parseFloat(after.height) || 0)),
+      };
+    });
+  });
+  const smallTaps = taps.filter((t) => t.h < 44 || t.w < 44).map((t) => `${t.label} → ${t.w}x${t.h}`);
+  if (smallTaps.length) throw new Error(`觸控目標小於 44px：${smallTaps.join("；")}`);
+  console.log(`觸控目標 OK：${taps.length} 個可點元素熱區皆 ≥44px`);
+
   await page.screenshot({ path: "smoke_mobile.png", fullPage: true });
 
   // 離線劇本（決賽保險）：/chat 斷線 → mock 接手走完 Golden Path（含 BULLISH 切換）
