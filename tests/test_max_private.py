@@ -98,14 +98,15 @@ class ResolveVolumeTests(unittest.TestCase):
 
     def test_rejects_amount_below_market_minimum(self, _rules):
         with self.ticker(2_000_000):
-            with self.assertRaisesRegex(ValueError, "最低金額"):
+            with self.assertRaisesRegex(ValueError, r"單筆最低 NT\$250"):
                 max_private.resolve_volume(
                     {"market": "btctwd", "side": "buy", "volume_twd": 100, "ord_type": "market"})
 
-    def test_rejects_when_amount_cannot_reach_min_base_amount(self, _rules):
-        # 幣價高到 NT$300 換不到 0.0001 顆
+    def test_floor_is_the_larger_of_the_two_limits_not_just_min_quote(self, _rules):
+        """幣價高到 NT$300 換不到 0.0001 顆：門檻是數量下限 NT$900，不是金額下限 NT$250。
+        只報 min_quote 會害使用者照 250 改，改完照樣被退。"""
         with self.ticker(9_000_000):
-            with self.assertRaisesRegex(ValueError, "最低數量"):
+            with self.assertRaisesRegex(ValueError, r"單筆最低 NT\$900"):
                 max_private.resolve_volume(
                     {"market": "btctwd", "side": "buy", "volume_twd": 300, "ord_type": "market"})
 

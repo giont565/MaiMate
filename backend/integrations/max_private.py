@@ -115,9 +115,14 @@ def resolve_volume(order):
     if price <= 0:
         raise ValueError(f"取不到 {market} 現價，無法換算下單量")
 
-    if amount_twd < rules["min_quote_amount"]:
+    # 兩道下限取大者才是真正的門檻。只報 min_quote_amount 會誤導——ETH 的
+    # min_quote 是 250，但 0.005 ETH 的門檻約 NT$310，使用者照 250 改還是會被退。
+    floor = max(rules["min_quote_amount"], rules["min_base_amount"] * price)
+    if amount_twd < floor:
         raise ValueError(
-            f"{market} 單筆最低金額 NT${rules['min_quote_amount']:,.0f}，"
+            f"{market.upper()} 單筆最低 NT${floor:,.0f}"
+            f"（金額下限 NT${rules['min_quote_amount']:,.0f}、"
+            f"數量下限 {rules['min_base_amount']} {rules['base_unit'].upper()}≈NT${rules['min_base_amount'] * price:,.0f}，取大者），"
             f"這張單只有 NT${amount_twd:,.0f}"
         )
 

@@ -45,6 +45,11 @@ def calculate_trade_scenarios(market, side, fraction=1.0, amount_twd=None,
     cur_value = qty * price
     total_value = max(total_value, cur_value + twd, 1)
 
+    # 交易所有單筆最低限制（金額與數量兩道，取大者）。不查這個就會產生「麥麥自己推薦、
+    # 但送出去必被退件」的方案——實測 NT$500 買 ETH 時，25% 的 NT$125 低於 ethtwd 的
+    # 下限，使用者點了那張金框推薦卡，拿到 500 Internal Server Error。
+    floor_twd = _min_order_twd(market, price)
+
     if side == "sell":
         if qty <= 0:
             return {"error": "not_in_portfolio",
@@ -68,9 +73,21 @@ def calculate_trade_scenarios(market, side, fraction=1.0, amount_twd=None,
         if amount_twd > twd:
             return {"error": "insufficient_twd",
                     "message": f"TWD 餘額 NT${twd:,.0f} 不足以買入 NT${amount_twd:,.0f}"}
+        if amount_twd < floor_twd:
+            return {"error": "below_min_order",
+                    "message": (f"{market.upper()} 單筆最低 NT${floor_twd:,.0f}，"
+                                f"NT${amount_twd:,.0f} 送出去會被交易所退件。"
+                                f"請改用 NT${floor_twd:,.0f} 以上的金額。")}
+        partial_amount = amount_twd * 0.25
+        partial_label = "先買 25% 試水溫"
+        if partial_amount < floor_twd:
+            # 25% 低於交易所下限：抬到剛好可成交的金額，並在標籤上講清楚為什麼不是 25%。
+            # 寧可標籤變醜，也不要給一張按下去會失敗的卡。
+            partial_amount = floor_twd
+            partial_label = f"先買 NT${floor_twd:,.0f} 試水溫（{market.upper()} 單筆最低）"
         scenarios = [
-            _scenario("partial", "先買 25% 試水溫", amount_twd * 0.25,
-                      _post_pct(cur_value + amount_twd * 0.25, total_value), _buy_note(report)),
+            _scenario("partial", partial_label, partial_amount,
+                      _post_pct(cur_value + partial_amount, total_value), _buy_note(report)),
             _scenario("full", "照原意圖全額買入", amount_twd,
                       _post_pct(cur_value + amount_twd, total_value), _buy_note(report)),
             _pause(price, cur_value, total_value),
@@ -78,7 +95,22 @@ def calculate_trade_scenarios(market, side, fraction=1.0, amount_twd=None,
     else:
         return {"error": "bad_side", "message": f"未知方向：{side}"}
 
-    return {"scenarios": scenarios, "fee_source": FEE_SOURCE, "disclaimer": DISCLAIMER}
+    return {"scenarios": scenarios, "fee_source": FEE_SOURCE,
+            "min_order_twd": round(floor_twd), "disclaimer": DISCLAIMER}
+
+
+def _min_order_twd(market, price):
+    """該市場單筆最低可成交金額（TWD）。最低金額與最低數量兩道限制取大者。
+
+    查不到規則時回 0（不擋）——行情/規則暫時取不到不該讓整個三方案掛掉，
+    真的低於下限時 max_private.resolve_volume 還有第二道防線。
+    """
+    try:
+        from ..integrations import max_public
+        rules = max_public.market_rules(market)
+    except Exception:
+        return 0.0
+    return max(float(rules["min_quote_amount"]), float(rules["min_base_amount"]) * price)
 
 
 def _price_of(currency, balances, default_price):

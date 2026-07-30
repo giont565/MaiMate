@@ -54,7 +54,17 @@ def handler(event, context):
     audit.log("user_confirmed", confirm_token=token, market=order.get("market"),
               side=order.get("side"), volume_twd=order.get("volume_twd"))
     from ..integrations import max_private
-    result = max_private.place_order(order)
+    try:
+        result = max_private.place_order(order)
+    except ValueError as e:
+        # 下單前的檢查沒過（低於交易所最低量、取不到現價…）。這是使用者看得懂、
+        # 也改得了的狀況，不該以 500 Internal Server Error 呈現——實測就是這樣讓
+        # 使用者按下確認後只看到一句「Internal Server Error」。憑證已被消耗，
+        # 所以請他重新發起而不是重按。
+        audit.log("rejected", confirm_token=token, reason=str(e),
+                  market=order.get("market"), side=order.get("side"),
+                  volume_twd=order.get("volume_twd"))
+        return _resp(400, {"code": "order_rejected", "message": str(e), "retryable": False})
     audit.log("executed", confirm_token=token,
               exchange_order_id=(result or {}).get("id") if isinstance(result, dict) else None)
     return _resp(200, {"ok": True, "order": order, "exchange_response": result})
