@@ -112,4 +112,17 @@ curl "<ApiUrl>/market?market=btctwd&kind=ticker"        # 應回 MAX 行情
 | /order 500 | MAX 金鑰未設或權限不足（要「讀取＋交易」） |
 | 行情空白 | MAX API 連不到：確認 Lambda 有對外網路（HttpApi 預設可） |
 
-全程目標 **< 60 分鐘**。演練實測時間：＿＿＿（7/31 前填）
+全程目標 **< 60 分鐘**。演練實測時間：**07/31 實測 46 分鐘**（砍掉整套 stack 重建，含人工設金鑰）
+
+演練實況與提醒（照這份走的人先看這段）：
+
+- **刪除很快是特例**：本次 `delete-stack` 幾分鐘就完成，因為 PR #40 的 CloudFront
+  當時還沒真的部署過，stack 裡沒有 distribution。**已經有 distribution 的環境，刪除要 15–90 分鐘**
+- **CloudFront 第一次建立**約 5–15 分鐘，佔了這 46 分鐘的大宗
+- 全新 stack 的 **ApiUrl 與前端網址都會換**：`API_BASE` 三個檔要改、對外連結要換。
+  舊的 `*.s3-website-*.amazonaws.com` 在 PR #40 之後已永久失效（bucket 轉私有）
+- 全新環境的金鑰**一定**是空的（模板不含金鑰），這步無法省
+- 驗收用 `python3 scripts/verify_live.py --base <ApiUrl>`，22 項自動判定
+- ⚠️ **最容易踩的坑不在指令，在工作目錄**：本次演練有兩次差點在舊的
+  `~/Downloads/MaiMate-main` 快照裡執行（停在 7/28、缺全部修正）。
+  每一行都先 `cd` 到正式 repo，或直接把舊快照改名
