@@ -37,12 +37,38 @@
 
 ## 後端（R2）
 
-- [ ] 7. 🤖 建置與部署：`cd infra && sam build && sam deploy`
-  - 首次在此機器上跑要 `sam deploy --guided`；**stack 名沿用 `maimate`**，換名字會開出第二套環境
-- [ ] 8. 👤 抄下 Outputs 的 **ApiUrl** 與 **FrontendUrl**（後面兩步都要用；FrontendUrl 同時是隊友要的測試網址）
+- [ ] 7. 🤖 建置與部署（repo 沒有 `samconfig.toml`，所以參數要寫明；裸跑 `sam deploy` 會卡在互動提問）：
+  ```bash
+  npm run build:sam
+  sam deploy --template-file .aws-sam/build/template.yaml --stack-name maimate \
+    --region us-east-1 --capabilities CAPABILITY_IAM --resolve-s3 \
+    --parameter-overrides KnowledgeBaseId=<你這個帳號的 KB ID> \
+    --no-confirm-changeset --no-fail-on-empty-changeset
+  ```
+  - **stack 名沿用 `maimate`**，換名字會開出第二套環境
+  - 🚨 `KnowledgeBaseId` 的模板預設值 `DSIYBVI1IX` 是 **B 包隊員自己帳號**裡的 KB，
+    在別的帳號（含決賽官方新環境）**不存在**。不覆寫的話 RAG 會靜默失效——
+    畫面看不出異狀，只是回答沒有出處。沒有自己的 KB 就先不要設 `KB_ID`，
+    工具會自動不註冊，至少不會假裝有 RAG
+  - 想先看會改什麼再決定：把 `--no-confirm-changeset` 換成 `--no-execute-changeset`，
+    它會印出變更清單但不執行。看 `Replacement` 欄——全是 `False` 代表 API ID 不變、
+    `API_BASE` 不用改
+- [ ] 8. 👤 抄下 Outputs 的 **ApiUrl**、**FrontendUrl**、**FrontendDistributionId**（第 10–12 步都要用）
+  - FrontendUrl 現在是 **CloudFront HTTPS 網址**（PR #40 之後），不再是 s3-website 網址
 - [ ] 9. 👤 主控台設 MAX 金鑰——**ChatFunction 與 OrderFunction 兩支都要**
-  - ⚠️ **每次重新部署都要重做這步**：CloudFormation 會把函式設定收斂回模板，
-    手動加的金鑰不在模板裡（鐵則2）會被移除。之前設過不代表現在還在
+  - ⚠️ **模板的 Environment 區塊有變動時**，CloudFormation 會把函式設定收斂回模板，
+    手動加的金鑰不在模板裡（鐵則2）就會被移除。純程式碼部署（沒動 template.yaml）
+    則不會被清掉——07/28 連續兩次部署實測金鑰都存活
+  - 所以規則是：**每次部署後都用下面這行確認一次**，被清掉才重設，不必每次盲補
+    ```bash
+    for f in ChatFunction OrderFunction; do
+      printf "%s: " "$f"
+      aws lambda get-function-configuration --function-name "$(aws cloudformation describe-stack-resources \
+        --stack-name maimate --logical-resource-id $f --query 'StackResources[0].PhysicalResourceId' --output text)" \
+        --query 'Environment.Variables' --output json | python3 -c "import json,sys;print(', '.join(sorted((json.load(sys.stdin) or {}).keys())))"
+    done
+    ```
+    看到 `MAX_API_KEY, MAX_API_SECRET` 就是還在（**只印 key 名稱不印值**）
   - Lambda → 函式 → Configuration → Environment variables → **Edit → Add**（新增，不是取代）
   - 🚨 不要用 CLI `--environment`（整組取代，會清掉 `TABLE_NAME`／`KB_ID`／`BEDROCK_REGION`）
   - 🚨 金鑰不進檔案、不貼進 Kiro 對話、截圖不入鏡（鐵則2）
@@ -57,17 +83,25 @@
   ```
   - 第二行必須**只輸出一行**；多行代表有頁沒改到（漏改不會報錯，只會靜默走離線 mock）
 - [ ] 11. 🤖 上傳：`aws s3 sync frontend/ s3://<FrontendBucket>/`
+- [ ] 11b. 🤖 **清 CloudFront 快取**（PR #40 之後新增的必要步驟，漏掉會讓使用者拿到舊檔）：
+  ```bash
+  aws cloudfront create-invalidation --distribution-id <FrontendDistributionId> --paths "/*"
+  ```
+  - 症狀：檔案明明 sync 上去了，開網頁卻還是舊版，且**不會有任何錯誤訊息**
+  - S3 bucket 現在是私有的（OAC），**舊的 `*.s3-website-*.amazonaws.com` 網址會失效**，
+    對外只給 FrontendUrl 那個 HTTPS 網址
 
 ## 驗證（R4）
 
-- [ ] 12. 🤖 三支探針：
+- [ ] 12. 🤖 自動驗收（取代原本手打三支 curl，涵蓋 21 項）：
   ```bash
-  curl -s "<ApiUrl>/audit?session_id=probe"
-  curl -s "<ApiUrl>/market?market=btctwd&kind=ticker" | head -c 300
-  curl -s "<ApiUrl>/health" | head -c 200
+  python3 scripts/verify_live.py --base <ApiUrl>
   ```
-  - `/audit` 不回 404、`/market` 有 `fetched_at_taipei`、`/health` 有 `realized_pnl`
-  - **任一不符就停下來回查，不要繼續往下測**
+  - 它**永遠不會送出真實訂單**（對 `/order` 只送 `action=cancel`，且有硬性擋條）
+  - 失敗項會直接印出原因，貼回對話就能修
+  - ⚠️ 模型有不確定性：同一句買賣意圖偶爾會反問而不直接出三方案，
+    D9／D12／D13／D15 若整組失敗，**先重跑一次**再判定為真的壞掉
+  - **任一項失敗就停下來回查，不要繼續往下測**
 - [ ] 13. 👤 手機開 FrontendUrl，走 `docs/TEST_CHECKLIST.md` **D 段 18 項**
   - 最關鍵五項：健康分圓環是圓的／「去年我虧最多的是哪一筆」分清虧損與少賺／
     三方案數字可驗算／確認卡按取消／關 Wi-Fi 走離線劇本
