@@ -45,12 +45,12 @@ python3 scripts/verify_live.py --base https://<本次 ApiUrl>   # 決賽換環�
 
 | # | 項目 | 通過條件 |
 |---|---|---|
-| B1 | `sam deploy` 完成 | Outputs 有 ApiUrl／FrontendUrl／FrontendBucket |
+| B1 | `sam deploy` 完成 | Outputs 有 ApiUrl／HTTPS FrontendUrl／FrontendBucket／FrontendDistributionId |
 | B2 | ChatFunction 環境變數 | `MAX_API_KEY`／`MAX_API_SECRET` 已設（漏設 → 查持倉會答「帳戶 API 未設定」） |
 | B3 | OrderFunction 環境變數 | 同上兩把金鑰（兩支 Lambda 都要，07/21 實測踩過） |
 | B4 | KB_ID 已設 | ChatFunction 有 `KB_ID`（RAG 問答才會通）＋`bedrock:Retrieve` 權限 |
 | B5 | 三個 API_BASE 都改了 | index.html／welcome.html／onboarding.html 各一份，全指向本次 ApiUrl |
-| B6 | S3 同步完成 | 開 FrontendUrl 頂欄麥麥 logo 有出現（assets 同步成功） |
+| B6 | S3 同步完成 | 手機 Safari（含隱私瀏覽）開 HTTPS FrontendUrl，根路徑與頂欄麥麥 logo 正常 |
 
 ## C. 後端 API 冒煙（curl，5 分）
 
