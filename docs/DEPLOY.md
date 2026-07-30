@@ -33,7 +33,9 @@ sam deploy --guided     # 第一次；之後 sam deploy 即可
 ```
 
 - guided 選項：stack 名 `maimate`、region 同上、其餘預設；確認 IAM 變更
-- [ ] 記下 Outputs：**ApiUrl**、**FrontendUrl**、FrontendBucket 名稱
+- [ ] 記下 Outputs：**ApiUrl**、**FrontendUrl（CloudFront HTTPS）**、FrontendBucket、
+      FrontendDistributionId。首次建立 CloudFront 通常要等 10–20 分鐘，賽前先部署好，
+      不要在 Demo 開始前才建立
 
 ### 部署後手動設定（模板刻意不含，金鑰嚴禁進版控）
 
@@ -66,6 +68,7 @@ sed -i 's#window.API_BASE = "[^"]*"#window.API_BASE = "<本次 ApiUrl>"#' fronte
 sed -i '' 's#window.API_BASE = "[^"]*"#window.API_BASE = "<本次 ApiUrl>"#' frontend/*.html   # macOS：多一組空引號
 grep -oh 'window.API_BASE = "[^"]*"' frontend/*.html | sort -u   # 必須只剩「一行」＝全站一致
 aws s3 sync frontend/ s3://<FrontendBucket>/
+aws cloudfront create-invalidation --distribution-id <FrontendDistributionId> --paths "/*"
 ```
 
 > macOS 的 `sed -i` 把下一個參數當備份副檔名，不加 `''` 會報
@@ -73,7 +76,9 @@ aws s3 sync frontend/ s3://<FrontendBucket>/
 
 - [ ] 上面那行 `sort -u` **只輸出一行**（全部進入頁指向同一個本次 ApiUrl）。最常忘的一步；
       漏改任何一頁不會報錯，只會讓該頁靜默掉回離線 mock，很難當場察覺
-- [ ] 瀏覽器開 FrontendUrl：頂欄麥麥 logo 有出現（assets 同步成功）
+- [ ] 確認 `FrontendUrl` 是 `https://*.cloudfront.net`，不是 S3 的 `http://...WebsiteURL`
+- [ ] 手機 Safari（含隱私瀏覽）開 FrontendUrl：根路徑直接載入 `index.html`，頂欄麥麥
+      logo 有出現（assets 同步成功）
 
 ## 4. 冒煙測試（workflow.md 部署冒煙順序）｜預估 10 分
 
@@ -97,6 +102,8 @@ curl "<ApiUrl>/market?market=btctwd&kind=ticker"        # 應回 MAX 行情
 
 | 症狀 | 檢查 |
 |---|---|
+| FrontendUrl 開根路徑 403 | CloudFront `DefaultRootObject` 必須是 `index.html`；確認 Output 使用 CloudFront URL |
+| S3 同步後仍看到舊前端 | 對 FrontendDistributionId 執行 `create-invalidation --paths "/*"` |
 | 某一頁全走離線 mock（其他頁正常） | 那頁的 API_BASE 忘了改——回 §3 跑 `sort -u` 驗證 |
 | RAG 問答退化成一般回答 | `KB_ID` 被 CLI `--environment` 洗掉了（見 §2 警告） |
 | /chat 500 | Bedrock model access 未開通／region 不符 → 開通或設 BEDROCK_REGION |
