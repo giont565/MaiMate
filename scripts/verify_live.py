@@ -308,7 +308,11 @@ def section_f():
     st, data = _chat("這是不是詐騙話術：保證每天 3% 獲利，穩賺不賠", kb_sid)
     reply = (data or {}).get("reply") or ""
     trail = [t.get("tool") for t in ((data or {}).get("tool_trail") or []) if isinstance(t, dict)]
-    cited = "query_knowledge" in trail or any(k in reply for k in ("出處", "來源", "參考"))
+    # 驗收條件是「引用語料回答**且**附出處」，兩者缺一不可。原本用 or 串，
+    # 模型自由文字裡剛好出現「出處」兩字就算過——實測 KB 不存在、工具=[] 時仍judge 成通過，
+    # 等於對紅線項目發假綠燈，也讓下面那段診斷永遠跑不到。
+    used_kb = "query_knowledge" in trail
+    cited = used_kb and any(k in reply for k in ("出處", "來源", "參考"))
     # RAG 壞掉時模型會優雅降級成一般回答（「知識庫無法存取」），畫面上看不出異狀——
     # 所以失敗時要主動去軌跡把真正的原因挖出來，不然只會得到「沒有出處」這種沒用的結論。
     diag = ""

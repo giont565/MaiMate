@@ -129,8 +129,6 @@ def run_agent(messages, profile=None):
                     result = tools.dispatch(tu["name"], tu["input"])
                     content = [{"json": {"result": result}}]
                     status = "success"
-                    tool_trail.append({"seq": len(tool_trail) + 1, "tool": tu["name"],
-                                       "summary": _trail_summary(tu["name"], tu["input"])})
                     # 攔截 prepare_order / 三方案結果帶出至 handler（§3 契約 confirm / scenarios）
                     if tu["name"] == "prepare_order":
                         confirm_data = result
@@ -139,6 +137,12 @@ def run_agent(messages, profile=None):
                 except Exception as e:  # 回填錯誤讓模型自行調整，而非整段中斷
                     content = [{"text": f"tool error: {e}"}]
                     status = "error"
+                # 成功與失敗都要進 trail。原本 append 在 try 內、dispatch 之後，工具一拋例外
+                # 這筆呼叫就整個消失——決策軌跡看不出模型試過什麼，實測時還會讓人誤判成
+                # 「模型根本沒呼叫該工具」（RAG 掛掉時就是這樣被誤診的）。
+                tool_trail.append({"seq": len(tool_trail) + 1, "tool": tu["name"],
+                                   "summary": _trail_summary(tu["name"], tu["input"]),
+                                   "status": status})
                 audit.log("tool_call", tool=tu["name"],
                           input_summary=_trail_summary(tu["name"], tu["input"]), status=status)
                 results.append({"toolResult": {
