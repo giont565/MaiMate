@@ -63,16 +63,52 @@ cd docs/brand && python3 render_pixel_bot.py   # 重出麥麥像素吉祥物
 已驗證：`/health` 為 07-28 資料含 realized_pnl／`/market` 含 fetched_at_taipei／`/audit` 不回 404／
 前端健康分卡圓環正常、顯示 +NT$117,482。**驗收清單 D1–D4 已過，D5–D18 未測。**
 
-## 待辦交接（2026-07-28 session 結束時）
+## 交接（2026-08-01 02:20，決賽當天）
 
-- [ ] **#4 MAX Private API 回 2014 未解**——詳細除錯紀錄見 issue #4 留言，接手先讀那則
-- [ ] **驗收未跑完**：`docs/TEST_CHECKLIST.md` D5–D18、E（Onboarding 五屏）、F（AI 安全六項）
-- [ ] **PR #32 決策**（haoting 的 Screen 6–8，11k 行）——距 code freeze 剩 3 天，要不要納入
-- [ ] PR #33（macOS sed 文件修正）待 merge；分支上另有 MAX 除錯的多個 commit 未開 PR
-- [ ] 全員 Lv2 KYC（#3）；#6 Bedrock Guardrails 主控台待建（設 `GUARDRAIL_ID` 即生效）
-- [ ] #8 影片（分鏡稿已備）、#14 部署計時演練、#15 Drive 整合簡報修正
-- [ ] 加分證據截圖：Lv2 五張 A–E、Kiro 五張 F–J（清單見 `docs/CAPTAIN_TODO.md` Part 2）
-- [ ] Claude Design 三張卡仍是舊版（DesignSync 權限流在非互動環境失敗）
+### 線上環境（帳號 525237381533／us-east-1）
+
+| 資源 | 值 |
+|---|---|
+| 前端 | https://d1ttogc25b56n5.cloudfront.net |
+| ApiUrl | `https://hwgog76s3a.execute-api.us-east-1.amazonaws.com` |
+| FrontendBucket / DistributionId | `maimate-frontendbucket-tdpftef0y2d6` / `ECJ9UVQF1D5O3` |
+| Knowledge Base | `PDEGDAUUH9`（13 篇語料，metadata 掛出處） |
+| Guardrail | `6v38f3jue77y` v1，**刻意停用**（`GuardrailId=off`） |
+| ChatFunction / OrderFunction | `maimate-ChatFunction-gJoISvAx91RA` / `maimate-OrderFunction-OtPA9sr4MOWp` |
+
+部署與驗收指令、金鑰補回步驟全在 `docs/DEPLOY.md`；RAG 重建用 `scripts/setup_rag_kb.py`。
+
+### 已完成（都有線上實測證據）
+
+- **#4 全線打通**：真實成交兩筆 `#20720919534`、`#20721028463`，MAX App 推播確認，
+  帳戶 ETH 餘額 +0.0102 為證。共修掉六個各自足以讓下單失敗的問題（簽章 2014／volume
+  讀錯 key／憑證沒進 DynamoDB／三方案低於交易所下限／貼齊門檻被四捨五入／確認鈕連按）
+- **#9 RAG**：自建 KB（語料在 Drive「黑客松/MaiMate_RAG語料」＋隊友的 chunks.jsonl 已合併）
+- **#14 G1 演練**：砍掉整套 stack 從零重建，實測 46 分鐘
+- 驗收：後端 22 項通過 21、前端完整性 13/13、Python 50 項、九組煙測
+- 手機實機：離線劇本、行情保留舊值、PWA 加到主畫面（standalone ＋ 斷網可開）
+
+### 待辦
+
+- [ ] **#8 Demo 錄影**（最重要，環境目前是好的；分鏡稿 `docs/DEMO_SCRIPT.md`）
+- [ ] TEST_CHECKLIST D14（憑證 61 秒過期）、D16（語氣切換）、E5–E10
+- [ ] 簡報「RAG 附出處尚未穩定」那條已不成立，可改寫（`docs/build_pitch.js` 誠實頁）
+- [ ] #6 Guardrail 要正確啟用需對 input／output 套用不同政策——賽後做
+- [ ] 根目錄有一批沒人引用的重複檔（`test_backend.py`／`navigation-context.js`／
+      `bedrock_client.py`／`profile_engine.py`／`strategy_calculator.py`），賽後清掉
+
+### 踩過的坑（會再犯，先讀）
+
+1. **工作目錄**：`~/Downloads/MaiMate-main-舊版勿用` 是 7/28 的舊快照，從那裡部署會把線上
+   覆蓋回舊版。每一行指令都先 `cd /Users/hao/Documents/MaiMate`
+2. **金鑰何時會被清**：只有**模板 Environment 區塊變動**時（改 `KB_ID`／新增 `GUARDRAIL_ID`
+   都算）。純程式碼部署不會。每次部署後用 DEPLOY.md 那行檢查，不要盲補
+3. **AI 相關驗收一次通過不算通過**：連跑三次、且跑完整套。今晚三次誤判都源於此
+   （F3 出處、D9 反問、D12 連按），細節見 `docs/TEST_CHECKLIST.md` 開頭那段
+4. **不會報錯的失敗**：sync 漏檔／快取沒清／某頁 `API_BASE` 忘了改，畫面全都正常但資料是
+   假的。用 `npm run verify:ui` 比對線上檔案 sha256
+5. **新增頁面要同步兩處**：`frontend/*.html` 的 `API_BASE`（用 glob 改，別逐檔）與
+   `scripts/verify_live_ui.js` 的 `PAGES` 清單
 
 ## 溝通慣例
 
