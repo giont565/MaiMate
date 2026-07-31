@@ -310,6 +310,14 @@ function addConfirmCard(card, token, fee) {
     </div>`);
   const el = document.getElementById(id);
   el.querySelector(".ok").onclick = async () => {
+    // 按下就鎖住。實測（07/31 真實成交 #20720919534）使用者 1.7 秒內連按三次，
+    // 第一次成交、後兩次被後端 410 擋掉——重放保護有效，但畫面會在成交成功之後
+    // 才跳出「確認憑證無效或已過期」的紅字，看起來像失敗。後端那道防線留著，
+    // 前端這裡不要讓第二次點擊有機會送出。
+    const ok = el.querySelector(".ok"), no = el.querySelector(".no");
+    if (ok.disabled) return;
+    ok.disabled = no.disabled = true;
+    ok.textContent = "送出中…";
     if (token === "offline-demo") { // 離線劇本：不打 API，示意完成整條 Golden Path
       log().insertAdjacentHTML("beforeend", `<div class="done">✅（離線展示）訂單流程示意完成 — 真實環境將經 60 秒憑證驗證與 MAX Private API 成交</div>`);
       maiMood("bullish");
