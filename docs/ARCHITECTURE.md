@@ -18,37 +18,75 @@
 
 ## 2. 全景圖
 
+> 這張圖與 README 舊版的差異：舊圖把 `profile_engine` 畫成 LLM 的第 7 個工具，
+> 但 `tools.py` 的工具清單裡**沒有它**——Profile 是注入 system prompt 改變語氣，
+> 不是模型能呼叫的工具。畫成工具會讓人誤以為模型能主動查／改使用者的模式。
+
+```mermaid
+flowchart TB
+    U["使用者（手機）"]
+    subgraph FE["前端 — S3 + CloudFront｜零建置 vanilla JS"]
+        P1["welcome / onboarding"]
+        P2["index：Golden Path 主程式"]
+        P3["home / chat / insights / settings"]
+        MOCK["離線 mock 備援<br/>（API 掛掉自動接手＋明示標示）"]
+    end
+    U --> FE
+    FE -.任一 API 失敗.-> MOCK
+
+    subgraph API["API Gateway (HttpApi) + Lambda×5"]
+        L1["ChatFunction<br/>POST /chat｜60s"]
+        L2["HealthFunction<br/>GET /health"]
+        L3["MarketFunction<br/>GET /market"]
+        L4["OrderFunction<br/>POST /order"]
+        L5["AuditFunction<br/>GET /audit"]
+    end
+    FE --> L1 & L2 & L3 & L4 & L5
+
+    subgraph AGENT["backend/agent — Bedrock Converse 工具迴圈"]
+        SCRUB["scrub_input 去個資"]
+        PICK["pick_model<br/>Haiku 日常 / Sonnet 深度"]
+        LLM["Bedrock Converse"]
+        PROF["profile：注入 system prompt<br/>（改語氣，不改數字，非工具）"]
+        GR["護欄 check_output<br/>＋Bedrock Guardrails"]
+        T1["query_user_history"]
+        T2["get_market_data"]
+        T3["get_account_balance（唯讀）"]
+        T4["calculate_trade_scenarios"]
+        T5["prepare_order（只產確認卡）"]
+        T6["query_knowledge（RAG，設了 KB_ID 才載入）"]
+    end
+    L1 --> SCRUB --> PICK --> LLM
+    PROF -.注入.-> LLM
+    LLM --> T1 & T2 & T3 & T4 & T5 & T6
+    LLM --> GR
+
+    subgraph DATA["資料層"]
+        HR["health_report.json<br/>（離線預算，隨 Lambda 打包）"]
+        KB["Bedrock KB + S3 Vectors"]
+        DDB["DynamoDB<br/>憑證 + Audit（append-only）"]
+        MAXP["MAX Public API"]
+        MAXV["MAX Private API"]
+    end
+    T1 --> HR
+    L2 --> HR
+    T6 --> KB
+    T2 --> MAXP
+    L3 --> MAXP
+    T3 --> MAXV
+    L1 & L4 & L5 --> DDB
+    L4 ==>|"唯一送單路徑<br/>execute_order 不在工具清單"| MAXV
+
+    subgraph DEV["開發工具鏈（非 runtime，不參與線上流程）"]
+        KIRO["Kiro IDE"]
+        SKILL["max-api-skill＝給 AI 看的 API 文件包"]
+        MCP["max-mcp-server＝開發期工具"]
+    end
 ```
-                      ┌──────────── 靜態前端（S3 + CloudFront）────────────┐
-                      │  welcome → onboarding → index / home / chat        │
-                      │  insights / settings                               │
-                      │  零建置：純 HTML + vanilla JS，沒有打包器           │
-                      └───────────────────────┬────────────────────────────┘
-                                              │ HTTPS
-                              ┌───────────────▼───────────────┐
-                              │      API Gateway (HttpApi)     │
-                              └───┬───────┬───────┬──────┬─────┘
-                    POST /chat ───┘  GET   │  GET  │ POST │ GET
-                                  /health  │/market│/order│/audit
-                                           │       │      │
-        ┌──────────────┬──────────────┬────┴───┬───┴──────┴────┐
-        │ ChatFunction │HealthFunction│Market  │ OrderFunction │ AuditFunction
-        │  (60s)       │              │Function│               │
-        └──────┬───────┘              └───┬────┘      │        └──────┬───────┘
-               │                          │           │               │
-      ┌────────▼─────────┐                │           │        ┌──────▼──────┐
-      │  backend/agent/  │                │           │        │  DynamoDB   │
-      │  loop.py 工具迴圈 │                │           │        │ (append-only)│
-      └───┬──────────┬───┘                │           │        └─────────────┘
-          │          │                    │           │
-   ┌──────▼─────┐ ┌──▼──────────────┐ ┌───▼──────────▼────┐
-   │  Bedrock   │ │ Bedrock KB      │ │ backend/          │
-   │  Converse  │ │ (RAG 防詐語料)   │ │ integrations/     │
-   │ Haiku/Sonnet│ └─────────────────┘ │  max_public       │
-   └────────────┘                      │  max_private ★    │
-                                       └───────────────────┘
-                                    ★ 只有 OrderFunction 走得到下單
-```
+
+> ⚠️ **`max-api-skill` 不執行下單**，它是 API 文件包；`max-mcp-server` 是開發期工具。
+> 產品 runtime 真正送單的是 `OrderFunction` 直接呼叫 MAX Private API。
+> 這點在舊版簡報標錯過（issue #15），對外說明時注意。
 
 **五支 Lambda**（`infra/template.yaml`）：
 
@@ -252,7 +290,7 @@ mocks/<page>.js      離線假資料
 | # | 落差 | 影響 | 歸屬 |
 |---|---|---|---|
 | 1 | `infra/template.yaml` **未宣告** `GUARDRAIL_ID`、`ENABLE_PROMPT_CACHE`，但 `loop.py:14, 109-115` 依賴它們 | 每次 `sam deploy` 都會把主控台手動設的值清掉（同 `DEPLOY.md` §2 對 MAX 金鑰的警告）。症狀是 Guardrails 悄悄失效 | D／infra |
-| 2 | `README.md:264` 的 API 範例寫 `"tool":"get_portfolio"`，但實際工具叫 `get_account_balance`（`tools.py:66`）。`get_portfolio` 在 `backend/` 全域搜尋不到 | §3 是套件間交接的唯一依據，照著接會接錯 | 文件 |
+| 2 | ~~README §3 的 API 範例寫 `"tool":"get_portfolio"`，實際工具叫 `get_account_balance`~~ | ✅ 已修（2026-07-31）。§3 是套件間交接的唯一依據，照著接會接錯 | 已修 |
 | 3 | 根目錄 `profile_engine.py` 未被 `backend/` 任何檔案 import | 疑似棄用或示範檔。**不要拿它當「上線中的合規邏輯」的證據** | 待確認 |
 
 前兩項已知歸屬明確；第 3 項在確認前不刪（可能是別的包還在用）。

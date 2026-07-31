@@ -1,13 +1,29 @@
-# MaiMate 麥麥 — 唯一開發文件
+# MaiMate 麥麥 — 總覽與索引
 
 > 2026 雲湧智生黑客松｜MaiCoin 智慧理財命題｜隊伍「第五名」
-> **這是本專案唯一的文件。** 開發地圖、架構、驗收、成果全在這份；改介面、改範圍都改這裡。
+> **本檔是進入點：分工、時程、API 契約、驗收與商業模式在這裡；技術細節在下表三份文件。**
 > 決賽 8/1–8/2｜評分：創意25／可行20／商業20／AI設計15／切合10／完成10＋Lv2 Private API +5＋Kiro +5
 
 [![CI](https://github.com/giont565/MaiMate/actions/workflows/ci.yml/badge.svg)](https://github.com/giont565/MaiMate/actions/workflows/ci.yml)
 
 **一句話**：別的投資工具看「市場」，MaiMate 同時看「你」——AI 讀你一年 10,000 筆交易紀錄找出行為盲點，
 結合 MAX 即時行情給個人化洞察，在你明確授權下執行交易。**洞察 → 對話 → 行動，AI 有手，方向盤在人手上。**
+
+## 文件索引
+
+| 我想… | 看這份 |
+|---|---|
+| **30 分鐘把它跑起來**（不用 AWS、不用金鑰） | [docs/ONBOARDING.md](docs/ONBOARDING.md) |
+| 搞懂系統怎麼組起來的、程式在哪 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| 看合規怎麼設計的、**還缺什麼** | [docs/COMPLIANCE.md](docs/COMPLIANCE.md) |
+| 部署到 AWS | [docs/DEPLOY.md](docs/DEPLOY.md) |
+| 部署完驗收 | [docs/TEST_CHECKLIST.md](docs/TEST_CHECKLIST.md)＋`npm run verify:ui -- --base <網址>` |
+| 演 Demo | [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) |
+| 只有人能做的交付項（截圖、KYC） | [docs/CAPTAIN_TODO.md](docs/CAPTAIN_TODO.md) |
+| **改介面**（跨包契約） | 本檔 §3 —— 改前先在 #dev 廣播 |
+
+> 三份技術文件（ARCHITECTURE／COMPLIANCE／ONBOARDING）的每一條主張都附 `檔案:行號`，
+> 可自行 `git grep` 覆核。與本檔牴觸時以那三份為準；與程式碼牴觸時以程式碼為準。
 
 ## 0. 設計圖
 
@@ -124,69 +140,14 @@ flowchart LR
 
 ---
 
-## 2. 完整架構
+## 2. 產品與商業
 
-實線＝P0（賽前完成）；虛線＝P1（高擬真展示）。金融數字一律由確定性程式計算，LLM 只負責理解、整合、解釋。
+> **技術架構已移到 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**（含系統圖、五支 Lambda、
+> 工具清單、三道安全設計，全部附 `檔案:行號`）。本節只留 pitch 需要的產品與商業內容。
 
-```mermaid
-flowchart TB
-    subgraph ENTRY["入口層"]
-        U["使用者"]
-        WEB["手機版 Web（RWD）<br/>S3 + CloudFront"]
-        LINE["LINE 入口"]
-        U --> WEB
-        U -.P1.-> LINE
-    end
-    subgraph EXP["體驗層（前端 SPA）"]
-        CHAT["對話主畫面"]
-        HEALTH["行為健檢卡"]
-        CARD["下單確認卡"]
-        MOCK["離線 mock 備援"]
-    end
-    WEB --> CHAT & HEALTH
-    subgraph API["API 層（API Gateway + Lambda×5）"]
-        L1["/chat Agent迴圈"]
-        L2["/health 健檢"]
-        L3["/market 行情(快取5s)"]
-        L4["/order 下單(憑證驗證)"]
-        L5["/audit 決策軌跡"]
-    end
-    CHAT --> L1
-    HEALTH --> L2
-    CARD --> L4
-    CHAT --> L5
-    subgraph AGENT["Agent 編排層（Bedrock Converse + Tool Use）"]
-        LLM["LLM 路由<br/>Haiku 日常 / Sonnet 深度"]
-        GR["Bedrock Guardrails + 程式層護欄"]
-        T1["query_user_history"]
-        T2["get_market_data"]
-        T3["get_account_balance"]
-        T4["calculate_trade_scenarios"]
-        T5["prepare_order（只產草稿）"]
-        T6["query_knowledge（RAG）"]
-        T7["profile_engine"]
-    end
-    L1 --> LLM --> T1 & T2 & T3 & T4 & T5 & T6 & T7
-    LLM --- GR
-    subgraph DATA["資料層"]
-        S3D["S3：CSV + health_report.json"]
-        KB["Bedrock KB + S3 Vectors"]
-        DDB["DynamoDB：憑證+Audit+session"]
-        MAXAPI["MAX API Public/Private"]
-        CMC["CoinMarketCap"]
-    end
-    T1 --> S3D
-    T6 --> KB
-    T2 & T3 --> MAXAPI
-    L4 -->|"execute_order（LLM 碰不到）"| MAXAPI
-    L1 & L4 & L5 --> DDB
-    T2 -.延伸.-> CMC
-    subgraph DEV["開發工具鏈（非 runtime）"]
-        KIRO["Kiro IDE（+5%）"]
-        SKILL["max-api-skill＝API文件包"]
-        MCP["max-mcp-server＝開發工具"]
-    end
-```
+三十秒版本：靜態前端（S3+CloudFront）→ API Gateway → 五支 Lambda → `/chat` 進 Bedrock
+Converse 工具迴圈。**金融數字一律由確定性程式計算，LLM 只負責理解、整合、解釋。**
+安全靠三件 AI 做不到的事：下單函式不在工具清單、下單憑證 60 秒過期、每步留 audit。
 
 ### Golden Path（決賽 Demo 主線，90 秒）
 
@@ -261,7 +222,7 @@ Response：
     "confirmation_card": { "market":"ethtwd","side":"sell","volume_twd":35920,"ord_type":"market","price":null } },
   "scenarios": [ { "key":"partial","label":"賣出 25%","amount_twd":35920,"fee_twd":54,
     "post_concentration_pct":44,"behavior_note":"..." } ],
-  "tool_trail": [ {"seq":1,"tool":"get_portfolio","summary":"ETH 54%"} ]
+  "tool_trail": [ {"seq":1,"tool":"get_account_balance","summary":"ETH 54%"} ]
 }
 ```
 `confirm` 僅在產生下單草稿時出現；`scenarios` 僅在方案試算時出現；`tool_trail` 供前端工具鏈 chips。
@@ -345,6 +306,10 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 - 金管會 AI 指引六原則逐條有對應（治理問責/以人為本/隱私/穩健/透明可解釋/永續）
 - 本節為工程自查非法律意見；虛擬資產專法立法中，商業化前過正式法遵
 
+> **完整版在 [docs/COMPLIANCE.md](docs/COMPLIANCE.md)**：每條主張附 `檔案:行號` 可覆核，
+> 六原則逐條對照，並有一節 §5「還沒做到的」列出七項已知缺口（Guardrails 未建、
+> 費率無官方連結、成本是估算非實測等）。**上台前先讀那一節**——被問到時要答得出來。
+
 ### 4.10 部署與交付（#14、#8、#15）｜主責 D
 - [ ] 從零部署演練 <1 小時＋DEPLOY.md（含 Bedrock use case 開通步驟）
 - [ ] E2E Golden Path 全線通過；預錄影片 v1（7/30 前）＋決賽 final
@@ -367,11 +332,16 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 
 ## 6. 快速開始與紅線
 
+> **完整上手指南在 [docs/ONBOARDING.md](docs/ONBOARDING.md)**（30 分鐘，含讀程式碼的順序與常見卡關）。
+> 重點：**不需要 AWS、不需要金鑰、不需要官方 CSV，也能把整個產品跑起來**——前端連不到 API
+> 會自動切離線 mock，Golden Path 照樣走完。
+
 ```bash
 bash scripts/setup.sh                 # 環境檢查（缺什麼它會說）
-python3 analysis/precompute.py        # CSV → health_report.json
-npm i && npm run smoke                # 前端煙測（改 frontend/ 必跑；mock API 離線可跑）
-cd infra && sam build && sam deploy --guided
+python3 -m http.server 8791 --directory frontend   # 前端零建置，開 /welcome.html 即可玩
+npm i && npm test                     # 後端單元＋Python 35 項＋前端主煙測（全離線可跑）
+python3 analysis/precompute.py        # CSV → health_report.json（需官方 CSV）
+cd infra && sam build && sam deploy --guided       # 部署見 docs/DEPLOY.md
 ```
 
 **開發紀律**（git 流程／零硬編碼與 API_BASE 部署檢查／UI 就地更新／工具描述＋key_findings／寫好≠測過）
