@@ -17,6 +17,7 @@
     "smoke:chat": "node --check frontend/chat-core.js && node --check frontend/chat-service.js && node --check frontend/chat.js && node --check frontend/mocks/chat.js && node scripts/smoke_chat.js",
     "smoke:insights": "node --check frontend/insights-core.js && node --check frontend/insights-service.js && node --check frontend/insights.js && node scripts/smoke_insights.js",
     "smoke:regressions": "node --check frontend/settings.js && node --check frontend/welcome.js && node scripts/smoke_regressions.js",
+    "verify:ui": "node scripts/verify_live_ui.js",
     "handbook": "node docs/build_handbook.js"
   },
   "devDependencies": {
