@@ -37,6 +37,29 @@ sam deploy --guided     # 第一次；之後 sam deploy 即可
       FrontendDistributionId。首次建立 CloudFront 通常要等 10–20 分鐘，賽前先部署好，
       不要在 Demo 開始前才建立
 
+### RAG Knowledge Base：模板管不到，換帳號一定要重建
+
+🚨 `infra/template.yaml` 只**引用** `KnowledgeBaseId`，不會建立 Bedrock KB、S3 Vectors
+與語料 bucket。**KB 不存在時部署仍會顯示成功，RAG 靜默失效**——畫面不壞、回答還算像樣，
+只是「附出處」這個賣點安靜消失，F3 失敗。已踩過兩次（#34：KB 在隊員帳號 022289351970；
+07/31：隊長帳號砍掉重建後同樣沒有）。KB ID 是帳號＋region 範圍資源，**別的帳號的 ID 不能沿用**。
+
+```bash
+python3 scripts/setup_rag_kb.py --check                      # 先看本帳號有沒有
+python3 scripts/setup_rag_kb.py --corpus <repo外的語料檔路徑>   # 沒有就一鍵建完
+```
+
+腳本冪等（可重跑）、會印出新的 KB ID 與對應的 `sam deploy` 指令，並拒絕 repo 內的語料路徑（鐵則 1）。
+完整說明看腳本開頭的 docstring。**語料 `chunks.jsonl` 只在 Drive／S3，不進 git**。
+
+| 本帳號（525237381533）已建好 | 值 |
+|---|---|
+| Knowledge Base | `PDEGDAUUH9`（`maimate-rag-kb`，Titan Embed V2 / 1024 維） |
+| 語料 bucket | `maimate-rag-corpus-525237381533`，prefix `corpus/` |
+| 向量索引 | `maimate-rag-vectors` / `maimate-kb-index`（FLOAT32 / cosine） |
+| IAM role | `MaiMateRagKbRole` |
+| ⚠ 語料 | **尚未上傳**，KB 目前是空的（檢索回空、F3 仍紅） |
+
 ### 部署後手動設定（模板刻意不含，金鑰嚴禁進版控）
 
 🚨 **每次 `sam deploy` 之後都要重做這一節**——CloudFormation 更新時會把函式設定收斂回
