@@ -73,7 +73,9 @@ Base、S3 Vectors、語料 S3 bucket。CloudFormation 因此可能在 KB 不存�
 | Vector store | S3 Vectors，index `maimate-rag-index`，FLOAT32 |
 | Data source | `maimate-rag-s3`，S3 prefix `corpus/` |
 | Chunking | Fixed size：300 tokens，10% overlap |
-| 語料物件 | `corpus/chunks.jsonl`（從團隊 Drive 取得，不進 git） |
+| Drive 備份 | [`MaiMate_RAG_語料`](https://drive.google.com/drive/folders/1WbiNZfQxasbv2UIY2CSXiL7lqaOTMCv1) |
+| 語料物件 | [`chunks.jsonl`](https://drive.google.com/file/d/1bGluoaSlYoGtPNkRN3i__zqrTHqWEF-5/view)，5,226 bytes、9 筆 JSONL |
+| SHA-256 | `F79DEA561B09AF43B4445DC77DA8A1D5D3B1E654F864291FE622EF5B53E263A7` |
 
 #### A. 先判斷是帳號／region 錯誤，還是真的不存在
 
@@ -92,21 +94,49 @@ aws bedrock-agent list-knowledge-bases --region us-east-1
 
 #### B. 在 Bedrock 主控台重建（一次性）
 
-1. 在與 SAM 部署相同的 region（預設 `us-east-1`）建立一般 S3 bucket，Block Public
-   Access 全開；從 Drive 下載 `chunks.jsonl` 到 repo 外的暫存目錄，再上傳到
-   `s3://<corpus-bucket>/corpus/chunks.jsonl`。上傳完成即刪除本機暫存副本。
-2. 建立 S3 Vectors vector bucket 與 index；index 使用 1024 維、FLOAT32、cosine
+1. 開啟團隊 Drive 的 [`MaiMate_RAG_語料`](https://drive.google.com/drive/folders/1WbiNZfQxasbv2UIY2CSXiL7lqaOTMCv1)，
+   下載 `chunks.jsonl` 到 **repo 外**的暫存目錄。不要放進專案資料夾、SAM build context、
+   commit 或 PR。下載後先核對大小與 SHA-256：
+
+   ```powershell
+   # Windows PowerShell；改成實際下載檔案位置
+   $RagCorpus = "$env:TEMP\maimate-rag\chunks.jsonl"
+   (Get-Item -LiteralPath $RagCorpus).Length   # 應為 5226
+   (Get-FileHash -LiteralPath $RagCorpus -Algorithm SHA256).Hash
+   # 應為 F79DEA561B09AF43B4445DC77DA8A1D5D3B1E654F864291FE622EF5B53E263A7
+   ```
+
+   ```bash
+   # Linux / macOS；改成實際下載檔案位置
+   RAG_CORPUS=/tmp/maimate-rag/chunks.jsonl
+   wc -c "$RAG_CORPUS"                         # 應為 5226
+   shasum -a 256 "$RAG_CORPUS"                 # macOS
+   sha256sum "$RAG_CORPUS"                     # Linux
+   ```
+
+2. 在與 SAM 部署相同的 region（預設 `us-east-1`）建立一般 S3 bucket，Block Public
+   Access 全開，再上傳 Drive 下載的原檔：
+
+   ```bash
+   aws s3 cp "$RAG_CORPUS" s3://<corpus-bucket>/corpus/chunks.jsonl
+   aws s3 ls s3://<corpus-bucket>/corpus/chunks.jsonl   # 大小應為 5226
+   ```
+
+   Windows PowerShell 使用相同指令時，把 `"$RAG_CORPUS"` 改成 `$RagCorpus`。
+
+   上傳成功後刪除本機暫存副本；Drive 與 S3 保留為兩份授權來源。
+3. 建立 S3 Vectors vector bucket 與 index；index 使用 1024 維、FLOAT32、cosine
    distance，名稱可用 `maimate-rag-index`。
-3. Bedrock → Knowledge bases → Create，名稱 `maimate-rag-kb`：
+4. Bedrock → Knowledge bases → Create，名稱 `maimate-rag-kb`：
    - embedding model：Amazon Titan Text Embeddings V2；
    - execution role：新建或指定只能讀取上述 corpus bucket、寫入上述 S3 Vectors index，
      並可呼叫 embedding model 的 role；
    - vector store：選擇剛建立的 S3 Vectors bucket／index。
-4. 新增 S3 data source `maimate-rag-s3`，prefix 設 `corpus/`；chunking 選 fixed size，
+5. 新增 S3 data source `maimate-rag-s3`，prefix 設 `corpus/`；chunking 選 fixed size，
    300 tokens、10% overlap。
-5. 執行 Sync，等待 ingestion job `COMPLETE`；確認 scanned ≥ 1、indexed ≥ 1、
+6. 執行 Sync，等待 ingestion job `COMPLETE`；確認 scanned ≥ 1、indexed ≥ 1、
    failed = 0。記下新 KB ID。
-6. 用 Retrieve 測試確認不是空索引：
+7. 用 Retrieve 測試確認不是空索引：
 
 ```bash
 aws bedrock-agent-runtime retrieve \
