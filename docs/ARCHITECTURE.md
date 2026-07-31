@@ -273,6 +273,23 @@ mocks/<page>.js      離線假資料
 部署時**只有那四頁**要改 `API_BASE`；另外三頁沒有是正常的。
 `scripts/verify_live_ui.js` 的 L3 會自動驗這件事（漏改任一頁不會報錯，只會靜默走假資料）。
 
+### PWA（加到主畫面）
+
+`manifest.webmanifest` + `sw.js`，`start_url` 是 `host-app.html`。加到主畫面後 standalone
+開啟（沒有網址列），看起來就是一支 App。
+
+主畫面的圖示與名稱用的是**麥麥自己的**（`icons/`，名稱「麥麥」），不是 MAX 或 MaiCoin 的——
+在別人的主畫面上放一個他們的 logo 與名稱，那已經不是示意而是冒名。點開之後裡面才是宿主 App 的模擬畫面。
+
+**Service worker 用 network-first，不是 cache-first。** cache-first 快一點，但會讓
+「部署了新版、使用者還是看到舊版」變成常態——那正是 `verify_live_ui.js` 花一整節在抓的災情。
+只在真的斷網時吃快取。跨來源的 API 請求一律不碰，讓前端自己的離線 mock 接手並亮標示；
+在 SW 快取 API 回應會讓畫面顯示過期行情而且毫無提示。
+
+precache 清單由 `npm run build:sw` 產出（`sw-assets.js`，版本＝所有檔案內容的雜湊）。
+`smoke:hostapp` 有一條斷言比對清單與實際目錄——**漏跑產生器會直接紅**，因為漏掉的檔只會在
+真的斷網時才現形，也就是決賽現場。同一支煙測會實際切斷網路重載，驗證頁面確實開得起來。
+
 ### 離線備援
 
 任一 API 掛掉，前端自動切 mock 並亮「離線展示」標示，Golden Path 全程照走完

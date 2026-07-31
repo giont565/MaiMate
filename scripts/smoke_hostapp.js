@@ -196,6 +196,84 @@ const server = http.createServer((req, res) => {
   console.log("觸控目標 OK：App 內可點元素全部 ≥44px（示意列的切換鈕為記錄在案的例外）");
 
   if (jsErrors.length) throw new Error(`JS 例外：${jsErrors.slice(0, 3).join("；")}`);
+  await page.close();
+
+  // ── 9. PWA：precache 清單不得與實際目錄脫節 ─────────────────────
+  // 這條是純檔案比對，不用瀏覽器。清單是產生的（npm run build:sw），
+  // 忘了重跑就會有檔案沒被快取——而破口只在真的斷網時現形，也就是決賽現場。
+  {
+    const swAssetsPath = path.join(ROOT, "sw-assets.js");
+    if (!fs.existsSync(swAssetsPath)) throw new Error("frontend/sw-assets.js 不存在 → 跑 npm run build:sw");
+    const listed = new Set(JSON.parse(/self\.SW_ASSETS = (\[[\s\S]*?\]);/.exec(fs.readFileSync(swAssetsPath, "utf8"))[1]));
+    const SKIP = new Set(["sw.js", "sw-assets.js", "brand/README.md"]);
+    const EXT = new Set([".html", ".js", ".css", ".png", ".svg", ".webmanifest", ".jpg", ".webp"]);
+    const actual = [];
+    (function walk(d) {
+      for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+        const p = path.join(d, e.name);
+        if (e.isDirectory()) walk(p);
+        else actual.push(path.relative(ROOT, p).split(path.sep).join("/"));
+      }
+    })(ROOT);
+    const want = actual.filter((f) => !SKIP.has(f) && EXT.has(path.extname(f).toLowerCase()));
+    const missing = want.filter((f) => !listed.has(f));
+    const stale = [...listed].filter((f) => !want.includes(f));
+    if (missing.length || stale.length) {
+      throw new Error(`sw-assets.js 與實際目錄脫節 → 跑 npm run build:sw\n    `
+        + (missing.length ? `清單缺少：${missing.join("、")}  ` : "")
+        + (stale.length ? `清單多餘：${stale.join("、")}` : ""));
+    }
+    console.log(`precache 清單 OK：${want.length} 個檔與目錄一致`);
+  }
+
+  // ── 10. PWA：manifest 與圖示 ──────────────────────────────────
+  // 另開一個沒有 route 攔截的 context——攔截會干擾 service worker 的請求
+  const pwa = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const pp = await pwa.newPage();
+  {
+    const r = await pp.request.get(`${base}/manifest.webmanifest`);
+    if (!r.ok()) throw new Error(`manifest.webmanifest 取不到：${r.status()}`);
+    const m = await r.json();
+    if (m.display !== "standalone") throw new Error(`manifest.display 應為 standalone，實際：${m.display}`);
+    if (!m.start_url) throw new Error("manifest 沒有 start_url");
+    if (!Array.isArray(m.icons) || !m.icons.length) throw new Error("manifest 沒有 icons");
+    for (const ic of m.icons) {
+      const ir = await pp.request.get(`${base}/${ic.src}`);
+      if (!ir.ok()) throw new Error(`圖示 ${ic.src} 取不到：${ir.status()}（主畫面會是空白方塊）`);
+    }
+    // 頁面要真的引用 manifest 與 apple-touch-icon，光有檔案不會讓它可安裝
+    await pp.goto(`${base}/host-app.html`, { waitUntil: "load" });
+    const links = await pp.evaluate(() => ({
+      manifest: !!document.querySelector('link[rel="manifest"]'),
+      apple: !!document.querySelector('link[rel="apple-touch-icon"]'),
+      capable: !!document.querySelector('meta[name="apple-mobile-web-app-capable"][content="yes"]'),
+    }));
+    for (const [k, v] of Object.entries(links)) if (!v) throw new Error(`host-app.html 缺少 PWA 標籤：${k}`);
+    console.log(`PWA manifest OK：standalone、start_url=${m.start_url}、${m.icons.length} 個圖示皆可取得`);
+  }
+
+  // ── 11. PWA：斷網後仍打得開（決賽保險的實際驗證）─────────────────
+  {
+    await pp.waitForFunction(() => navigator.serviceWorker.controller !== null, { timeout: 15000 })
+      .catch(() => { throw new Error("service worker 沒有接管頁面 —— 離線備援不會生效"); });
+    await pwa.setOffline(true);
+    await pp.reload({ waitUntil: "load" });
+    const offline = await pp.evaluate(() => ({
+      wm: document.querySelector(".wm") ? document.querySelector(".wm").dataset.name : null,
+      asset: document.querySelector(".ast .v") ? document.querySelector(".ast .v").textContent.trim() : null,
+    }));
+    if (offline.wm !== "MAX") throw new Error("斷網後頁面沒渲染出來 —— service worker 快取沒生效");
+    if (!/\d/.test(offline.asset || "")) throw new Error(`斷網後總資產讀不到：${offline.asset}`);
+    // 斷網時麥麥也要進得去（WebView 內的頁面同樣來自快取）
+    await pp.click(".mmtab");
+    await pp.waitForFunction(() => document.getElementById("wv").classList.contains("on"));
+    const ofr = pp.frames().find((f) => f.url().includes("home.html"));
+    if (!ofr) throw new Error("斷網時 WebView 內找不到 home.html");
+    await ofr.waitForSelector("#home-greeting-title", { timeout: 10000 });
+    await pwa.setOffline(false);
+    console.log(`斷網實測 OK：拔網路後 host-app 與麥麥首頁都從快取開得起來（資產 ${offline.asset}）`);
+  }
+  await pwa.close();
 
   await browser.close();
   server.close();

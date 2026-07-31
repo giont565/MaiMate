@@ -21,7 +21,21 @@
       所以「在 MAX 看到的資產」與「麥麥講的帳戶」是同一個
     - 行情 → 真的打 /market 拿即時價；抓不到就顯示「—」並標「未串接」，不編造
 -->
+<!-- PWA：加到主畫面後 standalone 開啟（沒有網址列），看起來就是一支 App。
+     black-translucent 讓內容延伸到狀態列底下，配合 safe-area padding 才不會被瀏海壓到。 -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#16224D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="麥麥">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <script>window.API_BASE = "https://ywm2d396r8.execute-api.us-east-1.amazonaws.com";</script>
+<script>
+  // 註冊 service worker：決賽現場網路掛掉時，Demo 仍走得完（見 sw.js 開頭說明）
+  if ("serviceWorker" in navigator) {
+    addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  }
+</script>
 <script src="mocks/account.js"></script>
 <style>
   :root{ --gold:#E8A13A; --up:#12B76A; --down:#F04438; --bar:30px; }

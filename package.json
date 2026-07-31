@@ -9,6 +9,7 @@
     "validate:sam": "sam validate --template-file infra/template.yaml --lint",
     "build:sam": "sam build --template-file infra/template.yaml",
     "build:account": "node scripts/build_account_mock.js",
+    "build:sw": "node scripts/build_sw_manifest.js",
     "smoke": "node scripts/smoke_frontend.js",
     "smoke:welcome": "node scripts/smoke_welcome.js",
     "smoke:onboarding": "node --check frontend/onboarding-core.js && node --check frontend/investment-analysis.js && node --check frontend/onboarding-analysis.js && node --check frontend/onboarding.js && node --check frontend/mocks/onboarding.js && node scripts/smoke_onboarding.js",
