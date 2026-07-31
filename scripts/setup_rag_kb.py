@@ -238,16 +238,25 @@ def ensure_data_source(region, kb_id, corpus_bucket, account):
 
 
 def upload_corpus(path, bucket, region):
+    """接受單一檔案或整個資料夾。Bedrock KB 的 S3 data source 吃 .md/.txt/.pdf/.html/.csv/.docx；
+    一個主題一個檔比較好，檢索回來的 s3 URI 就是可讀的出處。"""
     p = Path(path).expanduser().resolve()
-    if not p.is_file():
-        sys.exit(f"✘ 找不到語料檔：{p}")
-    if REPO_ROOT in p.parents:
+    if not p.exists():
+        sys.exit(f"✘ 找不到語料：{p}")
+    if REPO_ROOT == p or REPO_ROOT in p.parents:
         sys.exit(f"✘ 語料放在 repo 內（{p}）——鐵則 1 禁止語料進 git。\n"
                  f"  請放到 repo 以外的暫存目錄再指過來，上傳完即刪除本機副本。")
-    key = CORPUS_PREFIX + p.name
-    subprocess.run(["aws", "s3", "cp", str(p), f"s3://{bucket}/{key}", "--region", region],
-                   check=True, capture_output=True)
-    ok(f"語料已上傳 s3://{bucket}/{key}（{p.stat().st_size:,} bytes）")
+    if p.is_dir():
+        subprocess.run(["aws", "s3", "sync", str(p), f"s3://{bucket}/{CORPUS_PREFIX}",
+                        "--region", region, "--delete"], check=True, capture_output=True)
+        files = sorted(f for f in p.rglob("*") if f.is_file())
+        ok(f"語料資料夾已同步 s3://{bucket}/{CORPUS_PREFIX}（{len(files)} 個檔）")
+        for f in files:
+            info(f"· {f.name}（{f.stat().st_size:,} bytes）")
+    else:
+        subprocess.run(["aws", "s3", "cp", str(p), f"s3://{bucket}/{CORPUS_PREFIX}{p.name}",
+                        "--region", region], check=True, capture_output=True)
+        ok(f"語料已上傳 s3://{bucket}/{CORPUS_PREFIX}{p.name}（{p.stat().st_size:,} bytes）")
     info("上傳完成後請刪除本機暫存副本")
 
 
