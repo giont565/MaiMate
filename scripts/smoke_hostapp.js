@@ -15,7 +15,11 @@ const path = require("path");
 const { chromium } = require("playwright");
 
 const ROOT = path.join(__dirname, "..", "frontend");
-const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css", ".png": "image/png" };
+// .svg 一定要在：宿主 logo 是 SVG，少了它瀏覽器拿到 octet-stream 會當成載入失敗、
+// 退回字標，於是煙測會回報「無 logo 檔」——檔案明明在，狀態卻是錯的。
+const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
+  ".css": "text/css", ".png": "image/png", ".svg": "image/svg+xml",
+  ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" };
 
 // 麥麥的兩個入口該進哪一頁——寫在這裡當單一事實來源，改入口就要改這裡
 const ENTRY_GRID = "welcome.html";                      // 九宮格 icon：新用戶完整動線
@@ -66,7 +70,8 @@ const server = http.createServer((req, res) => {
   await page.click("#h-mc");
   await page.waitForFunction(() => document.getElementById("app").dataset.host === "mc");
   if (!(await page.$eval("#app", (e) => e.className)).includes("mc")) throw new Error("切到 MaiCoin 後主題未換");
-  if (!(await page.$eval(".wm", (e) => e.textContent)).includes("MaiCoin")) throw new Error("字標未換成 MaiCoin");
+  // 用 data-name 判定，不看 .wm 的文字——放進官方 logo 檔之後那裡會變成 <img>，沒有文字
+  if ((await page.$eval(".wm", (e) => e.dataset.name)) !== "MaiCoin") throw new Error("字標未換成 MaiCoin");
   await page.click("#h-max");
   await page.waitForFunction(() => document.getElementById("app").dataset.host === "max");
   // 網址參數也要能指定（現場最穩的切法）
@@ -75,6 +80,28 @@ const server = http.createServer((req, res) => {
   await page.goto(`${base}/host-app.html`, { waitUntil: "load" });
   await page.waitForSelector(".wm");
   console.log("宿主切換 OK：底部切換鈕與 ?host=mc 兩種方式都生效");
+
+  // ── 2b. logo 缺檔時要退回字標，不能留一個破圖 ────────────────────
+  // frontend/brand/ 的官方 logo 要人工放（官網對程式抓取回 403），所以缺檔是常態，
+  // 缺檔的畫面必須仍然完整——破圖 icon 出現在 Demo 上比沒有 logo 更難看。
+  const brand = await page.evaluate(() => {
+    const wm = document.querySelector(".wm");
+    const img = wm.querySelector("img");
+    return {
+      hasImg: !!img,
+      imgLoaded: img ? img.naturalWidth > 0 : null,
+      text: wm.textContent.trim(),
+      name: wm.dataset.name,
+    };
+  });
+  if (brand.hasImg && !brand.imgLoaded) throw new Error("logo 圖檔載入失敗但沒有退回字標——畫面會出現破圖");
+  if (!brand.hasImg && !brand.text.includes(brand.name)) throw new Error(`退回字標後看不到宿主名稱：「${brand.text}」`);
+  console.log(`品牌標示 OK：${brand.hasImg ? "使用 brand/ 的官方 logo" : `無 logo 檔，已退回字標（${brand.text}）`}`);
+
+  // ── 2c. 不畫假的狀態列（這是要放到真手機上展示的）──────────────
+  const fakeBar = await page.evaluate(() => /9:41/.test(document.querySelector(".app").textContent));
+  if (fakeBar) throw new Error("畫面上還有假的狀態列時間——真手機自己就有狀態列，不要疊一層假的");
+  console.log("無假狀態列 OK：交給真手機自己的狀態列");
 
   // ── 3. 誠實斷言 A：總資產必須等於 MM_ACCOUNT，不得寫死 ──────────
   const acc = await page.evaluate(() => ({
