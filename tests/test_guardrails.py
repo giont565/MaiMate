@@ -97,3 +97,11 @@ class AntiFraudContextTests(unittest.TestCase):
 
     def test_recommendation_without_fraud_framing_is_still_blocked(self):
         self.assert_blocked("推薦你現在賣出 ETH。")
+
+
+    def test_education_negation_still_passes_after_the_fraud_label_change(self):
+        """F3 修好卻把 F4 弄壞的那次回歸：_SAFETY_CONTEXT 結尾是 $，套在前綴上才等於
+        「安全語詞在命中詞正前方」；一度改成套整句，$ 錨到句尾，
+        「定期定額**不**保證獲利，長期下跌時…」的「不」就不算數了。"""
+        self.assert_allowed("定期定額不保證獲利，長期下跌時攤平成本只會讓虧損發生得比較慢。")
+        self.assert_allowed("它不能保證獲利，也不能消除價格下跌、本金損失、手續費與流動性風險。")

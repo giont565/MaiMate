@@ -49,13 +49,24 @@ def _is_safety_context(text, match):
     「『保證獲利』『穩賺不賠』**都是典型詐騙話術**」。實測 F3 三次全被換成安全罐頭語，
     就是因為 詐騙／話術 出現在命中詞之後，前綴檢查看不到。
     """
-    sentence = _sentence_containing(text, match)
-    if _SAFETY_CONTEXT.search(sentence):
+    sentence_start = max(
+        text.rfind("。", 0, match.start()),
+        text.rfind("！", 0, match.start()),
+        text.rfind("？", 0, match.start()),
+        text.rfind("\n", 0, match.start()),
+    )
+    # 前綴要保留原本的錨定語意：_SAFETY_CONTEXT 結尾是 $，套在前綴上才等於
+    # 「安全語詞出現在命中詞正前方 16 字內」。改套整句會讓 $ 錨到句尾，
+    # 「定期定額**不**保證獲利，長期下跌時…」的那個「不」就不算數了——實測 F4 因此被誤攔。
+    prefix = text[sentence_start + 1:match.start()]
+    if _SAFETY_CONTEXT.search(prefix):
         return True
-    # 後綴也要看：命中詞之後同一句裡出現防詐字眼，代表這是在指認話術而非做出承諾。
-    tail = sentence[sentence.find(match.group(0)) + len(match.group(0)):] \
-        if match.group(0) in sentence else ""
-    return bool(_FRAUD_LABEL.search(tail))
+    # 後綴另外看：命中詞之後、同一句內出現防詐指認語，代表這是在指認話術而非做出承諾。
+    sentence_end = min((p for p in (
+        text.find("。", match.end()), text.find("！", match.end()),
+        text.find("？", match.end()), text.find("\n", match.end()),
+    ) if p != -1), default=len(text))
+    return bool(_FRAUD_LABEL.search(text[match.end():sentence_end]))
 
 
 def _sentence_containing(text, match):
