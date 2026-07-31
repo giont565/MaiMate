@@ -10,6 +10,18 @@ Parameters:
     Default: DSIYBVI1IX
     Description: Bedrock Knowledge Base used by the query_knowledge agent tool
 
+  # KB 與 Guardrail 都是 CloudFormation 管不到的外部資源，且是「帳號＋region」範圍。
+  # 換帳號一定要重建，不能沿用別人的 ID——留空代表停用，模型層護欄不掛載，
+  # 程式層 guardrails.py 仍然有效（四層降為三層，不會整個沒有防護）。
+  GuardrailId:
+    Type: String
+    Default: ""
+    Description: Bedrock Guardrail id; empty disables the model-layer guardrail
+  GuardrailVersion:
+    Type: String
+    Default: "1"
+    Description: Bedrock Guardrail version to attach
+
 Globals:
   Function:
     Runtime: python3.12
@@ -38,10 +50,14 @@ Resources:
         Variables:
           KB_ID: !Ref KnowledgeBaseId
           BEDROCK_REGION: !Ref AWS::Region
+          GUARDRAIL_ID: !Ref GuardrailId
+          GUARDRAIL_VERSION: !Ref GuardrailVersion
       Policies:
         - Statement:
             - Effect: Allow
-              Action: [bedrock:InvokeModel, bedrock:Converse]
+              # ApplyGuardrail 是掛載 guardrailConfig 時 converse 會用到的權限；
+              # 少了它，converse 會以 AccessDenied 失敗——而不是「護欄靜默不生效」。
+              Action: [bedrock:InvokeModel, bedrock:Converse, bedrock:ApplyGuardrail]
               Resource: "*"
             - Effect: Allow
               Action: [aws-marketplace:ViewSubscriptions, aws-marketplace:Subscribe]
