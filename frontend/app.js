@@ -46,6 +46,22 @@ const MOCK = {
   // 三方案數字不變（程式算的），只變說法，對應「LLM 只負責把方案講成人話」的職責分離
   chat(text) {
     const mode = modeOverride || currentMode || "growth";
+    // 方案卡可點之後，卡片標題會被當成訊息送進來，所以選方案要先攔下來。
+    // 少了這兩段的話：「先賣 25%…」「照原計畫全部賣出」會命中下面的 /賣/ 再跑一次三方案
+    // （點了等於原地繞圈），「先不動，設 -10% 價格提醒」則什麼都沒命中、掉到最後的預設
+    // 回覆（答非所問）。離線劇本是 Demo 的保命符，這條路徑不能斷。
+    if (/先不動|價格提醒|冷靜/.test(text)) return {
+      reply: "（離線展示）好，這個選項**不會產生任何訂單**。我幫你記下 −10% 的提醒價，到價時再通知你回來看看。在那之前，你的持倉維持不變。",
+      tool_trail: [{ seq: 1, tool: "calculate_trade_scenarios", summary: "方案試算（ethtwd）" }],
+    };
+    const pick = /先賣\s*25%|留\s*75%/.test(text) ? { label: "先賣 25%、留 75% 觀察", amount: 35920 }
+      : /全部賣出|照原計畫/.test(text) ? { label: "照原計畫全部賣出", amount: 143680 } : null;
+    if (pick) return {
+      reply: `（離線展示）好，${pick.label}。確認卡片已產生，**60 秒內有效**——要你自己按下確認才會送出訂單，麥麥不會替你按。`,
+      tool_trail: [{ seq: 1, tool: "prepare_order", summary: "擬定訂單草稿（ethtwd）" }],
+      confirm: { confirm_token: "offline-demo",
+                 confirmation_card: { market: "ethtwd", side: "sell", volume_twd: pick.amount, ord_type: "market", price: null } },
+    };
     if (/全賣|賣掉|賣出|全部賣/.test(text)) return {
       reply: {
         cautious: "（離線展示）別急，麥麥陪你。你想把 ETH 都賣掉——它現在佔你資產的 **54%**。想先跟你說一件事：**今年 1/8 大跌那天你也這樣全賣過**，到年底少賺了 **NT$312,924**（三十多萬）。賣或不賣都可以，我們先看三個都算好數字的選項，挑最安心的那個：",

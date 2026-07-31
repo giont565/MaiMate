@@ -6,6 +6,7 @@
 """
 import json
 import os
+import re
 import time
 import uuid
 from pathlib import Path
@@ -134,9 +135,30 @@ def query_knowledge(query):
     results = [{
         "text": (r.get("content") or {}).get("text", "")[:600],
         "source": ((r.get("location") or {}).get("s3Location") or {}).get("uri", "unknown"),
+        # 語料每篇都寫了「資料來源：<官方網址>」。只給 s3:// 路徑的話，模型會判斷那對
+        # 使用者沒意義而整個省略不提——實測 F3 就是這樣：工具成功、回答卻沒有出處。
+        # 把可公開引用的網址抽出來單獨給，模型才有東西可寫。
+        "source_url": _source_url((r.get("content") or {}).get("text", "")),
     } for r in resp.get("retrievalResults", [])]
     return {"results": results,
-            "data_notes": "引用 results 回答時必須附 source 出處；results 為空就如實說知識庫查無資料。"}
+            "data_notes": (
+                "**回答必須附出處**：引用哪一段就寫出該段的 source_url（官方網址）。"
+                "source 是內部儲存路徑，不要寫給使用者看。"
+                "results 為空就如實說知識庫查無資料，不要改用一般知識硬答。"
+            )}
+
+
+def _source_url(text):
+    """從語料內文抓出「資料來源」後面的官方網址。抓不到就回 None，讓模型如實不引用。
+
+    兩種寫法都要吃：網址緊接在冒號後（B 包語料），或先寫機關名、網址在下一行（本專案語料）。
+    只往後看有限範圍，避免抓到隔了很遠、其實屬於別段的網址。
+    """
+    head = re.search(r"資料來源[：:]", text)
+    if not head:
+        return None
+    m = re.search(r"https?://\S+", text[head.end():head.end() + 300])
+    return m.group(0).rstrip("）)，,。") if m else None
 
 
 def query_user_history(section="all"):
