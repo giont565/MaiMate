@@ -13,7 +13,7 @@ const { chromium } = require("playwright");
 const ROOT = path.join(__dirname, "..", "frontend");
 const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css", ".png": "image/png" };
 
-const HEALTH = { chase_index: { buy_above_ma_pct: 64.9, buy_total: 2350 },
+const HEALTH = { chase_index: { buy_above_ma_pct: 65.0, buy_total: 2350 },
   opportunity_cost: { total_missed_twd: 26598877 },
   realized_pnl: { total_realized_twd: 117482, loss_trades: 493, profit_trades: 981 },
   concentration: { peak_concentration: { top_pct: 98.6, month: "2025-12", top_currency: "twd" } },
@@ -84,6 +84,9 @@ const server = http.createServer((req, res) => {
   if (cards.length !== 4 || !cards[1].includes("2,660萬")) throw new Error(`健檢卡異常：${cards}`);
   const insights = await page.$$eval("#insights .insight", (els) => els.map((e) => e.textContent));
   if (insights.length !== 2 || !insights[0].includes("2,350")) throw new Error(`insight 異常：${insights}`);
+  // 追高指數釘在 health_report 的 buy_above_ma_pct（65.0）——線上與離線 mock 必須同值，
+  // 否則斷網切換的瞬間畫面上的百分比會跳動（曾經線上 65% / 離線 64.9%）
+  if (!cards[0].includes("65%")) throw new Error(`追高指數未對上 health_report 的 65%：${cards[0]}`);
   // 集中度卡：top_currency=twd 須明確標成「現金（TWD）」，不可只寫「持倉集中度」誤導成加密過度集中
   if (!cards[2].includes("現金") || !cards[2].includes("TWD")) throw new Error(`集中度卡未標明現金/幣別：${cards[2]}`);
   console.log("健檢 2×2 卡＋insight OK（千分位；集中度卡已標現金 TWD）");
@@ -254,6 +257,36 @@ const server = http.createServer((req, res) => {
   await page.click(".inputbar button");
   await page.waitForFunction(() => { const m = document.querySelectorAll(".msg.ai"); return m.length && m[m.length - 1].textContent.includes("出處"); });
   console.log(`離線加拍 OK：開場白隨模式改變（${badgeTxt}）、防詐意圖附出處`);
+
+  // ── 真·全斷網（C 包「離線 mock 拔網路實測」）──────────────────────────────
+  // 上面那段只斷 /chat，/health /market /order /audit 仍被 fulfill，所以測不到「整條網路掛掉」。
+  // 這裡把非本機的請求全部 abort 後「重新載入頁面」——冷啟動才會走到 loadHealth/loadMarket
+  // 的 catch，那正是決賽現場網路斷掉時使用者真正會看到的第一個畫面。
+  for (const p of ["**/health*", "**/market*", "**/chat", "**/order", "**/audit*"]) await page.unroute(p);
+  await page.route("**/*", (route) =>
+    route.request().url().startsWith(base) ? route.continue() : route.abort());
+
+  await page.goto(`${base}/index.html`);
+  await page.waitForFunction(() => getComputedStyle(document.getElementById("offline")).display !== "none");
+
+  // 健檢卡照樣有內容（MOCK.health 接手），數字仍是 health_report 的真值
+  const offCards = await page.$$eval("#health .card", (els) => els.map((e) => e.textContent));
+  if (offCards.length !== 4) throw new Error(`全斷網健檢卡數異常：${offCards.length}`);
+  if (!offCards[0].includes("65%") || !offCards[1].includes("2,660萬")) throw new Error(`全斷網健檢卡數字不對：${offCards[0]} / ${offCards[1]}`);
+
+  // 反向誠實斷言：行情沒有離線備援，四格必須維持「—」，不准拿寫死價格假裝連得上
+  const offTicks = await page.$$eval("#market .v", (els) => els.map((e) => e.textContent.trim()));
+  if (offTicks.length !== 4 || offTicks.some((t) => t !== "—")) throw new Error(`全斷網行情不得顯示價格：${offTicks.join("/")}`);
+
+  // Golden Path 冷啟動後仍走得完
+  await page.fill("#q", "ETH 跌太多幫我全部賣掉");
+  await page.click(".inputbar button");
+  await page.waitForSelector(".confirm");
+  if ((await page.$$eval(".scen", (els) => els.length)) < 3) throw new Error("全斷網三方案卡未渲染");
+  await page.click(".confirm .ok");
+  await page.waitForFunction(() => [...document.querySelectorAll(".done")].some((e) => e.textContent.includes("離線展示")));
+  if ((await page.$$eval(".trail", (els) => els.length)) < 1) throw new Error("全斷網軌跡面板未渲染");
+  console.log("全斷網 OK：冷啟動亮離線標示、健檢卡走 mock（65%／2,660萬）、行情維持「—」不假造、Golden Path 走完");
 
   await browser.close();
   server.close();
