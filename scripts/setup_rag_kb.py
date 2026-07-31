@@ -247,6 +247,7 @@ def upload_corpus(path, bucket, region):
         sys.exit(f"✘ 語料放在 repo 內（{p}）——鐵則 1 禁止語料進 git。\n"
                  f"  請放到 repo 以外的暫存目錄再指過來，上傳完即刪除本機副本。")
     if p.is_dir():
+        _write_metadata_sidecars(p)
         subprocess.run(["aws", "s3", "sync", str(p), f"s3://{bucket}/{CORPUS_PREFIX}",
                         "--region", region, "--delete"], check=True, capture_output=True)
         files = sorted(f for f in p.rglob("*") if f.is_file())
@@ -258,6 +259,32 @@ def upload_corpus(path, bucket, region):
                         "--region", region], check=True, capture_output=True)
         ok(f"語料已上傳 s3://{bucket}/{CORPUS_PREFIX}{p.name}（{p.stat().st_size:,} bytes）")
     info("上傳完成後請刪除本機暫存副本")
+
+
+def _write_metadata_sidecars(folder):
+    """替每個語料檔產生 <檔名>.metadata.json，把官方出處掛成 metadata。
+
+    為什麼不能只靠內文：chunking 是固定 300 tokens，「資料來源：<網址>」只出現在檔案開頭，
+    被切到後段的片段完全不含那一行。實測檢索回三段只有一段帶得到出處，模型當然寫不出來
+    ——F3 因此時好時壞。掛成 metadata 之後，同一份文件的每一個片段都會帶著出處回來。
+    """
+    import re
+    n = 0
+    for f in sorted(folder.glob("*.md")):
+        text = f.read_text(encoding="utf-8")
+        head = re.search(r"資料來源[：:]", text)
+        url = None
+        if head:
+            m = re.search(r"https?://\S+", text[head.end():head.end() + 300])
+            url = m.group(0).rstrip("）)，,。") if m else None
+        if not url:
+            continue
+        (f.parent / f"{f.name}.metadata.json").write_text(
+            json.dumps({"metadataAttributes": {"source_url": url}}, ensure_ascii=False),
+            encoding="utf-8")
+        n += 1
+    if n:
+        ok(f"產生 {n} 份 metadata sidecar（把出處掛到每個片段上）")
 
 
 def ingest(region, kb_id, ds_id):
@@ -276,7 +303,12 @@ def ingest(region, kb_id, ds_id):
             if j["status"] == "FAILED":
                 sys.exit(f"✘ ingestion 失敗：{j.get('failureReasons')}")
             if not s.get("numberOfNewDocumentsIndexed"):
-                sys.exit("✘ ingestion 完成但 indexed=0——空索引，檢索會永遠回空。檢查語料格式與 prefix。")
+                # indexed=0 有兩種：真的沒灌進去，或內容沒變所以增量同步跳過。
+                # 後者是正常的，但**只改 metadata sidecar 時也會被跳過**（實測踩到：
+                # 加了 sidecar 卻沒生效，要刪掉 data source 重建才會全量重灌）。
+                # 這裡不直接判死，交給下一步的檢索煙測判斷索引到底有沒有東西。
+                info("⚠ indexed=0：內容沒變動所以跳過。若剛改過 metadata sidecar，"
+                     "需先 delete-data-source 再跑一次才會生效")
             ok("ingestion 完成")
             return
     sys.exit("✘ ingestion 等待逾時，請用 get-ingestion-job 自行確認")

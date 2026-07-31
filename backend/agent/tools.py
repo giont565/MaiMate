@@ -135,10 +135,11 @@ def query_knowledge(query):
     results = [{
         "text": (r.get("content") or {}).get("text", "")[:600],
         "source": ((r.get("location") or {}).get("s3Location") or {}).get("uri", "unknown"),
-        # 語料每篇都寫了「資料來源：<官方網址>」。只給 s3:// 路徑的話，模型會判斷那對
-        # 使用者沒意義而整個省略不提——實測 F3 就是這樣：工具成功、回答卻沒有出處。
-        # 把可公開引用的網址抽出來單獨給，模型才有東西可寫。
-        "source_url": _source_url((r.get("content") or {}).get("text", "")),
+        # 出處優先讀 metadata（setup_rag_kb.py 產生的 sidecar），抓不到才退回從內文找。
+        # 為什麼不能只靠內文：chunking 是固定 300 tokens，「資料來源：<網址>」只在檔案開頭，
+        # 切到後段的片段根本沒有那一行——實測檢索三段只有一段帶得到，F3 因此時好時壞。
+        "source_url": (r.get("metadata") or {}).get("source_url")
+                      or _source_url((r.get("content") or {}).get("text", "")),
     } for r in resp.get("retrievalResults", [])]
     return {"results": results,
             "data_notes": (
