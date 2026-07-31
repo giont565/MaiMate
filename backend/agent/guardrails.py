@@ -22,10 +22,15 @@ _SPECIFIC_ASSET = re.compile(
 
 # 防詐、風險教育與否定句可能引用同一組買賣字詞；這些不是對使用者下指令。
 _SAFETY_CONTEXT = re.compile(
-    r"(不要|不可|切勿|勿|不應|不|避免|拒絕|警惕|警訊|"
+    r"(不要|不可|切勿|勿|不應|不|避免|拒絕|警惕|警訊|紅旗|"
+    # 否定句：「沒有任何商品可以保證獲利」講的是相反的意思，卻會命中「保證獲利」。
+    # 少了這組，防詐回答被自己的護欄換成安全罐頭語——實測 F3 就是這樣掛的。
+    r"沒有|沒|無法|不會|不存在|並非|絕無|哪有|"
     r"詐騙(?:集團|群組|話術)?(?:可能)?(?:會)?|"
     r"對方(?:可能)?(?:會)?|假冒|自稱|聲稱|宣稱|誘導|要求)"
-    r"[^。！？\\n]{0,16}$"
+    # 原本寫 [^。！？\\n]——raw string 裡的 \\n 是「反斜線＋字母 n」，不是換行，
+    # 所以換行從來沒被當成句子邊界。
+    r"[^。！？\n]{0,16}$"
 )
 
 
@@ -35,7 +40,7 @@ def _is_safety_context(text, match):
         text.rfind("。", 0, match.start()),
         text.rfind("！", 0, match.start()),
         text.rfind("？", 0, match.start()),
-        text.rfind("\\n", 0, match.start()),
+        text.rfind("\n", 0, match.start()),
     )
     prefix = text[sentence_start + 1:match.start()]
     return bool(_SAFETY_CONTEXT.search(prefix))
