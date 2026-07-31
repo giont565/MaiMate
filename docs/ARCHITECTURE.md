@@ -286,6 +286,12 @@ mocks/<page>.js      離線假資料
 只在真的斷網時吃快取。跨來源的 API 請求一律不碰，讓前端自己的離線 mock 接手並亮標示；
 在 SW 快取 API 回應會讓畫面顯示過期行情而且毫無提示。
 
+⚠️ **Service worker 需要 HTTPS。** 用 `http://<區網 IP>:8791` 在手機上測時，
+瀏覽器連 `navigator.serviceWorker` 都不會提供（`isSecureContext === false`），離線快取完全不會生效——
+但「加到主畫面 standalone 開啟」仍然可以（那靠 `apple-mobile-web-app-capable`，不需要安全context）。
+要完整驗證離線備援，用 HTTPS 網址（CloudFront 或臨時通道）。已實測：HTTPS 下首次載入即接管，
+斷網重載仍開得起來。
+
 precache 清單由 `npm run build:sw` 產出（`sw-assets.js`，版本＝所有檔案內容的雜湊）。
 `smoke:hostapp` 有一條斷言比對清單與實際目錄——**漏跑產生器會直接紅**，因為漏掉的檔只會在
 真的斷網時才現形，也就是決賽現場。同一支煙測會實際切斷網路重載，驗證頁面確實開得起來。
