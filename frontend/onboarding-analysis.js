@@ -104,11 +104,14 @@ const AnalysisUI = (() => {
     show("session-expired", false);
   }
 
+  /* 只要本機已有「與目前資料版本相符」的結果就算可救援——分析本身成功、
+   * 只是這次讀取失敗時同樣適用；否則會把讀取失敗誤報成分析失敗，
+   * 並讓使用者走上會清掉自己修正的「使用展示結果」。 */
   function hasPreviousResultForFailedJob() {
     const state = OnboardingStore.read();
     return Boolean(
       state.analysisJob &&
-      state.analysisJob.status === "failed" &&
+      (state.analysisJob.status === "failed" || state.analysisJob.status === "succeeded") &&
       resultMatchesState(state, state.profileResult)
     );
   }
@@ -199,7 +202,16 @@ const AnalysisUI = (() => {
         return;
       }
     } catch (_) {
-      if (routeRequestIsCurrent(epoch, "#/analyzing")) showFailed();
+      if (!routeRequestIsCurrent(epoch, "#/analyzing")) return;
+      // 讀取失敗但本機已有同版本結果 → 走「查看上次結果」，不謊報分析失敗
+      if (hasPreviousResultForFailedJob()) {
+        activeJob = state.analysisJob;
+        renderScopeNote();
+        renderStageList(activeJob);
+        showFailed(true);
+      } else {
+        showFailed();
+      }
       return;
     }
     const storedJobIsCurrent = Boolean(
@@ -608,13 +620,18 @@ const AnalysisUI = (() => {
     const coverage = activeResult.coverage;
     const dataTypes = [];
     if (coverage.portfolioAvailable) dataTypes.push("目前持倉");
-    if (coverage.transactionCount) dataTypes.push(coverage.transactionCount + " 筆交易紀錄");
+    if (coverage.transactionCount) dataTypes.push(coverage.transactionCount.toLocaleString("en-US") + " 筆交易紀錄");
     if (coverage.fundingHistoryAvailable) dataTypes.push("入出金紀錄");
     if (coverage.questionnaireCompleted) dataTypes.push(coverage.questionnaireAnswerCount + " 題補充問卷");
     const rows = [
       ["資料期間", coveragePeriod(coverage)],
       ["使用資料", dataTypes.length ? dataTypes.join("、") : "目前沒有足夠資料"],
-      ["持有資產", coverage.portfolioAvailable ? coverage.assetCount + " 項" : "未使用持倉資料"],
+      // 報告只給最大持有標的與占比時 assetCount 是 null → 明說未提供，不補數字
+      ["持有資產", !coverage.portfolioAvailable ? "未使用持倉資料"
+        : coverage.assetCount == null ? "報告未提供各幣種比例" : coverage.assetCount + " 項"],
+      /* 交易一律只有每月聚合，沒有逐筆明細——這件事要一直講明白，
+       * 否則使用者會以為上面那個交易筆數是可以逐筆追溯的。 */
+      ["交易明細", coverage.transactionDetailAvailable ? "已使用逐筆紀錄" : "報告未提供逐筆明細（僅每月聚合）"],
       ["問卷狀態", coverage.questionnaireCompleted ? "已完成 " + coverage.questionnaireAnswerCount + " / " + coverage.questionnaireAnswerCount : "稍後補充"],
       ["入出金資料", coverage.fundingHistoryAvailable ? "已使用" : "未使用"],
       ["分析時間", formatDate(activeResult.createdAt)],
@@ -645,8 +662,9 @@ const AnalysisUI = (() => {
     const coverage = activeResult.coverage;
     const values = [
       coveragePeriod(coverage),
-      coverage.transactionCount ? coverage.transactionCount + " 筆交易" : "交易紀錄未使用",
-      coverage.portfolioAvailable ? coverage.assetCount + " 項持有資產" : "持倉資料未使用",
+      coverage.transactionCount ? coverage.transactionCount.toLocaleString("en-US") + " 筆交易" : "交易紀錄未使用",
+      !coverage.portfolioAvailable ? "持倉資料未使用"
+        : coverage.assetCount == null ? "無各幣種持倉明細" : coverage.assetCount + " 項持有資產",
       coverage.questionnaireCompleted ? coverage.questionnaireAnswerCount + " 題補充回答" : "問卷稍後補充",
     ];
     if (!coverage.fundingHistoryAvailable) values.push("未使用入出金紀錄");
@@ -1033,9 +1051,12 @@ const AnalysisUI = (() => {
 
   function navigateNext(response) {
     if (!response || !response.nextRoute) throw new Error("NEXT_ROUTE_MISSING");
-    const target = new URL(response.nextRoute, location.href);
-    if (target.origin !== location.origin) throw new Error("NEXT_ROUTE_NOT_ALLOWED");
-    location.href = target.href;
+    if (!window.MM_NAVIGATION || typeof window.MM_NAVIGATION.resolveRoute !== "function") {
+      throw new Error("NEXT_ROUTE_GUARD_UNAVAILABLE");
+    }
+    const resolved = window.MM_NAVIGATION.resolveRoute(response.nextRoute);
+    if (!resolved) throw new Error("NEXT_ROUTE_NOT_ALLOWED");
+    location.href = resolved;
   }
 
   async function confirmProfile() {

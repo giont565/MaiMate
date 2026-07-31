@@ -101,6 +101,39 @@ const server = http.createServer((req, res) => {
   if (ring.w < 40 || Math.abs(ring.w - ring.h) > 2 || ring.br === "0px") throw new Error(`hero 圓環非圓形（w=${ring.w} h=${ring.h} br=${ring.br}）— CSS 未套上`);
   console.log(`hero 健康分卡 OK：分數 ${heroScore.trim()}、圓環 ${ring.w}×${ring.h} 圓形、已實現損益千分位、公式上卡`);
 
+  // API 數字／確認卡欄位的 XSS 邊界（後端回傳非數字字串時不得注入 DOM）
+  await page.evaluate(() => {
+    window.__numericXss = 0;
+    renderHealth({
+      chase_index: { buy_above_ma_pct: '<img src=x onerror="window.__numericXss=1">', buy_total: "not-a-number" },
+      opportunity_cost: { total_missed_twd: "not-a-number" },
+      concentration: { peak_concentration: { top_pct: '<img src=x onerror="window.__numericXss=1">', month: '<img src=x onerror="window.__numericXss=1">' } },
+      cash_flow_behavior: { withdrawals_after_7d_btc_drop_pct: '<img src=x onerror="window.__numericXss=1">', twd_withdrawal_count: "not-a-number" },
+    });
+  });
+  await page.waitForTimeout(50);
+  const numericXss = await page.evaluate(() => ({
+    fired: window.__numericXss,
+    injectedNodes: document.querySelectorAll("#health img,#insights img").length,
+  }));
+  if (numericXss.fired || numericXss.injectedNodes) throw new Error(`數字欄位 XSS 未阻擋：${JSON.stringify(numericXss)}`);
+  await page.evaluate(() => addConfirmCard({
+    market: '<img src=x onerror="window.__numericXss=1">',
+    side: "sell",
+    volume_twd: '<img src=x onerror="window.__numericXss=1">',
+    ord_type: "limit",
+    price: '<img src=x onerror="window.__numericXss=1">',
+  }, "xss-test"));
+  await page.waitForTimeout(50);
+  const confirmXss = await page.evaluate(() => ({
+    fired: window.__numericXss,
+    injectedNodes: document.querySelectorAll(".confirm img").length,
+  }));
+  if (confirmXss.fired || confirmXss.injectedNodes) throw new Error(`確認卡 XSS 未阻擋：${JSON.stringify(confirmXss)}`);
+  await page.evaluate(() => document.querySelector(".confirm")?.remove());
+  await page.evaluate((healthy) => renderHealth(healthy), HEALTH);
+  console.log("API 數字／確認卡 XSS 邊界 OK");
+
   // 行情就地更新（千分位顯示、原始值存 dataset）
   const r1 = await page.$$eval("#market .v", (els) => els.map((e) => e.textContent));
   if (r1.join("/") !== "2,091,464.5/60,536.6/2,469.5/2.3509") throw new Error(`round1 格式異常：${r1}`);
@@ -169,6 +202,25 @@ const server = http.createServer((req, res) => {
   const hls = await page.$$eval(".trail .step.hl", (els) => els.length);
   if (steps.length !== 4 || !steps[1].includes("NT$35,920") || hls !== 3) throw new Error(`軌跡面板異常：${steps} hl=${hls}`);
   console.log("成交→軌跡 OK：4 步驟、訂單事件 hl×3、金額千分位");
+
+  /* 觸控目標 ≥44px（#13）。在成交後量：這時三方案卡／確認卡／軌跡面板都在畫面上，
+   * 涵蓋的可點元素最多。熱區 = 自身盒子 ∪ ::after 覆蓋層（模式徽章刻意保留小視覺，
+   * 用透明 ::after 放大可點範圍）。 */
+  const taps = await page.evaluate(() => {
+    const nodes = [...document.querySelectorAll("button, a, [role=button]")].filter((n) => n.offsetParent !== null);
+    return nodes.map((node) => {
+      const rect = node.getBoundingClientRect();
+      const after = getComputedStyle(node, "::after");
+      return {
+        label: (node.id ? "#" + node.id : node.tagName.toLowerCase()) + ' "' + (node.textContent || "").trim().slice(0, 10) + '"',
+        w: Math.round(Math.max(rect.width, parseFloat(after.width) || 0)),
+        h: Math.round(Math.max(rect.height, parseFloat(after.height) || 0)),
+      };
+    });
+  });
+  const smallTaps = taps.filter((t) => t.h < 44 || t.w < 44).map((t) => `${t.label} → ${t.w}x${t.h}`);
+  if (smallTaps.length) throw new Error(`觸控目標小於 44px：${smallTaps.join("；")}`);
+  console.log(`觸控目標 OK：${taps.length} 個可點元素熱區皆 ≥44px`);
 
   await page.screenshot({ path: "smoke_mobile.png", fullPage: true });
 

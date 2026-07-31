@@ -61,7 +61,7 @@ const EntryAdapter = {
     return {
       demoSessionId: "demo_session_local",
       persona: { id: personaId, displayName: DEMO_PERSONAS[personaId] || personaId },
-      nextRoute: "index.html?demo=" + encodeURIComponent(personaId),
+      nextRoute: "home.html?demo=" + encodeURIComponent(personaId),
     };
   },
 };
@@ -152,14 +152,20 @@ document.addEventListener("keydown", e => {
 document.getElementById("btn-cta").onclick = async () => {
   if (entryState === "ERROR") { track("maimate_entry_reload_clicked"); return init(); }
   track("maimate_primary_cta_clicked");
-  location.href = entryState === "READY_COMPLETED" ? "index.html?src=welcome" : "onboarding.html#/consent";
+  location.href = entryState === "READY_COMPLETED" ? "home.html?src=welcome" : "onboarding.html#/consent";
 };
 document.getElementById("btn-demo").onclick = async () => {
   track("maimate_demo_cta_clicked");
   const s = await EntryAdapter.createDemoSession("STEADY_PLANNER");
   location.href = s.nextRoute;
 };
-document.getElementById("btn-back").onclick = () => history.back();
+/* 入口頁通常是 app 的第一頁：沒有上一頁時直接隱藏返回鍵，
+ * 否則按下去會落到 about:blank，第一畫面就掉出 app。 */
+(function initBack() {
+  const back = document.getElementById("btn-back");
+  if (!document.referrer) { back.hidden = true; return; } // 直接開啟＝沒有上一頁
+  back.onclick = () => history.back();
+})();
 
 /* ── Demo 用狀態切換（評審展示三態；與 index.html 模式徽章同手法）── */
 function cycleState() {

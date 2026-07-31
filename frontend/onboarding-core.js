@@ -30,10 +30,13 @@
 /** @typedef {{key:ProfileDimensionKey,originalDescriptor:string,effectiveDescriptor:string,effectiveExplanation:string,correctionApplied:boolean}} EffectiveProfileDimension */
 /** @typedef {{id:string,userId:string,analysisJobId:string,dataVersion?:string,resultVersion:string,status:'draft'|'confirmed'|'revised',profileHeadline:string,summary:string,tags:ProfileTag[],coverage:AnalysisDataCoverage,dimensions:ProfileDimension[],stablePatterns:ProfileObservation[],attentionPoints:ProfileObservation[],supportPlan:SupportPlanItem[],overallFeedback?:OverallProfileFeedback,generatedBy:'rules'|'rulesAndAi'|'fallbackTemplate',createdAt:string,updatedAt:string,confirmedAt?:string}} InvestmentProfileResult */
 /** @typedef {{originalResultId:string,effectiveHeadline:string,dimensions:EffectiveProfileDimension[],supportPlan:SupportPlanItem[],userCorrections:UserProfileCorrection[],updatedAt:string}} EffectiveInvestmentProfile */
-/** @typedef {{currentScreen:number,consent?:ConsentRecord,profile?:OnboardingProfile,portfolioSource?:'mock'|'internalApi',draft?:{qIndex:number,answers:Object,optional:Object},demoSession?:DemoSession,analysisJob?:AnalysisJob,profileResult?:InvestmentProfileResult,profileFeedback?:Object,overallFeedback?:OverallProfileFeedback,effectiveProfile?:EffectiveInvestmentProfile,profileConfirmationReminder?:boolean}} OnboardingState */
+/** @typedef {{currentScreen:number,consent?:ConsentRecord,profile?:OnboardingProfile,portfolioSource?:'mock'|'internalApi',draft?:{qIndex:number,answers:Object,optional:Object},demoSession?:DemoSession,demoPersonaId?:'STEADY_PLANNER',analysisJob?:AnalysisJob,profileResult?:InvestmentProfileResult,profileFeedback?:Object,overallFeedback?:OverallProfileFeedback,effectiveProfile?:EffectiveInvestmentProfile,profileConfirmationReminder?:boolean,home?:Object}} OnboardingState */
 
 const MM_DEMO_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
-const MM_DEMO_DATA_VERSION = "steady-planner-existing-8-v1";
+/* 示範資料版本：現在的來源是隊友共用的真實帳戶（data/health_report.json → mocks/account.js），
+ * 不再是舊的「8 筆交易」示範帳戶，版本字串也一併改掉避免誤導。 */
+const MM_DEMO_DATA_VERSION = "health-report-2025-v1";
+const MM_EVENT_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$/;
 
 /* Analytics 只允許事件名與 questionId；不接受任意 metadata。 */
 function track(name, meta) {
@@ -42,11 +45,13 @@ function track(name, meta) {
     const log = (Array.isArray(stored) ? stored : []).flatMap((item) => {
       if (!item || item.e == null || String(item.e).length === 0) return [];
       const clean = { e: String(item.e) };
-      if (item.q != null && String(item.q).length > 0) clean.q = String(item.q);
+      const priorQuestionId = item.q == null ? "" : String(item.q);
+      if (MM_EVENT_ID_PATTERN.test(priorQuestionId)) clean.q = priorQuestionId;
       return [clean];
     });
     const event = { e: String(name) };
-    if (meta && meta.questionId) event.q = String(meta.questionId);
+    const questionId = meta && meta.questionId ? String(meta.questionId) : "";
+    if (MM_EVENT_ID_PATTERN.test(questionId)) event.q = questionId;
     log.push(event);
     localStorage.setItem("mm_events", JSON.stringify(log.slice(-100)));
   } catch (_) {}
@@ -65,6 +70,31 @@ const OnboardingStore = {
     const state = Object.assign(this.read(), patch);
     localStorage.setItem(this.KEY, JSON.stringify(state));
     return state;
+  },
+  /* ── 使用者自己的作答快照 ──
+   * 「先看示範帳戶」會用示範人格覆蓋整份 onboarding 狀態。覆蓋前先留一份快照，
+   * 讓使用者能在「我的」把自己的設定換回來，不會因為好奇點一下就永久失去作答。 */
+  SNAPSHOT_KEY: "mm_onboarding_user_snapshot",
+  /** 只在使用者確實有自己的（非示範）資料、且尚未有快照時建立 */
+  snapshotUserState() {
+    if (localStorage.getItem(this.SNAPSHOT_KEY)) return false;
+    const state = this.read();
+    const isOwnData = Boolean(state.profile) &&
+      !state.demoPersonaId &&
+      !(state.consent && state.consent.source === "demo");
+    if (!isOwnData) return false;
+    localStorage.setItem(this.SNAPSHOT_KEY, JSON.stringify(state));
+    return true;
+  },
+  hasUserSnapshot() { return Boolean(localStorage.getItem(this.SNAPSHOT_KEY)); },
+  /** @returns {boolean} 還原成功與否 */
+  restoreUserState() {
+    const raw = localStorage.getItem(this.SNAPSHOT_KEY);
+    if (!raw) return false;
+    try { JSON.parse(raw); } catch (_) { localStorage.removeItem(this.SNAPSHOT_KEY); return false; }
+    localStorage.setItem(this.KEY, raw);
+    localStorage.removeItem(this.SNAPSHOT_KEY);
+    return true;
   },
   /** @returns {DemoSession} */
   ensureDemoSession() {
@@ -99,12 +129,14 @@ const OnboardingStore = {
       portfolioSource: undefined,
       draft: undefined,
       demoSession: undefined,
+      demoPersonaId: undefined,
       analysisJob: undefined,
       profileResult: undefined,
       profileFeedback: undefined,
       overallFeedback: undefined,
       effectiveProfile: undefined,
       profileConfirmationReminder: undefined,
+      home: undefined,
     });
   },
 };

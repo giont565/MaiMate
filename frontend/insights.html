@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>深入了解｜MaiMate</title>
+<style>
+  /* Screen 8：設計 token 與 Screen 1–7 完全一致（色票／字級 44-28-17-14／圓角 16-12／平塗） */
+  :root{--bg:#FBFCFE;--card:#FFFFFF;--red:#E64A4D;--blue:#1E4DA7;--txt:#0F172A;--sub:#46557B;--mut:#6B7280;
+    --line:#E3E9F5;--tint:#EEF3FC;--warm:#FFF6EC;--bar:#7592CA;--bar-dim:#C7D5EC}
+  *{box-sizing:border-box;font-family:"Noto Sans CJK TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;margin:0}
+  html,body{overflow-x:clip}
+  body{background:var(--bg);color:var(--txt);padding-bottom:calc(150px + env(safe-area-inset-bottom))}
+  button{font:inherit}
+
+  /* ── Header ── */
+  .ins-header{position:sticky;top:0;z-index:20;background:rgba(251,252,254,.96);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);padding:8px 12px;display:flex;align-items:center;gap:8px}
+  .ins-header .icon-button{min-width:44px;min-height:44px;border:0;background:none;color:var(--sub);font-size:20px;
+    cursor:pointer;border-radius:12px}
+  .ins-header .who{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+  .ins-header .who img{width:30px;height:auto;flex:none}
+  .ins-header .who b{font-size:15px;display:block;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ins-header .who span{font-size:11.5px;color:var(--mut);display:block;line-height:1.4}
+  .more-menu{position:absolute;right:10px;top:56px;background:#fff;border:1px solid var(--line);border-radius:12px;
+    box-shadow:0 12px 30px rgba(22,34,77,.14);padding:6px;z-index:25;min-width:194px}
+  .more-menu[hidden]{display:none}
+  .more-menu button{display:block;width:100%;text-align:left;min-height:44px;padding:0 12px;border:0;background:none;
+    color:var(--txt);font-size:13.5px;cursor:pointer;border-radius:12px}
+  .more-menu button:hover{background:var(--tint)}
+
+  main{max-width:480px;margin:0 auto;padding:0 20px}
+
+  /* ── 來源卡（從哪來）── */
+  .source-card{margin-top:14px;background:var(--tint);border:1px solid #DCE6F8;border-radius:16px;padding:12px 14px}
+  .source-card[hidden]{display:none}
+  .source-card .lbl{font-size:11.5px;font-weight:800;color:var(--blue)}
+  .source-card .val{font-size:13px;line-height:1.65;margin-top:3px}
+  .source-card .meta{font-size:11.5px;color:var(--mut);margin-top:4px;line-height:1.6}
+
+  /* ── 停止更新／未授權提示 ── */
+  .notice-bar{margin-top:12px;background:var(--warm);border:1px solid #F2E2CE;border-radius:12px;padding:11px 13px;
+    font-size:12.5px;color:var(--sub);line-height:1.7}
+  .notice-bar[hidden]{display:none}
+
+  /* ── Hero：先看到結論與個人關聯，不是巨大圖表 ── */
+  .hero{margin-top:16px}
+  .hero .eyebrow{font-size:11.5px;font-weight:800;color:var(--blue)}
+  .hero h1{font-size:22px;line-height:1.45;letter-spacing:-.01em;margin-top:6px}
+  .hero .conclusion{font-size:16px;font-weight:800;line-height:1.7;margin-top:10px}
+  .metric-box{display:flex;align-items:flex-end;gap:10px;margin-top:12px;background:var(--card);
+    border:1px solid var(--line);border-radius:16px;padding:14px}
+  .metric-box[hidden]{display:none}
+  .metric-box .mv{font-size:28px;font-weight:800;line-height:1.1;color:var(--blue)}
+  .metric-box .ml{font-size:12px;color:var(--mut);line-height:1.6}
+  .metric-box .mn{font-size:12.5px;color:var(--sub);line-height:1.6;margin-top:2px}
+
+  /* ── 一般段落卡 ── */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px 14px;margin-top:14px}
+  .card h2{font-size:17px;line-height:1.5}
+  .card p{font-size:13.5px;color:var(--sub);line-height:1.85;margin-top:9px}
+  .card p:first-of-type{margin-top:8px}
+  .sec-title{font-size:17px;margin-top:22px}
+
+  /* ── 圖表：純 CSS 橫條／柱狀（不引入圖表庫、不畫圓餅）── */
+  .chart-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px 14px;margin-top:14px}
+  .chart-card h2{font-size:15.5px;line-height:1.55}
+  .chart-card .sum{font-size:12.5px;color:var(--mut);line-height:1.7;margin-top:6px}
+  .chart-readout{margin-top:10px;background:var(--tint);border-radius:12px;padding:9px 11px;font-size:12.5px;
+    color:var(--blue);font-weight:800;line-height:1.6}
+
+  .alloc-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+  .alloc-bar{width:100%;min-height:52px;border:0;background:none;padding:4px 0;cursor:pointer;text-align:left;display:block}
+  .alloc-bar .row{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .alloc-bar .row span{font-size:12.5px;color:var(--sub);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .alloc-bar .row b{font-size:13px;font-weight:800;color:var(--blue);flex:none}
+  .alloc-bar .track{height:10px;border-radius:12px;background:var(--tint);overflow:hidden;margin-top:7px}
+  .alloc-bar .fill{height:100%;border-radius:12px;background:var(--bar)}
+  .alloc-bar[aria-pressed="true"] .fill{background:var(--blue)}
+
+  /* 堆疊單條：一條切成數段。極小的段（0.1%）寬度只有 1px 級，
+     所以每段給 min-width:2px 讓它至少看得見，真正可點的是下面的圖例列（≥44px）。 */
+  .stack-bar{display:flex;height:16px;border-radius:12px;overflow:hidden;background:var(--tint);margin-top:14px}
+  .stack-seg{min-width:2px;background:var(--bar);border-right:1px solid var(--card)}
+  .stack-seg:last-child{border-right:0}
+  .stack-seg.on{background:var(--blue)}
+  .stack-legend{display:flex;flex-direction:column;gap:2px;margin-top:10px}
+  .stack-item{display:flex;align-items:center;gap:9px;width:100%;min-height:44px;border:0;background:none;
+    padding:6px 0;cursor:pointer;text-align:left}
+  .stack-item .swatch{width:10px;height:10px;border-radius:3px;background:var(--bar);flex:none}
+  .stack-item[aria-pressed="true"] .swatch{background:var(--blue)}
+  .stack-item span{font-size:12.5px;color:var(--sub);flex:1;min-width:0;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .stack-item b{font-size:13px;font-weight:800;color:var(--blue);flex:none}
+
+  .rhythm-chart{position:relative;display:flex;align-items:flex-end;gap:3px;height:152px;margin-top:14px;
+    border-bottom:1px solid var(--line);padding-bottom:2px}
+  .rhythm-avg{position:absolute;left:0;right:0;border-top:1px dashed var(--blue);pointer-events:none}
+  .rhythm-avg span{position:absolute;right:0;top:-16px;font-size:10.5px;color:var(--blue);font-weight:800;background:var(--card);padding:0 3px}
+  .rhythm-bar{flex:1;min-width:0;height:100%;border:0;background:none;padding:0;cursor:pointer;
+    display:flex;align-items:flex-end}
+  .rhythm-bar i{display:block;width:100%;background:var(--bar-dim);border-radius:12px 12px 0 0}
+  .rhythm-bar[data-latest="true"] i{background:var(--blue)}
+  .rhythm-bar[data-busiest="true"] i{background:var(--bar)}
+  .rhythm-bar[aria-pressed="true"] i{background:var(--red)}
+  .rhythm-axis{display:flex;justify-content:space-between;margin-top:6px;font-size:10.5px;color:var(--mut)}
+  .rhythm-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px;font-size:11px;color:var(--mut)}
+  .rhythm-legend span{display:inline-flex;align-items:center;gap:4px}
+  .rhythm-legend i{width:9px;height:9px;border-radius:12px;display:inline-block}
+
+  /* ── 指標／對照列 ── */
+  .kv-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px 14px;margin-top:14px}
+  .kv-card h2{font-size:15.5px;line-height:1.55}
+  .kv{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
+  .kv:first-of-type{border-top:0}
+  .kv span{color:var(--mut);min-width:0}
+  .kv b{font-weight:800;text-align:right;flex:none;max-width:58%}
+  .kv .note{display:block;font-size:11.5px;color:var(--mut);font-weight:400;margin-top:2px;text-align:right}
+
+  /* ── 資料不足 ── */
+  .gap-card{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--red);
+    border-radius:12px;padding:15px 14px;margin-top:14px}
+  .gap-card .tag{display:inline-block;background:var(--warm);color:#9A5B12;font-size:11.5px;font-weight:800;
+    border-radius:12px;padding:4px 9px}
+  .gap-card h2{font-size:16px;line-height:1.55;margin-top:9px}
+  .gap-card p{font-size:13.5px;color:var(--sub);line-height:1.85;margin-top:8px}
+  .gap-card .lbl{font-size:12px;font-weight:800;color:var(--blue);margin-top:12px}
+  .bullet li{font-size:12.5px;color:var(--sub);line-height:1.8;list-style:none;padding-left:14px;position:relative}
+  .bullet li::before{content:"・";position:absolute;left:0}
+  .gap-alts{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+  .gap-alts button{min-height:48px;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:0 13px;
+    text-align:left;font-size:13.5px;font-weight:700;color:var(--txt);cursor:pointer}
+
+  /* ── 依據 ── */
+  .ev-card{background:var(--tint);border:1px solid #DCE6F8;border-radius:16px;padding:15px 14px;margin-top:14px}
+  .ev-card h2{font-size:15.5px}
+  .ev-item{border-top:1px solid #DCE6F8;padding:9px 0}
+  .ev-item:first-of-type{border-top:0;padding-top:6px}
+  .ev-item b{font-size:13px;line-height:1.6;display:block}
+  .ev-item span{display:block;font-size:11.5px;color:var(--mut);margin-top:2px;line-height:1.6}
+  .ev-foot{font-size:11.5px;color:var(--mut);line-height:1.7;margin-top:8px}
+
+  /* ── 限制 ── */
+  .limit-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px 14px;margin-top:14px}
+  .limit-card h2{font-size:15.5px;margin-bottom:8px}
+
+  /* ── 相關名詞／追問 ── */
+  .term-list{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+  .term-item{width:100%;min-height:60px;background:#fff;border:1.5px solid var(--line);border-radius:16px;
+    padding:12px 42px 12px 14px;text-align:left;color:var(--txt);cursor:pointer;position:relative}
+  .term-item::after{content:"›";position:absolute;right:15px;top:50%;transform:translateY(-50%);font-size:20px;color:var(--blue)}
+  .term-item b{display:block;font-size:13.5px;line-height:1.5}
+  .term-item span{display:block;font-size:12px;color:var(--mut);line-height:1.6;margin-top:3px}
+  .ask-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+  .ask-list button{min-height:48px;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:11px 14px;
+    text-align:left;font-size:13.5px;font-weight:700;color:var(--txt);cursor:pointer}
+
+  /* ── 回到對話 CTA ── */
+  .cta{margin-top:18px;display:flex;flex-direction:column;gap:9px}
+  .cta button{min-height:50px;border-radius:12px;font-size:14.5px;font-weight:800;cursor:pointer}
+  .cta .primary{border:0;background:var(--blue);color:#fff}
+  .cta .secondary{border:1.5px solid var(--line);background:#fff;color:var(--txt)}
+  .foot-note{margin-top:14px;background:var(--tint);border-radius:16px;padding:13px 14px;font-size:12px;
+    color:var(--sub);line-height:1.75}
+
+  /* ── 洞察索引 ── */
+  .index-group{margin-top:18px}
+  .index-group h2{font-size:15.5px}
+
+  /* ── 底部導覽 ── */
+  .bottom-nav{position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));z-index:17;padding:0 20px}
+  .nav-row{max-width:480px;margin:0 auto;display:flex;background:#fff;border:1px solid var(--line);border-radius:16px;
+    box-shadow:0 10px 24px rgba(22,34,77,.10);overflow:hidden}
+  .nav-row button{flex:1;min-height:48px;border:0;background:none;font-size:12px;font-weight:700;color:var(--mut);cursor:pointer}
+  .nav-row button[aria-current="page"]{color:var(--blue);background:var(--tint)}
+
+  :focus-visible{outline:2px solid var(--red);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+  @media (max-width:374px){.hero h1{font-size:20px}.metric-box .mv{font-size:25px}}
+</style>
+</head>
+<body>
+
+<header class="ins-header">
+  <button class="icon-button" id="ins-back" aria-label="返回">‹</button>
+  <div class="who">
+    <img src="maimate_hero.png" alt="">
+    <div><b id="ins-title">深入了解</b><span id="ins-subtitle">延續你在首頁與對話看到的資料</span></div>
+  </div>
+  <button class="icon-button" id="ins-more" aria-label="更多選項" aria-haspopup="menu" aria-expanded="false">⋯</button>
+  <div class="more-menu" id="more-menu" role="menu" hidden>
+    <button type="button" role="menuitem" data-more="all">看所有深入了解</button>
+    <button type="button" role="menuitem" data-more="chat">回到對話問麥麥</button>
+    <button type="button" role="menuitem" data-more="home">回首頁</button>
+    <button type="button" role="menuitem" data-more="privacy">資料使用方式</button>
+  </div>
+</header>
+
+<main>
+  <aside class="source-card" id="source-card" hidden>
+    <div class="lbl">這一頁的資料從哪裡來</div>
+    <div class="val" id="source-value"></div>
+    <div class="meta" id="source-meta"></div>
+  </aside>
+
+  <div class="notice-bar" id="notice-bar" role="status" hidden></div>
+
+  <section id="detail-root" hidden>
+    <div class="hero">
+      <div class="eyebrow" id="hero-eyebrow">深入了解</div>
+      <h1 id="hero-title"></h1>
+      <p class="conclusion" id="hero-conclusion"></p>
+    </div>
+    <div class="metric-box" id="hero-metric" hidden>
+      <div>
+        <div class="mv" id="metric-value"></div>
+        <div class="ml" id="metric-label"></div>
+        <div class="mn" id="metric-note"></div>
+      </div>
+    </div>
+
+    <article class="card" id="why-card">
+      <h2 id="why-title">為什麼這和你有關</h2>
+      <div id="why-body"></div>
+    </article>
+
+    <div id="sections-root"></div>
+
+    <article class="card" id="simple-card">
+      <h2 id="simple-title">用簡單一點的方式說</h2>
+      <div id="simple-body"></div>
+    </article>
+
+    <section class="ev-card" id="evidence-card">
+      <h2>麥麥根據什麼這樣說</h2>
+      <div id="evidence-body"></div>
+      <p class="ev-foot">麥麥不會顯示完整交易明細或帳號資訊。</p>
+    </section>
+
+    <section class="limit-card" id="limit-card">
+      <h2>這份分析有哪些限制</h2>
+      <ul class="bullet" id="limit-body"></ul>
+    </section>
+
+    <section id="terms-card">
+      <h2 class="sec-title">一起看懂相關概念</h2>
+      <div class="term-list" id="terms-body"></div>
+    </section>
+
+    <section id="ask-card">
+      <h2 class="sec-title">你可以接著問</h2>
+      <div class="ask-list" id="ask-body"></div>
+    </section>
+
+    <div class="cta">
+      <button type="button" class="primary" id="cta-chat">回到對話繼續問</button>
+      <button type="button" class="secondary" id="cta-all">看其他深入了解</button>
+    </div>
+
+    <aside class="foot-note" role="note">
+      深入了解是用來看懂目前的資料，不代表投資能力、風險等級、績效或獲利預測，也不是買賣建議。決定始終在你手上。
+    </aside>
+  </section>
+
+  <section id="index-root" hidden>
+    <div class="hero">
+      <div class="eyebrow">深入了解</div>
+      <h1>把重要的事，再看深一點</h1>
+      <p class="conclusion">每一頁都先講結論，再給依據與限制；資料不足的部分會直接說明缺什麼。</p>
+    </div>
+    <div class="index-group">
+      <h2>關於你的帳戶</h2>
+      <div class="term-list" id="index-personal"></div>
+    </div>
+    <div class="index-group">
+      <h2>先看懂這些名詞</h2>
+      <div class="term-list" id="index-knowledge"></div>
+    </div>
+    <aside class="foot-note" role="note">
+      深入了解是用來看懂目前的資料，不代表投資能力、風險等級、績效或獲利預測，也不是買賣建議。
+    </aside>
+  </section>
+</main>
+
+<nav class="bottom-nav" aria-label="MaiMate 主要導覽">
+  <div class="nav-row">
+    <button type="button" data-nav="/maimate/home">首頁</button>
+    <button type="button" data-nav="/maimate/insights" aria-current="page">洞察</button>
+    <button type="button" data-nav="/maimate/chat">問麥麥</button>
+    <button type="button" data-nav="/maimate/settings">我的</button>
+  </div>
+</nav>
+
+<script src="mocks/account.js"></script>
+<script src="mocks/onboarding.js"></script>
+<script src="mocks/home.js"></script>
+<script src="mocks/chat.js"></script>
+<script src="onboarding-core.js"></script>
+<script src="home-core.js"></script>
+<script src="navigation-context.js"></script>
+<script src="home-service.js"></script>
+<script src="chat-core.js"></script>
+<script src="insights-core.js"></script>
+<script src="insights-service.js"></script>
+<script src="insights.js"></script>
+</body>
+</html>

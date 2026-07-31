@@ -201,7 +201,7 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem("mm_
     if (!events.includes(ev)) throw new Error(`事件未記錄：${ev}`);
   const parsedEvents = JSON.parse(events);
   for (const event of parsedEvents)
-    if (Object.keys(event).some((key) => !["e", "q"].includes(key))) throw new Error("事件記錄保留舊格式或未允許欄位");
+    if (Object.keys(event).some((key) => !["e", "q", "src", "intent", "tool", "style", "status", "guard"].includes(key))) throw new Error("事件記錄保留舊格式或未允許欄位");
   if (/beginner|longTermGrowth|concise|token|balance|372000|BTC/i.test(events)) throw new Error("事件記錄疑似含答案內容或金融明細");
   console.log("事件 OK：6 類事件有記；無答案內容/金融明細");
 

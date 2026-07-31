@@ -15,12 +15,25 @@
   body{background:var(--bg);color:var(--txt)}
 
   /* ── App Header：wordmark＋紅底線 ── */
-  .topbar{padding:16px 24px 0;display:flex;align-items:center;gap:8px;position:relative;z-index:20}
-  .topbar .back{background:none;border:0;color:var(--sub);font-size:20px;cursor:pointer;padding:2px 8px 2px 0;line-height:1}
+  .topbar{padding:16px 24px 0;display:flex;align-items:center;gap:12px;position:relative;z-index:20}
+  .topbar .back{background:none;border:0;color:var(--sub);font-size:20px;cursor:pointer;line-height:1;
+    min-width:44px;min-height:44px;padding:0;margin-left:-10px;display:inline-flex;align-items:center}
   .topbar .wordmark{font-size:15px;font-weight:800;letter-spacing:.02em;padding-bottom:6px;border-bottom:4px solid var(--red)}
   .topbar .spacer{margin-left:auto}
   .devbadge{background:none;border:1px solid var(--line);color:var(--mut);font-size:10px;padding:3px 10px;border-radius:12px;font-weight:700;cursor:pointer;white-space:nowrap}
-  .helpbtn{width:28px;height:28px;border-radius:12px;background:none;border:1px solid var(--line);color:var(--sub);font-size:13px;font-weight:800;cursor:pointer}
+  /* 44×44 的圓角方框＋一個問號，是 iOS 常見的說明鈕樣式；比原本 28px 好按也不突兀 */
+  .helpbtn{width:44px;height:44px;border-radius:14px;background:none;border:1px solid var(--line);color:var(--sub);
+    font-size:15px;font-weight:800;cursor:pointer}
+
+  /* ── 觸控目標 ≥44px（Apple HIG）──
+     這幾個控件的視覺尺寸是刻意小的（小徽章、細連結、底線文字鈕），直接把盒子撐到 44px
+     會破壞版面，所以用透明的 ::after 只把「可點範圍」放大，視覺一律不動。
+     只往垂直方向放大（left/right:0）的那幾個，是因為它們水平相鄰且間距只有 12–14px，
+     橫向也放大會讓兩個控件的熱區疊在一起，變成點哪個都不確定。 */
+  .devbadge, .legal a, .btn-demo{position:relative}
+  .devbadge::after, .legal a::after, .btn-demo::after{
+    content:"";position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:46px}
+  /* 這幾個的可視寬度都 ≥44px（徽章 72、連結 52–78、示範鈕 84），所以只補高度就夠 */
 
   main{max-width:480px;margin:0 auto;padding:0 24px 40px}
 
@@ -47,7 +60,9 @@
   .bubble .msg{font-size:15px;line-height:1.7;font-weight:600}
   .bubble .msg em{font-style:normal;color:var(--blue-d)}
   .bubble .pills{display:flex;gap:8px;margin-top:12px}
-  .bubble .pills button{border:0;border-radius:12px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+  /* 這兩顆是主要 CTA，直接撐到 44px；視覺上變高一點，反而更像可按的按鈕 */
+  .bubble .pills button{border:0;border-radius:12px;padding:0 18px;min-height:44px;font-size:13px;font-weight:700;
+    cursor:pointer;font-family:inherit}
   .bubble .pills .y{background:var(--blue-d);color:#fff}
   .bubble .pills .n{background:#EEF2FA;color:var(--ink)}
   .bubble .reply{display:none;font-size:12.5px;color:var(--ink-mut);margin-top:12px}
@@ -92,7 +107,9 @@
   .sheet .grab{width:40px;height:4px;background:#D5DEF0;border-radius:12px;margin:10px auto 0}
   .sheet .shead{display:flex;align-items:center;padding:10px 18px 12px;border-bottom:1px solid var(--line)}
   .sheet .shead b{font-size:15px}
-  .sheet .shead .x{margin-left:auto;background:none;border:0;font-size:18px;color:var(--mut);cursor:pointer;padding:4px 8px}
+  /* 關閉鈕在 sheet 標題列最右、旁邊沒有別的控件，直接給 44×44（視覺仍是一個 ✕） */
+  .sheet .shead .x{margin-left:auto;background:none;border:0;font-size:18px;color:var(--mut);cursor:pointer;
+    min-width:44px;min-height:44px;padding:0;display:inline-flex;align-items:center;justify-content:center}
   .sheet .sbody{overflow-y:auto;padding:14px 18px 8px}
   .sheet .intro{display:flex;gap:12px;align-items:center;margin-bottom:6px}
   .sheet .intro img{width:40px;height:auto}
