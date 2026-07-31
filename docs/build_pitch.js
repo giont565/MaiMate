@@ -423,8 +423,19 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;
 .opath{margin-top:.5rem;padding-top:.6rem;border-top:1px solid rgba(232,161,58,.28)}
 .opath b{display:block;color:#4ADE9A;font-size:clamp(.7rem,1.05vw,.86rem);font-family:ui-monospace,Menlo,monospace}
 .opath span{display:block;color:#8FA0C0;font-size:.7rem;margin-top:.2rem}
-@media (max-width:820px){.two,.three,.stats{grid-template-columns:1fr}.steps li{flex-direction:column;gap:.2rem}
-  .steps .d{text-align:left;min-width:0}}
+/* 直式手機：每頁鎖 100vh 對投影是對的，對手機閱讀是錯的——內容較多的頁會被切掉。
+   窄螢幕改成自然長高、整頁捲動，並關掉吸附（內容比一屏長時，吸附會讓人捲不順）。 */
+@media (max-width:820px){
+  html{scroll-snap-type:none}
+  .slide{height:auto;min-height:100vh;padding:6vh 6vw 7vh;scroll-snap-align:none}
+  .two,.three,.stats{grid-template-columns:1fr}
+  .steps li{flex-direction:column;gap:.2rem}
+  .steps .d{text-align:left;min-width:0}
+  .archwrap{grid-template-columns:1fr}
+  table{font-size:.82rem}
+  th,td{padding:.55rem .5rem}
+  .num{bottom:1.2vh}
+}
 @media print{.slide{height:100vh;page-break-after:always}}
 </style></head><body>
 ${SLIDES.map(htmlSlide).join("\n")}
