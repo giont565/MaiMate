@@ -15,8 +15,8 @@ Parameters:
   # 程式層 guardrails.py 仍然有效（四層降為三層，不會整個沒有防護）。
   GuardrailId:
     Type: String
-    Default: ""
-    Description: Bedrock Guardrail id; empty disables the model-layer guardrail
+    Default: "off"
+    Description: Bedrock Guardrail id; "off" disables the model-layer guardrail
   GuardrailVersion:
     Type: String
     Default: "1"

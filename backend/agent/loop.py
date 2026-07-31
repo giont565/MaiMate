@@ -110,7 +110,11 @@ def run_agent(messages, profile=None):
         inferenceConfig={"maxTokens": 1500, "temperature": 0.3},
     )
     # Bedrock Guardrails（#6）：D 包在主控台建好後設 GUARDRAIL_ID 即掛載（程式層護欄仍疊加）
-    guardrail_id = os.environ.get("GUARDRAIL_ID")
+    # 停用寫法要多給幾種：sam deploy 的 --parameter-overrides 不接受空值
+    # （`GuardrailId=` 直接報 invalid format），現場要緊急關掉時不該卡在 CLI 語法。
+    guardrail_id = (os.environ.get("GUARDRAIL_ID") or "").strip()
+    if guardrail_id.lower() in ("", "off", "none", "disabled", "-"):
+        guardrail_id = ""
     if guardrail_id:
         converse_kwargs["guardrailConfig"] = {
             "guardrailIdentifier": guardrail_id,
