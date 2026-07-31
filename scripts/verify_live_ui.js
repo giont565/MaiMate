@@ -27,7 +27,10 @@ const path = require("path");
 const { chromium } = require("playwright");
 
 const ROOT = path.join(__dirname, "..", "frontend");
-const PAGES = ["welcome.html", "onboarding.html", "index.html", "home.html", "chat.html", "insights.html", "settings.html"];
+// 新增頁面時務必補進來——這份清單漏一頁，該頁的 API_BASE 就沒人在看。
+// 07/31 實測：host-app.html 不在清單裡，它指著已刪除的舊 API 而 L3.1 判定通過。
+const PAGES = ["welcome.html", "onboarding.html", "index.html", "home.html", "chat.html",
+               "insights.html", "settings.html", "host-app.html"];
 
 // ---------- CLI ----------
 const argv = process.argv.slice(2);
