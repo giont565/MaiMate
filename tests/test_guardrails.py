@@ -87,3 +87,13 @@ class AntiFraudContextTests(unittest.TestCase):
         self.assert_blocked("我保證賺，你現在進場就對了。")
         self.assert_blocked("建議你現在買入 BTC。")
         self.assert_blocked("BTC 一定會漲。")
+
+
+    def test_fraud_label_after_the_phrase_also_counts(self):
+        """模型最自然的寫法是把警告放在後面：「『保證獲利』…都是典型詐騙話術」。
+        只看前綴 16 字會漏掉，實測 F3 三次全被換成安全罐頭語就是這個原因。"""
+        self.assert_allowed("「保證獲利」「穩賺不賠」都是典型詐騙話術。")
+        self.assert_allowed("只要出現保證獲利這種說法，就是詐騙警訊。")
+
+    def test_recommendation_without_fraud_framing_is_still_blocked(self):
+        self.assert_blocked("推薦你現在賣出 ETH。")

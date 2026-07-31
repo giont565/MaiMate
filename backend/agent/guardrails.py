@@ -33,17 +33,29 @@ _SAFETY_CONTEXT = re.compile(
     r"[^。！？\n]{0,16}$"
 )
 
+# 出現在命中詞「之後」的防詐指認語。用途很窄：只用來判斷「這句是在指認詐騙話術」，
+# 例如「『保證獲利』『穩賺不賠』都是典型詐騙話術」。承諾獲利的句子不會這樣寫。
+_FRAUD_LABEL = re.compile(
+    r"(詐騙|話術|騙局|警訊|紅旗|陷阱|假的|不可信|不實|吸金|龐氏|"
+    r"都是|就是).{0,12}(詐騙|話術|騙局|警訊|紅旗|陷阱)|"
+    r"(詐騙|話術|騙局|警訊|紅旗|陷阱|吸金|龐氏)"
+)
+
 
 def _is_safety_context(text, match):
-    """Return True when an advice-like phrase is governed by nearby safety language."""
-    sentence_start = max(
-        text.rfind("。", 0, match.start()),
-        text.rfind("！", 0, match.start()),
-        text.rfind("？", 0, match.start()),
-        text.rfind("\n", 0, match.start()),
-    )
-    prefix = text[sentence_start + 1:match.start()]
-    return bool(_SAFETY_CONTEXT.search(prefix))
+    """Return True when an advice-like phrase is governed by safety language in the same sentence.
+
+    只看命中詞「前面」不夠：模型最自然的寫法是把警告放在後面——
+    「『保證獲利』『穩賺不賠』**都是典型詐騙話術**」。實測 F3 三次全被換成安全罐頭語，
+    就是因為 詐騙／話術 出現在命中詞之後，前綴檢查看不到。
+    """
+    sentence = _sentence_containing(text, match)
+    if _SAFETY_CONTEXT.search(sentence):
+        return True
+    # 後綴也要看：命中詞之後同一句裡出現防詐字眼，代表這是在指認話術而非做出承諾。
+    tail = sentence[sentence.find(match.group(0)) + len(match.group(0)):] \
+        if match.group(0) in sentence else ""
+    return bool(_FRAUD_LABEL.search(tail))
 
 
 def _sentence_containing(text, match):
