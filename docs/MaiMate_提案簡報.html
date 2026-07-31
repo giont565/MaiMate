@@ -119,7 +119,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;
           <div class="h">下單憑證 60 秒過期</div><div class="b">AI 只能產生確認卡，不能送單。憑證要人按，60 秒後自己失效，過期回 410。沒有「授權一次、之後自動」。</div>
           <div class="e">tools.py:19｜order.py:25,29,51-53</div></div><div class="card">
           <div class="h">每一步都留痕</div><div class="b">工具呼叫、產卡、確認、取消、過期、成交，六種事件 append-only 寫入。使用者當下就看得到，不是出事後才查得到。</div>
-          <div class="e">audit.py:27-41</div></div></div><p class="foot"><b>提示詞攔的是意圖，架構攔的是能力。</b> 靠提示詞說「不要下單」，是在賭模型每次都聽話。</p></div><div class="num">8</div></section>
+          <div class="e">audit.py:27-41</div></div></div><p class="foot"><b>提示詞攔的是意圖，架構攔的是能力。</b> 靠提示詞說「不要下單」，是在賭模型每次都聽話。<br><br><b>07/31 真錢實測</b>：ETH/TWD 兩筆成交（#20720919534、#20721028463），MAX App 推播確認。其中一次使用者 1.7 秒內連按三次確認鈕——<b>只成交一次，後兩次回 410</b>。重放保護不是投影片上的宣稱，是真錢環境下擋下來的。</p></div><div class="num">8</div></section>
 <section class="slide"><div class="inner"><div class="kicker">系統架構</div><h2>全 Serverless，決賽當天可在 1 小時內重新部署</h2><div class="archwrap">
     <div class="archcol">
     
@@ -159,7 +159,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;
 <section class="slide"><div class="inner"><div class="kicker">AI 設計</div><h2>模型分工：貴的只用在該用的地方</h2>
         <table><thead><tr><th>工作</th><th>模型</th><th>單次成本（估算）</th></tr></thead>
         <tbody><tr><td>日常對話＋工具調度</td><td>Claude Haiku（Bedrock）</td><td>≈ NT$0.3</td></tr><tr><td>深度歸因＋方案解釋</td><td>Claude Sonnet（Bedrock）</td><td>≈ NT$2.2</td></tr><tr><td>混合平均</td><td>依意圖自動路由</td><td>&lt; NT$0.6</td></tr></tbody></table><p class="note">⚠️ <b>以上為估算</b>（依 AWS 主控台現價推算），非實測計費。系統目前沒有量測成本的程式碼。<br><br>路由邏輯在 loop.py:60-67——看使用者這句話是不是深度問題，是才升級到 Sonnet。</p></div><div class="num">11</div></section>
-<section class="slide"><div class="inner"><div class="kicker">AI 設計</div><h2>為什麼金融數字不能讓 LLM 算</h2><p class="lead">手續費、賣後集中度、機會成本——<b>全部由確定性程式計算</b>。<br><br>LLM 算錯一次數字，使用者可能就照著它下了一筆真錢的單。<br>而 LLM 算術出錯是已知的、機率性的、無法用提示詞根治的。<br><br>所以我們的分工是：<b>程式負責對，模型負責讓人聽得懂。</b></p></div><div class="num">12</div></section>
+<section class="slide"><div class="inner"><div class="kicker">AI 設計</div><h2>為什麼金融數字不能讓 LLM 算</h2><p class="lead">手續費、賣後集中度、機會成本——<b>全部由確定性程式計算</b>。<br><br>LLM 算錯一次數字，使用者可能就照著它下了一筆真錢的單。<br>而 LLM 算術出錯是已知的、機率性的、無法用提示詞根治的。<br><br>所以我們的分工是：<b>程式負責對，模型負責讓人聽得懂。</b><br><br>費率不是抄來的：<code>/api/v3/info</code> 對這個帳號回傳 <b>maker 0.0008／taker 0.0016</b>，程式用的就是交易所自己回的值。</p></div><div class="num">12</div></section>
 <section class="slide"><div class="inner"><div class="kicker">AI-native</div><h2>沒有生成式 AI，這個產品不存在</h2><p class="lead sm">誠實地逐項問一次：哪些部分其實不需要 AI？</p>
         <table><thead><tr><th>產品的一部分</th><th>沒有生成式 AI 做得到嗎</th></tr></thead>
         <tbody><tr><td>行為健檢的數字（追高 65%、機會成本 26.6M）</td><td>✅ 做得到 —— 那是 <code>analysis/precompute.py</code> 算的統計</td></tr><tr><td>三方案的金額、手續費、賣後集中度</td><td>✅ 做得到 —— <code>scenarios.py</code> 的確定性計算</td></tr><tr><td><b>聽懂「ETH 跌太多幫我全部賣掉」</b></td><td>❌ 那是自由語句，不是選單上的選項</td></tr><tr><td><b>在恐慌當下，把他自己的紀錄講成一句聽得進去的話</b></td><td>❌ 要把數據、個人歷史、當下情境編織成人話</td></tr><tr><td><b>同一組數字換三種語氣（陪伴／簡潔／分析）</b></td><td>❌ 數字不變，說法要變</td></tr><tr><td><b>「這是不是詐騙話術」的語意理解與語料檢索</b></td><td>❌ 意圖判讀 ＋ RAG</td></tr></tbody></table><p class="note">所以我們沒有把 AI 用在算數字上——<b>數字全部由程式算</b>。AI 只做程式做不到的那一半。</p><p class="foot">沒有生成式 AI，這產品會退化成一個儀表板。而<b>儀表板攔不住正在恐慌的人</b>——那個人不會在按下全賣之前先去看圖表。</p></div><div class="num">13</div></section>
@@ -194,9 +194,8 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;
 <section class="slide"><div class="inner"><div class="kicker">誠實頁</div><h2>還沒做到的</h2><p class="lead sm">這一頁存在的理由：前面每一條都有程式證據，這一頁才可信。</p>
         <div class="honest"><div class="hi">
           <div class="h">Bedrock Guardrails 尚未在主控台建立</div><div class="b">程式接點已就緒，設環境變數即生效。目前實際是四層護欄而非五層——前四層仍各自獨立有效。</div></div><div class="hi">
-          <div class="h">費率沒有可點擊的官方出處</div><div class="b">程式寫死 maker 0.08% / taker 0.16%，註解自陳「官網查證」但沒有 URL。對使用者算成本的數字，只有自陳出處不夠。</div></div><div class="hi">
           <div class="h">成本數字是估算，不是實測</div><div class="b">系統沒有量測 AI 成本的程式碼。簡報上標的是估算值。</div></div><div class="hi">
-          <div class="h">真實成交 E2E 尚未跑完</div><div class="b">待 Lv2 KYC。「不代操」的完整鏈路目前只在單元層驗過。</div></div></div><p class="foot">完整清單在 docs/COMPLIANCE.md §5。</p></div><div class="num">19</div></section>
+          <div class="h">RAG 附出處尚未穩定</div><div class="b">知識庫已建好、檢索正確、出處掛在 metadata 上；但模型是否把出處寫進回答仍有波動，連跑三次不是每次都過。已知不穩定，不是已知損壞。</div></div></div><p class="foot">完整清單在 docs/COMPLIANCE.md §5。</p></div><div class="num">19</div></section>
 <section class="slide cover"><div class="inner">
         <h1>洞察 → 對話 → 行動</h1><p class="sub">AI 有手，方向盤在人手上</p><p class="meta">github.com/giont565/MaiMate</p>
       </div><div class="num">20</div></section>
