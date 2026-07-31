@@ -13,8 +13,9 @@
   設計上刻意只有一層：整頁就是宿主 App 的畫面，沒有手機外框、沒有說明區塊。
   唯一的額外元素是最底下那條 18px 的示意標示列（誠實要求，見下）。
 
-  ⚠️ 宿主畫面是**示意 wireframe**，不是 MAX／MaiCoin 官方畫面的複製，也未使用官方 logo 檔。
-     底部常駐標示避免被誤認為官方產品截圖。
+  ⚠️ 宿主畫面是**示意 wireframe**，不是 MAX／MaiCoin 官方畫面的複製；頂欄使用官方 App icon
+     （brand/max.png、brand/maicoin.png，來自主辦方提供的品牌素材）。正因為用了真 logo，
+     底部那條「示意 wireframe · 非官方 App 畫面」更不能拿掉——它是唯一的區隔。
 
   數字規則（本專案鐵則：數字必須指得出來源）：
     - 總資產與持倉 → mocks/account.js（data/health_report.json 的同一個帳戶），
@@ -54,8 +55,10 @@
   .hd{flex:none;display:flex;align-items:center;justify-content:space-between;
     padding:calc(10px + env(safe-area-inset-top)) 14px 8px}
   .wm{font-size:20px;font-weight:800;letter-spacing:.01em;display:flex;align-items:center;gap:7px}
-  .wm img{height:26px;width:auto;max-width:132px;display:block}
-  /* 沒有官方 logo 檔時的替代字標（見 BRAND 說明） */
+  /* 官方 App icon 是圓角方形。裁切時難免帶到一點原圖的深色背景角，
+     用 border-radius 蓋掉——比在圖檔上硬去背乾淨。 */
+  .wm img{width:27px;height:27px;border-radius:23%;display:block;object-fit:cover}
+  /* 沒有官方 logo 檔時的替代字標（見 brand/README.md） */
   .wm .sq{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;
     font-size:12px;font-weight:900;color:#0E1526}
   .hdi{display:flex;gap:2px}
@@ -80,8 +83,12 @@
   .qi .ib{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center}
   .qi .ib svg{width:21px;height:21px}
   .qi .lb{font-size:11px;letter-spacing:.01em;line-height:1}
-  .qi.mm .ib{background:linear-gradient(140deg,#243768,#16224D);color:var(--gold);
-    box-shadow:0 0 0 1.5px rgba(232,161,58,.6)}
+  /* 麥麥入口用真的 App icon（新形象機器人），不是線性圖示——這顆是 Demo 的主角，
+     要一眼看得出「這是一個新增的 App 入口」而不是宿主 App 的既有功能 */
+  .qi.mm .ib{background:#fff;overflow:hidden;padding:0;
+    box-shadow:0 0 0 1.5px rgba(232,161,58,.75), 0 2px 8px rgba(0,0,0,.18)}
+  .qi.mm .ib img{width:100%;height:100%;object-fit:cover;display:block}
+  .qi.mm .ib svg{color:#16224D} /* 圖檔載入失敗時的線性圖示備援 */
   .qi .nw{position:absolute;top:-2px;left:calc(50% + 9px);background:var(--down);color:#fff;
     font-size:8px;font-weight:800;padding:1px 4px;border-radius:4px;letter-spacing:.03em;line-height:1.35}
 
@@ -227,18 +234,26 @@ const MKT = [["btctwd", "BTC", "比特幣"], ["ethtwd", "ETH", "以太幣"], ["s
 
 // 官方 logo：把檔案放進 frontend/brand/ 就自動生效，不用改程式（見 brand/README.md）。
 // 檔案不存在時 <img> 會 onerror，退回字標——所以少了檔案畫面不會破，只是不夠像。
-window.mmLogoFallback = function (img, letter, name) {
+// 圖檔載入失敗時換回線性圖示。用具名函式而不是把 SVG 字串塞進 onerror 屬性——
+// SVG 裡的雙引號會提早關掉 HTML 屬性，剩下的標記變成散落在 DOM 上的亂碼。
+window.mmMarkFallback = function (img) {
+  const box = document.createElement("span");
+  box.innerHTML = svg("bot");
+  img.replaceWith(box.firstElementChild);
+};
+
+window.mmLogoFallback = function (img, letter) {
   const sq = document.createElement("span");
   sq.className = "sq"; sq.textContent = letter;
-  img.replaceWith(sq, document.createTextNode(name));
+  img.replaceWith(sq); // 名稱本來就在旁邊的 <span>，這裡只換圖示本身
 };
 
 const HOSTS = {
-  max: { name: "MAX", mark: "M", theme: "max", light: false, logo: "brand/max.svg",
+  max: { name: "MAX", mark: "M", theme: "max", light: false, logo: "brand/max.png",
     quick: [["chart", "現貨"], ["bolt", "槓桿"], ["bank", "理財"], ["card", "充值"],
             ["gift", "活動"], ["users", "邀請"], ["doc", "報表"]],
     tabs: [["home", "首頁"], ["chart", "行情"], ["swap", "交易"], ["bot", "麥麥"], ["user", "我的"]] },
-  mc: { name: "MaiCoin", mark: "C", theme: "mc", light: true, logo: "brand/maicoin.svg",
+  mc: { name: "MaiCoin", mark: "C", theme: "mc", light: true, logo: "brand/maicoin.png",
     quick: [["repeat", "定期定額"], ["wallet", "錢包"], ["book", "新手教學"], ["card", "銀行帳戶"],
             ["gift", "推薦好友"], ["list", "交易紀錄"], ["chat", "客服"]],
     tabs: [["home", "首頁"], ["swap", "買賣"], ["repeat", "定投"], ["bot", "麥麥"], ["user", "我的"]] },
@@ -283,8 +298,8 @@ function render(k) {
 
   app.innerHTML = `
     <div class="hd">
-      <div class="wm" data-name="${H.name}"><img src="${H.logo}" alt="${H.name}"
-        onerror="mmLogoFallback(this,'${H.mark}','${H.name}')"></div>
+      <div class="wm" data-name="${H.name}"><img src="${H.logo}" alt=""
+        onerror="mmLogoFallback(this,'${H.mark}')"><span>${H.name}</span></div>
       <div class="hdi"><button data-noop="搜尋">${svg("search")}</button><button data-noop="通知">${svg("bell")}</button></div>
     </div>
     <div class="body">
@@ -296,7 +311,8 @@ function render(k) {
       ${k === "mc" ? `<div class="duo"><button class="b" data-noop="買入">買入</button><button class="s" data-noop="賣出">賣出</button></div>` : ""}
       <div class="qg">${quick}
         <button class="qi mm" data-mm="welcome.html"><span class="nw">NEW</span>
-          <span class="ib">${svg("bot")}</span><span class="lb">麥麥</span></button>
+          <span class="ib"><img src="icons/icon-192.png" alt="" onerror="mmMarkFallback(this)"></span>
+          <span class="lb">麥麥</span></button>
       </div>
       <div class="sh"><b>我的持倉</b><i>來源 health_report.json</i></div>
       <div class="lst">${holdings()}</div>

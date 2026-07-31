@@ -98,6 +98,14 @@ const server = http.createServer((req, res) => {
   if (!brand.hasImg && !brand.text.includes(brand.name)) throw new Error(`退回字標後看不到宿主名稱：「${brand.text}」`);
   console.log(`品牌標示 OK：${brand.hasImg ? "使用 brand/ 的官方 logo" : `無 logo 檔，已退回字標（${brand.text}）`}`);
 
+  // 圖示容器內只能有一個元素：曾經把 SVG 字串塞進 onerror 屬性，字串裡的雙引號
+  // 提早關掉屬性，剩下的標記散落成 DOM 亂碼疊在圖示上——而且不會有任何錯誤訊息
+  const strays = await page.$$eval(".qi .ib, .wm", (els) =>
+    els.map((e) => ({ cls: e.className || "wm", n: e.children.length, txt: e.textContent.trim().slice(0, 24) }))
+      .filter((x) => x.cls === "wm" ? x.n > 2 : x.n !== 1));
+  if (strays.length) throw new Error(`圖示容器有多餘節點（多半是屬性被字串內的引號截斷）：${JSON.stringify(strays)}`);
+  console.log("圖示結構 OK：每個圖示容器只有一個節點，無散落標記");
+
   // ── 2c. 不畫假的狀態列（這是要放到真手機上展示的）──────────────
   const fakeBar = await page.evaluate(() => /9:41/.test(document.querySelector(".app").textContent));
   if (fakeBar) throw new Error("畫面上還有假的狀態列時間——真手機自己就有狀態列，不要疊一層假的");
