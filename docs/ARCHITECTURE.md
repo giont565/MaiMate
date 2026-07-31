@@ -268,9 +268,33 @@ mocks/<page>.js      離線假資料
 | `home.html` | ❌ | 純前端 mock |
 | `insights.html` | ❌ | 純前端 mock |
 | `settings.html` | ❌ | 純前端 mock |
+| `host-app.html` | ✅ | **Demo 素材**：模擬 MAX／MaiCoin App 首頁多一個麥麥入口（`?host=mc` 切換），點下去麥麥在 WebView 裡跑起來。把「產品化路徑：主系統零改動」變成評審能點的東西。宿主畫面是示意 wireframe（底部常駐標示），總資產與持倉讀 `mocks/account.js` 以維持帳戶連續性，行情打 `/market` 拿即時價、抓不到就顯示「—」不編造 |
 
 部署時**只有那四頁**要改 `API_BASE`；另外三頁沒有是正常的。
 `scripts/verify_live_ui.js` 的 L3 會自動驗這件事（漏改任一頁不會報錯，只會靜默走假資料）。
+
+### PWA（加到主畫面）
+
+`manifest.webmanifest` + `sw.js`，`start_url` 是 `host-app.html`。加到主畫面後 standalone
+開啟（沒有網址列），看起來就是一支 App。
+
+主畫面的圖示與名稱用的是**麥麥自己的**（`icons/`，名稱「麥麥」），不是 MAX 或 MaiCoin 的——
+在別人的主畫面上放一個他們的 logo 與名稱，那已經不是示意而是冒名。點開之後裡面才是宿主 App 的模擬畫面。
+
+**Service worker 用 network-first，不是 cache-first。** cache-first 快一點，但會讓
+「部署了新版、使用者還是看到舊版」變成常態——那正是 `verify_live_ui.js` 花一整節在抓的災情。
+只在真的斷網時吃快取。跨來源的 API 請求一律不碰，讓前端自己的離線 mock 接手並亮標示；
+在 SW 快取 API 回應會讓畫面顯示過期行情而且毫無提示。
+
+⚠️ **Service worker 需要 HTTPS。** 用 `http://<區網 IP>:8791` 在手機上測時，
+瀏覽器連 `navigator.serviceWorker` 都不會提供（`isSecureContext === false`），離線快取完全不會生效——
+但「加到主畫面 standalone 開啟」仍然可以（那靠 `apple-mobile-web-app-capable`，不需要安全context）。
+要完整驗證離線備援，用 HTTPS 網址（CloudFront 或臨時通道）。已實測：HTTPS 下首次載入即接管，
+斷網重載仍開得起來。
+
+precache 清單由 `npm run build:sw` 產出（`sw-assets.js`，版本＝所有檔案內容的雜湊）。
+`smoke:hostapp` 有一條斷言比對清單與實際目錄——**漏跑產生器會直接紅**，因為漏掉的檔只會在
+真的斷網時才現形，也就是決賽現場。同一支煙測會實際切斷網路重載，驗證頁面確實開得起來。
 
 ### 離線備援
 

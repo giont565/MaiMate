@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>麥麥 MaiMate｜市場一直在變，麥麥一直陪你</title>
+<!-- PWA：從這裡加到主畫面也能 standalone 開啟（另一個入口是 host-app.html） -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#16224D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="麥麥">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<script>
+  if ("serviceWorker" in navigator) {
+    addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  }
+</script>
 <style>
   /* 方向 C：一屏＝角色＋一張對話證據卡＋一顆按鈕。
      設計依據（2026-07-26 設計評審＋實例研究）：平塗深藍不用光暈；字級 44/28/17/14；
