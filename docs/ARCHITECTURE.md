@@ -268,7 +268,7 @@ mocks/<page>.js      離線假資料
 | `home.html` | ❌ | 純前端 mock |
 | `insights.html` | ❌ | 純前端 mock |
 | `settings.html` | ❌ | 純前端 mock |
-| `host-app.html` | ❌ | **Demo 素材**：模擬 MAX／MaiCoin App 首頁多一個麥麥入口，點下去麥麥在 WebView 裡跑起來。把「產品化路徑：主系統零改動」變成評審能點的東西。宿主畫面是示意 wireframe（畫面上有常駐標示），總資產與持倉讀 `mocks/account.js` 以維持帳戶連續性，行情不打 API 故一律顯示「—」 |
+| `host-app.html` | ✅ | **Demo 素材**：模擬 MAX／MaiCoin App 首頁多一個麥麥入口（`?host=mc` 切換），點下去麥麥在 WebView 裡跑起來。把「產品化路徑：主系統零改動」變成評審能點的東西。宿主畫面是示意 wireframe（底部常駐標示），總資產與持倉讀 `mocks/account.js` 以維持帳戶連續性，行情打 `/market` 拿即時價、抓不到就顯示「—」不編造 |
 
 部署時**只有那四頁**要改 `API_BASE`；另外三頁沒有是正常的。
 `scripts/verify_live_ui.js` 的 L3 會自動驗這件事（漏改任一頁不會報錯，只會靜默走假資料）。
