@@ -32,7 +32,7 @@ def calculate_trade_scenarios(market, side, fraction=1.0, amount_twd=None,
     if report is None:
         from . import tools
         import json
-        report = json.loads(tools.HEALTH_REPORT.read_text())
+        report = json.loads(tools.HEALTH_REPORT.read_text(encoding="utf-8"))
 
     price = float(ticker.get("last") or 0)
     if price <= 0:

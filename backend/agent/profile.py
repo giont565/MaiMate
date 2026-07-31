@@ -59,5 +59,5 @@ def profile_for(mode=None, report=None):
     if report is None:
         import json
         from . import tools
-        report = json.loads(tools.HEALTH_REPORT.read_text())
+        report = json.loads(tools.HEALTH_REPORT.read_text(encoding="utf-8"))
     return infer_profile(report)

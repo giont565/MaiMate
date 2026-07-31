@@ -163,7 +163,7 @@ def _source_url(text):
 
 
 def query_user_history(section="all"):
-    report = json.loads(HEALTH_REPORT.read_text())
+    report = json.loads(HEALTH_REPORT.read_text(encoding="utf-8"))
     data = report if section == "all" else {section: report[section]}
     # 無論查哪個區塊都附重點摘要：模型選錯區塊時仍拿得到關鍵數字，避免答非所問。
     # 用語紀律：「虧損」只能指 realized_pnl（真實賺賠）；opportunity_cost 是「少賺」，兩者不得混用。

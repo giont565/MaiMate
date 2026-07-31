@@ -54,7 +54,7 @@ check("PII 全部清洗", all(t in scrubbed for t in ("[身分證字號]", "[手
 print("== scenarios（三方案數字驗算）==")
 BAL = {"eth": 2.0, "twd": 100000.0}
 TICKER = {"last": "60000"}
-REPORT = json.loads((ROOT / "data/health_report.json").read_text())
+REPORT = json.loads((ROOT / "data/health_report.json").read_text(encoding="utf-8"))
 r = scenarios.calculate_trade_scenarios("ethtwd", "sell", fraction=1.0,
                                         balances=BAL, ticker=TICKER, report=REPORT)
 s = {x["key"]: x for x in r["scenarios"]}
