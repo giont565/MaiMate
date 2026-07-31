@@ -3,6 +3,7 @@
 Golden Path 核心：交易意圖 → 三個帶真實數字的方案（保守/原意圖/暫停）。
 所有數字由本模組確定性計算（餘額×現價×費率），LLM 只負責講成人話。
 """
+import math
 
 # MAX 現貨基礎費率（來源：MAX 官網費率表，2026-07 查證；上線前再對官網）
 MAKER_FEE = 0.0008   # 掛單 0.08%
@@ -74,17 +75,23 @@ def calculate_trade_scenarios(market, side, fraction=1.0, amount_twd=None,
             return {"error": "insufficient_twd",
                     "message": f"TWD 餘額 NT${twd:,.0f} 不足以買入 NT${amount_twd:,.0f}"}
         if amount_twd < floor_twd:
+            suggest = math.ceil(floor_twd * 1.01)
             return {"error": "below_min_order",
-                    "message": (f"{market.upper()} 單筆最低 NT${floor_twd:,.0f}，"
+                    "message": (f"{market.upper()} 單筆最低 NT${floor_twd:,.1f}，"
                                 f"NT${amount_twd:,.0f} 送出去會被交易所退件。"
-                                f"請改用 NT${floor_twd:,.0f} 以上的金額。")}
+                                f"請改用 NT${suggest:,.0f} 以上的金額。")}
         partial_amount = amount_twd * 0.25
         partial_label = "先買 25% 試水溫"
         if partial_amount < floor_twd:
-            # 25% 低於交易所下限：抬到剛好可成交的金額，並在標籤上講清楚為什麼不是 25%。
+            # 25% 低於交易所下限：抬到可成交的金額，並在標籤上講清楚為什麼不是 25%。
             # 寧可標籤變醜，也不要給一張按下去會失敗的卡。
-            partial_amount = floor_twd
-            partial_label = f"先買 NT${floor_twd:,.0f} 試水溫（{market.upper()} 單筆最低）"
+            #
+            # 為什麼是 ceil＋緩衝而不是剛好等於門檻：①卡片金額會被 round() 成整數，
+            # 剛好貼齊門檻時那不到 1 元的差額會讓數量掉到最低量之下（實測 NT$310 對
+            # 門檻 310.4，換算 0.004993 ETH < 0.005，被退件）；②確認卡有 60 秒效期，
+            # 這段時間幣價漲一點點門檻就跟著漲。1% 緩衝同時吃掉這兩種誤差。
+            partial_amount = math.ceil(floor_twd * 1.01)
+            partial_label = f"先買 NT${partial_amount:,.0f} 試水溫（略高於 {market.upper()} 單筆最低）"
         scenarios = [
             _scenario("partial", partial_label, partial_amount,
                       _post_pct(cur_value + partial_amount, total_value), _buy_note(report)),

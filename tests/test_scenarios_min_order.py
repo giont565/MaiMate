@@ -30,6 +30,20 @@ class BuyScenarioMinimumTests(unittest.TestCase):
         self.assertGreaterEqual(partial["amount_twd"], floor)
         self.assertIn("最低", partial["label"], "抬過金額就要在標籤上講清楚，不能假裝還是 25%")
 
+    def test_rounded_amount_still_clears_the_floor_after_a_price_rise(self):
+        """實測退件案例：門檻 310.4，卡片顯示 round()→310，換算 0.004993 ETH < 0.005。
+        而且確認卡有 60 秒效期，這期間幣價還會動——金額必須留緩衝，不能貼齊門檻。"""
+        price = 62_082.3                       # 0.005 ETH = NT$310.41
+        partial = next(s for s in build(500, price)["scenarios"] if s["key"] == "partial")
+        amount = partial["amount_twd"]         # 卡片上的整數金額，就是實際會送出的金額
+
+        self.assertGreater(amount, ETH_RULES["min_base_amount"] * price,
+                           "貼齊門檻＋整數進位＝送出去必被退件")
+        # 60 秒內漲 0.5% 也還要能成交
+        risen = price * 1.005
+        volume = int(amount / risen * 10 ** 6) / 10 ** 6   # 照 base_precision 無條件捨去
+        self.assertGreaterEqual(volume, ETH_RULES["min_base_amount"])
+
     def test_partial_stays_25_percent_when_it_clears_the_minimum(self):
         result = build(4000)          # 25% = NT$1,000，遠高於門檻
         partial = next(s for s in result["scenarios"] if s["key"] == "partial")
