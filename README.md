@@ -34,6 +34,10 @@
 吉祥物：麥麥像素機器人（`docs/brand/`，IDLE/BLINK/BULLISH 三態，胸口 K 線）。
 mockup HTML 在 `docs/mockups/`＝C 包前端起點，畫面中所有數字皆真實資料計算。
 
+**產品化路徑的可點示意**：`frontend/host-app.html` — 模擬 MAX／MaiCoin App 首頁多一個麥麥 icon，
+點下去麥麥就在 WebView 裡跑起來，左上角保留返回宿主 App 的箭頭。把 §2「主交易系統零改動」
+從一句話變成評審自己能點的東西。（宿主畫面為示意 wireframe，畫面上有常駐標示。）
+
 ---
 
 ## 1. 開發地圖

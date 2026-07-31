@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>麥麥入口示意 — 從 MAX／MaiCoin App 進入 MaiMate</title>
+<!--
+  host-app.html — 產品化路徑的可點示意（Demo 用）
+
+  這頁在回答簡報「產品化路徑」那一頁的問題：MaiMate 要怎麼進到既有 App 裡？
+  答案是「加一個入口就好，主交易系統零改動」——但那是一句話，講了評審不一定有感。
+  這頁把它變成評審自己能點的東西：宿主 App 首頁多一個麥麥 icon，點下去麥麥就在
+  WebView 裡跑起來，左上角還留著返回宿主 App 的箭頭。
+
+  ⚠️ 宿主 App 畫面是**示意 wireframe**，不是 MAX／MaiCoin 官方畫面的複製，
+     也沒有使用官方 logo 檔。畫面上有常駐標示，避免被誤認為官方產品截圖。
+
+  數字來源：總資產與持倉讀 mocks/account.js（來自 data/health_report.json 的同一個帳戶），
+  所以「在 MAX 看到的資產」與「麥麥講的帳戶」是同一個——這個連續性本身就是 Demo 的一部分。
+  行情報價沒有可靠來源，一律標「示意」。
+-->
+<script src="mocks/account.js"></script>
+<style>
+  :root{
+    --gold:#E8A13A; --navy:#16224D; --ink:#101828; --mut:#667085;
+    --up:#12B76A; --down:#F04438;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    background:#0B1020;color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    padding:14px 12px 24px}
+
+  /* ── 示意控制列（在手機外框之外，不污染模擬畫面）── */
+  .rig{width:100%;max-width:430px;margin-bottom:12px}
+  .rig h1{font-size:15px;font-weight:700;letter-spacing:.01em}
+  .rig p{font-size:12px;color:#8FA0C0;margin-top:4px;line-height:1.6}
+  .seg{display:flex;gap:6px;margin-top:10px;background:#141C33;border-radius:12px;padding:4px}
+  .seg button{flex:1;min-height:44px;border:0;border-radius:9px;background:transparent;color:#8FA0C0;
+    font-size:14px;font-weight:600;font-family:inherit;cursor:pointer}
+  .seg button[aria-pressed=true]{background:#26324F;color:#fff}
+
+  /* ── 手機外框 ── */
+  .phone{width:100%;max-width:390px;height:min(844px,82vh);border-radius:34px;overflow:hidden;
+    position:relative;box-shadow:0 18px 60px rgba(0,0,0,.55);border:1px solid #26324F;background:#fff}
+  .stat{height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;
+    font-size:12px;font-weight:600;flex:none}
+  .screen{position:absolute;inset:0;display:flex;flex-direction:column}
+
+  /* ── 常駐誠實標示 ── */
+  /* 放在狀態列中間的空白處：常駐可見，但不壓到宿主 App 的內容 */
+  .simtag{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:40;
+    background:rgba(128,140,170,.22);color:#8892AA;font-size:9.5px;padding:2px 9px;border-radius:99px;
+    letter-spacing:.03em;pointer-events:none;white-space:nowrap}
+
+  /* ── 宿主 App 共用 ── */
+  .hd{display:flex;align-items:center;justify-content:space-between;padding:8px 16px 10px;flex:none}
+  .wm{font-size:19px;font-weight:800;letter-spacing:.02em}
+  .hd .ic{width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+    font-size:17px;border:0;background:transparent;color:inherit;cursor:pointer}
+  .body{flex:1;overflow-y:auto;padding:0 16px 12px}
+  .assets{border-radius:16px;padding:16px;margin-bottom:14px}
+  .assets .lb{font-size:12px;opacity:.72}
+  .assets .vv{font-size:27px;font-weight:800;margin-top:5px;letter-spacing:-.01em}
+  .assets .src{font-size:10px;opacity:.55;margin-top:6px}
+  .sect{font-size:13px;font-weight:700;margin:14px 0 9px;display:flex;justify-content:space-between;align-items:baseline}
+  .sect span{font-size:11px;font-weight:400;opacity:.6}
+
+  /* 功能九宮格 */
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .gi{border:0;background:transparent;font-family:inherit;color:inherit;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 2px;border-radius:12px;
+    min-height:66px;position:relative}
+  .gi .em{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:19px}
+  .gi .tx{font-size:11px;line-height:1.2;text-align:center}
+  .gi.mm .em{background:linear-gradient(135deg,#16224D,#2B3B72);color:#E8A13A;
+    box-shadow:0 0 0 2px rgba(232,161,58,.55)}
+  .gi .new{position:absolute;top:2px;right:calc(50% - 27px);background:#F04438;color:#fff;
+    font-size:8px;font-weight:800;padding:1px 5px;border-radius:99px;letter-spacing:.04em}
+
+  /* 行情 / 持倉列 */
+  .row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid}
+  .row:last-child{border-bottom:0}
+  .row .l{display:flex;align-items:center;gap:10px}
+  .row .dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:10px;font-weight:800;color:#fff}
+  .row .nm{font-size:14px;font-weight:600}
+  .row .sb{font-size:11px;opacity:.6;margin-top:1px}
+  .row .r{text-align:right}
+  .row .pv{font-size:14px;font-weight:700}
+  .row .pc{font-size:11px;margin-top:1px}
+
+  /* 大按鈕（MaiCoin） */
+  .duo{display:flex;gap:10px;margin-bottom:14px}
+  .duo button{flex:1;min-height:52px;border:0;border-radius:14px;font-size:16px;font-weight:700;
+    font-family:inherit;cursor:pointer;color:#fff}
+
+  /* 底部分頁 */
+  .tabs{display:flex;flex:none;padding:6px 4px calc(6px + env(safe-area-inset-bottom));border-top:1px solid}
+  .tab{flex:1;border:0;background:transparent;font-family:inherit;cursor:pointer;min-height:50px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;position:relative}
+  .tab .ti{font-size:18px;line-height:1}
+  .tab .tl{font-size:10px}
+  .tab.mm .ti{color:var(--gold)}
+  .tab .ndot{position:absolute;top:6px;right:calc(50% - 16px);width:7px;height:7px;border-radius:50%;background:#F04438}
+
+  /* ── 主題：MAX（深色交易所）── */
+  .max{background:#0E1526;color:#F2F5FA}
+  .max .stat{background:#0E1526}
+  .max .assets{background:linear-gradient(135deg,#1B2540,#141C33);border:1px solid #26324F}
+  .max .row{border-color:#1E2740}
+  .max .gi .em{background:#1A2440;color:#C7D3EC}
+  .max .tabs{background:#0E1526;border-color:#1E2740}
+  .max .tab{color:#6B7A9B}
+  .max .tab[aria-current=page]{color:#F2F5FA}
+
+  /* ── 主題：MaiCoin（淺色新手）── */
+  .mc{background:#F7F9FC;color:var(--ink)}
+  .mc .stat{background:#F7F9FC;color:var(--ink)}
+  .mc .assets{background:linear-gradient(135deg,#16224D,#243768);color:#fff}
+  .mc .row{border-color:#E7ECF4}
+  .mc .gi .em{background:#EDF2FA;color:#2B3B72}
+  .mc .tabs{background:#fff;border-color:#E7ECF4}
+  .mc .tab{color:#98A2B3}
+  .mc .tab[aria-current=page]{color:var(--navy)}
+  .mc .duo .buy{background:#12B76A}
+  .mc .duo .sell{background:#F04438}
+
+  /* ── WebView 疊層（麥麥跑在宿主 App 裡）── */
+  /* 從狀態列底下開始，不是 inset:0——真實 App 開 WebView 時狀態列還在，
+     順帶讓「示意」標籤留在狀態列裡，不會撞到 WebView 的標題 */
+  .wv{position:absolute;top:34px;left:0;right:0;bottom:0;z-index:30;background:#fff;
+    display:flex;flex-direction:column;
+    transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);visibility:hidden}
+  .wv.on{transform:translateY(0);visibility:visible}
+  .wvbar{flex:none;display:flex;align-items:center;gap:6px;padding:6px 8px;background:#0E1526;color:#fff;
+    border-bottom:1px solid #1E2740}
+  .wvbar.light{background:#fff;color:var(--ink);border-color:#E7ECF4}
+  .wvbar button{min-width:44px;min-height:44px;border:0;background:transparent;color:inherit;
+    font-size:16px;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px}
+  .wvbar .ttl{flex:1;text-align:center;font-size:14px;font-weight:600}
+  .wvbar .back{font-size:13px;padding:0 6px}
+  .wv iframe{flex:1;width:100%;border:0;background:#fff}
+  .wvnote{flex:none;font-size:10px;text-align:center;padding:4px;background:#F2F4F7;color:#667085}
+
+  /* 未實作項目的誠實提示 */
+  .toast{position:absolute;left:50%;bottom:88px;transform:translateX(-50%) translateY(8px);z-index:45;
+    background:rgba(16,24,40,.92);color:#fff;font-size:12px;padding:9px 15px;border-radius:11px;
+    opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;max-width:82%;text-align:center;line-height:1.5}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  .hint{width:100%;max-width:430px;margin-top:12px;font-size:11.5px;color:#8FA0C0;line-height:1.75}
+  .hint b{color:#E8A13A}
+  @media (max-width:420px){ .rig h1{font-size:14px} }
+</style>
+</head>
+<body>
+
+<div class="rig">
+  <h1>從既有 App 進入麥麥 — 可點示意</h1>
+  <p>宿主 App 首頁多一個麥麥入口，點下去麥麥就在 WebView 裡跑起來，左上角保留返回鍵。
+     這就是簡報「產品化路徑」說的<b>主交易系統零改動</b>。</p>
+  <div class="seg" role="group" aria-label="切換宿主 App">
+    <button id="btn-max" aria-pressed="true">MAX 交易所</button>
+    <button id="btn-mc" aria-pressed="false">MaiCoin 買賣</button>
+  </div>
+</div>
+
+<div class="phone">
+  <div class="simtag">示意 wireframe｜非官方 App 畫面</div>
+  <div class="screen" id="screen"></div>
+
+  <div class="wv" id="wv">
+    <div class="wvbar" id="wvbar">
+      <button class="back" id="wvback">‹ <span id="wvhost">MAX</span></button>
+      <div class="ttl">麥麥 MaiMate</div>
+      <button aria-label="更多" id="wvmore">⋯</button>
+    </div>
+    <iframe id="wvframe" title="MaiMate" src="about:blank"></iframe>
+    <div class="wvnote" id="wvnote">麥麥以 WebView 內嵌執行 — 宿主 App 不需要改任何交易邏輯</div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<div class="hint">
+  <b>兩個入口都會動</b>：首頁九宮格的麥麥 icon → 完整初次體驗（welcome）；底部「麥麥」分頁 → 主程式（Golden Path）。<br>
+  其他宿主 App 的功能是示意，點了會說明未實作——<b>不做假的可點功能</b>。
+</div>
+
+<script>
+"use strict";
+// ---------- 真實數字：與麥麥講的是同一個帳戶 ----------
+const ACC = window.MM_ACCOUNT || null;
+const twd = (v) => "NT$" + Math.round(v).toLocaleString("en-US");
+const portfolio = ACC && ACC.holdings ? ACC.holdings.portfolioTwd : null;
+const snap = ACC && ACC.holdingsSnapshot ? ACC.holdingsSnapshot : null;
+
+// 行情報價沒有可靠來源（這頁不打 API），一律標示意，不假裝是即時價
+const TICKERS = [
+  { s: "BTC", n: "比特幣", c: "#F7931A" },
+  { s: "ETH", n: "以太幣", c: "#627EEA" },
+  { s: "SOL", n: "Solana", c: "#9945FF" },
+  { s: "DOGE", n: "狗狗幣", c: "#C2A633" },
+];
+
+const COIN_NAME = { twd: "台幣", usdt: "泰達幣", eth: "以太幣", doge: "狗狗幣", usdc: "USD Coin", btc: "比特幣", sol: "Solana" };
+const COIN_COLOR = { twd: "#12B76A", usdt: "#26A17B", eth: "#627EEA", doge: "#C2A633", usdc: "#2775CA", btc: "#F7931A", sol: "#9945FF" };
+
+// ---------- 宿主 App 定義 ----------
+const HOSTS = {
+  max: {
+    name: "MAX", theme: "max", light: false,
+    grid: [
+      { i: "📈", t: "現貨" }, { i: "⚡", t: "槓桿" }, { i: "🏦", t: "理財" }, { i: "💳", t: "充值" },
+      { i: "🎁", t: "活動" }, { i: "👥", t: "邀請" }, { i: "📊", t: "報表" },
+    ],
+    tabs: [["🏠", "首頁"], ["📊", "行情"], ["💱", "交易"], ["🤖", "麥麥"], ["👤", "我的"]],
+  },
+  mc: {
+    name: "MaiCoin", theme: "mc", light: true,
+    grid: [
+      { i: "🔁", t: "定期定額" }, { i: "👛", t: "錢包" }, { i: "🎓", t: "新手教學" }, { i: "💳", t: "銀行帳戶" },
+      { i: "🎁", t: "推薦好友" }, { i: "🧾", t: "交易紀錄" }, { i: "💬", t: "客服" },
+    ],
+    tabs: [["🏠", "首頁"], ["💱", "買賣"], ["🔁", "定投"], ["🤖", "麥麥"], ["👤", "我的"]],
+  },
+};
+
+let current = "max";
+
+// ---------- 畫面組裝 ----------
+function holdingsRows() {
+  if (!snap) return `<div class="row"><div class="l"><div class="nm">持倉資料不足</div></div></div>`;
+  return snap.holdings.slice(0, 4).map((h) => {
+    const sym = h.currency.toUpperCase();
+    return `<div class="row"><div class="l">
+        <div class="dot" style="background:${COIN_COLOR[h.currency] || "#667085"}">${sym.slice(0, 3)}</div>
+        <div><div class="nm">${sym}</div><div class="sb">${COIN_NAME[h.currency] || sym}</div></div></div>
+      <div class="r"><div class="pv">${twd(h.value_twd)}</div><div class="pc" style="opacity:.6">${h.pct}%</div></div></div>`;
+  }).join("");
+}
+
+function tickerRows() {
+  // data-ticker 讓煙測能明確指認哪幾列是行情（不要靠位置去猜，猜錯會變成假通過）
+  return TICKERS.map((t) => `<div class="row" data-ticker="${t.s}"><div class="l">
+      <div class="dot" style="background:${t.c}">${t.s.slice(0, 3)}</div>
+      <div><div class="nm">${t.s}/TWD</div><div class="sb">${t.n}</div></div></div>
+    <div class="r"><div class="pv" style="opacity:.45">— —</div><div class="pc" style="opacity:.45">示意</div></div></div>`).join("");
+}
+
+function render(key) {
+  current = key;
+  const H = HOSTS[key];
+  const scr = document.getElementById("screen");
+  scr.className = "screen " + H.theme;
+
+  const grid = H.grid.map((g) => `<button class="gi" data-noop="${g.t}">
+      <span class="em">${g.i}</span><span class="tx">${g.t}</span></button>`).join("");
+
+  const tabs = H.tabs.map(([i, t]) => {
+    const isMM = t === "麥麥";
+    return `<button class="tab${isMM ? " mm" : ""}" ${t === "首頁" ? 'aria-current="page"' : ""}
+        ${isMM ? 'data-mm="index.html"' : `data-noop="${t}"`}>
+        ${isMM ? '<span class="ndot"></span>' : ""}<span class="ti">${i}</span><span class="tl">${t}</span></button>`;
+  }).join("");
+
+  scr.innerHTML = `
+    <div class="stat"><span>9:41</span><span>●●● ᯤ 🔋</span></div>
+    <div class="hd"><div class="wm">${H.name}</div>
+      <div style="display:flex"><button class="ic" data-noop="搜尋">🔍</button><button class="ic" data-noop="通知">🔔</button></div>
+    </div>
+    <div class="body">
+      <div class="assets">
+        <div class="lb">總資產估值</div>
+        <div class="vv">${portfolio ? twd(portfolio) : "資料不足"}</div>
+        <div class="src">${snap ? `${snap.asOf}｜${snap.method}` : "無持倉快照"}</div>
+      </div>
+
+      ${key === "mc" ? `<div class="duo"><button class="buy" data-noop="買入">買入</button><button class="sell" data-noop="賣出">賣出</button></div>` : ""}
+
+      <div class="sect">功能</div>
+      <div class="grid">${grid}
+        <button class="gi mm" data-mm="welcome.html"><span class="new">NEW</span>
+          <span class="em">🤖</span><span class="tx">麥麥 AI</span></button>
+      </div>
+
+      <div class="sect">我的持倉 <span>來自 health_report.json</span></div>
+      ${holdingsRows()}
+
+      <div class="sect">行情 <span>示意，本頁不打 API</span></div>
+      ${tickerRows()}
+    </div>
+    <div class="tabs">${tabs}</div>`;
+
+  document.getElementById("wvhost").textContent = H.name;
+  document.getElementById("wvbar").classList.toggle("light", H.light);
+  document.getElementById("btn-max").setAttribute("aria-pressed", String(key === "max"));
+  document.getElementById("btn-mc").setAttribute("aria-pressed", String(key === "mc"));
+}
+
+// ---------- WebView 開關 ----------
+const wv = document.getElementById("wv"), frame = document.getElementById("wvframe");
+function openMM(page) {
+  // 允許用 ?entry= 覆寫（現場想直接跳某一頁時用），但只接受本站相對路徑
+  const override = new URLSearchParams(location.search).get("entry");
+  const target = override && /^[\w.-]+\.html(\?.*)?$/.test(override) ? override : page;
+  frame.src = target;
+  wv.classList.add("on");
+}
+function closeMM() {
+  wv.classList.remove("on");
+  setTimeout(() => { frame.src = "about:blank"; }, 320); // 關掉後卸載，下次進來是乾淨的
+}
+
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("on"), 1900);
+}
+
+document.addEventListener("click", (e) => {
+  const mm = e.target.closest("[data-mm]");
+  if (mm) return openMM(mm.dataset.mm);
+  const noop = e.target.closest("[data-noop]");
+  // 不做假的可點功能：宿主 App 的其他項目老實說沒實作
+  if (noop) return toast(`「${noop.dataset.noop}」是宿主 App 既有功能，本示意未實作`);
+});
+document.getElementById("wvback").addEventListener("click", closeMM);
+document.getElementById("wvmore").addEventListener("click", () => toast("宿主 App 的選單，本示意未實作"));
+document.getElementById("btn-max").addEventListener("click", () => render("max"));
+document.getElementById("btn-mc").addEventListener("click", () => render("mc"));
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && wv.classList.contains("on")) closeMM(); });
+
+render("max");
+</script>
+</body>
+</html>
