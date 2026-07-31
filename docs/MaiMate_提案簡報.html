@@ -51,13 +51,15 @@ td.r{text-align:right;font-weight:600}
 .honest .b{color:#B9C6E0;font-size:.85rem;line-height:1.7}
 .archwrap{display:grid;grid-template-columns:1.15fr .85fr;gap:1.6rem;align-items:start}
 .archcol{display:flex;flex-direction:column;align-items:stretch}
-.lay{background:rgba(234,240,251,.05);border:1px solid rgba(234,240,251,.14);border-radius:11px;padding:.6rem .8rem}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;
+  background:rgba(234,240,251,.09);padding:.05em .35em;border-radius:4px;color:#CFE0FF}
+.lay{background:rgba(234,240,251,.05);border:1px solid rgba(234,240,251,.14);border-radius:11px;padding:.48rem .8rem}
 .lay .tag{color:#E8A13A;font-size:.68rem;letter-spacing:.1em;margin-bottom:.35rem;font-weight:700}
 .bxs{display:flex;flex-wrap:wrap;gap:.4rem}
 .bx{background:#1D2B5C;border:1px solid #2B3B72;border-radius:7px;padding:.3rem .6rem;
   font-size:clamp(.68rem,1.05vw,.88rem);color:#EAF0FB;white-space:nowrap}
 .lnote{margin-top:.4rem;color:#8FA0C0;font-size:.7rem;line-height:1.5}
-.arw{text-align:center;color:#E8A13A;font-size:.95rem;line-height:1;padding:.22rem 0}
+.arw{text-align:center;color:#E8A13A;font-size:.9rem;line-height:1;padding:.1rem 0}
 .archside{background:rgba(232,161,58,.07);border:1px solid rgba(232,161,58,.28);border-radius:11px;padding:.85rem 1rem}
 .archside .sh{color:#E8A13A;font-weight:700;font-size:.78rem;letter-spacing:.06em;margin-bottom:.5rem}
 .tools{list-style:none;margin:0 0 .7rem}
@@ -140,9 +142,16 @@ td.r{text-align:right;font-weight:600}
       <div class="excl">✖ execute_order 不在 LLM 工具清單</div>
       <div class="opath"><b>/order → MAX Private API</b><span>唯一能真的送單的路徑</span></div>
     </div></div><p class="foot">前端零建置（純 HTML＋vanilla JS，沒有打包器）——決賽當天不會因為 build 掛掉而開天窗。</p></div><div class="num">9</div></section>
-<section class="slide"><div class="inner"><div class="kicker">AI 設計</div><h2>模型分工：貴的只用在該用的地方</h2><table><thead><tr><th>工作</th><th>模型</th><th>單次成本（估算）</th></tr></thead>
-        <tbody><tr><td>日常對話＋工具調度</td><td>Claude Haiku（Bedrock）</td><td>≈ NT$0.3</td></tr><tr><td>深度歸因＋方案解釋</td><td>Claude Sonnet（Bedrock）</td><td>≈ NT$2.2</td></tr><tr><td>混合平均</td><td>依意圖自動路由</td><td>&lt; NT$0.6</td></tr></tbody></table><p class="note">⚠️ <b>以上為估算</b>（依 AWS 主控台現價推算），非實測計費。系統目前沒有量測成本的程式碼。<br><br>路由邏輯在 loop.py:60-67——看使用者這句話是不是深度問題，是才升級到 Sonnet。</p></div><div class="num">10</div></section>
-<section class="slide"><div class="inner"><div class="kicker">AI 設計</div><h2>為什麼金融數字不能讓 LLM 算</h2><p class="lead">手續費、賣後集中度、機會成本——<b>全部由確定性程式計算</b>。<br><br>LLM 算錯一次數字，使用者可能就照著它下了一筆真錢的單。<br>而 LLM 算術出錯是已知的、機率性的、無法用提示詞根治的。<br><br>所以我們的分工是：<b>程式負責對，模型負責讓人聽得懂。</b></p></div><div class="num">11</div></section>
+<section class="slide"><div class="inner"><div class="kicker">開發工具鏈</div><h2>會下單的只有一條路，而它不在工具鏈上</h2>
+        <table><thead><tr><th>元件</th><th>實際是什麼</th><th>在產品 runtime 裡嗎</th></tr></thead>
+        <tbody><tr><td>max-api-skill</td><td>給 AI 看的 <b>API 文件包</b>——它不執行任何交易</td><td>否</td></tr><tr><td>max-mcp-server</td><td>開發期工具，接在 Kiro 裡查行情用；設定檔的 autoApprove 只給唯讀的 ticker／depth／kline</td><td>否</td></tr><tr><td>Kiro IDE</td><td>開發環境（spec／steering／task 執行）</td><td>否</td></tr><tr><td><b>OrderFunction → MAX Private API</b></td><td>使用者按下確認後唯一真正送單的路徑</td><td><b>是，只有這條</b></td></tr></tbody></table><p class="note">這頁是修正：先前版本把 MAX Skill 標成執行模組。<b>文件包不會下單。</b><br>證據：<code>.kiro/settings/mcp.json</code>（開發期設定，唯讀白名單）、<code>backend/handlers/order.py:56</code>（唯一送單點）。</p><p class="foot">為什麼要特別澄清：把開發工具畫進 runtime，等於把一個不存在的攻擊面畫給評審看——而我們整套安全敘事的地基就是「送單路徑只有一條」。</p></div><div class="num">10</div></section>
+<section class="slide"><div class="inner"><div class="kicker">AI 設計</div><h2>模型分工：貴的只用在該用的地方</h2>
+        <table><thead><tr><th>工作</th><th>模型</th><th>單次成本（估算）</th></tr></thead>
+        <tbody><tr><td>日常對話＋工具調度</td><td>Claude Haiku（Bedrock）</td><td>≈ NT$0.3</td></tr><tr><td>深度歸因＋方案解釋</td><td>Claude Sonnet（Bedrock）</td><td>≈ NT$2.2</td></tr><tr><td>混合平均</td><td>依意圖自動路由</td><td>&lt; NT$0.6</td></tr></tbody></table><p class="note">⚠️ <b>以上為估算</b>（依 AWS 主控台現價推算），非實測計費。系統目前沒有量測成本的程式碼。<br><br>路由邏輯在 loop.py:60-67——看使用者這句話是不是深度問題，是才升級到 Sonnet。</p></div><div class="num">11</div></section>
+<section class="slide"><div class="inner"><div class="kicker">AI 設計</div><h2>為什麼金融數字不能讓 LLM 算</h2><p class="lead">手續費、賣後集中度、機會成本——<b>全部由確定性程式計算</b>。<br><br>LLM 算錯一次數字，使用者可能就照著它下了一筆真錢的單。<br>而 LLM 算術出錯是已知的、機率性的、無法用提示詞根治的。<br><br>所以我們的分工是：<b>程式負責對，模型負責讓人聽得懂。</b></p></div><div class="num">12</div></section>
+<section class="slide"><div class="inner"><div class="kicker">AI-native</div><h2>沒有生成式 AI，這個產品不存在</h2><p class="lead sm">誠實地逐項問一次：哪些部分其實不需要 AI？</p>
+        <table><thead><tr><th>產品的一部分</th><th>沒有生成式 AI 做得到嗎</th></tr></thead>
+        <tbody><tr><td>行為健檢的數字（追高 65%、機會成本 26.6M）</td><td>✅ 做得到 —— 那是 <code>analysis/precompute.py</code> 算的統計</td></tr><tr><td>三方案的金額、手續費、賣後集中度</td><td>✅ 做得到 —— <code>scenarios.py</code> 的確定性計算</td></tr><tr><td><b>聽懂「ETH 跌太多幫我全部賣掉」</b></td><td>❌ 那是自由語句，不是選單上的選項</td></tr><tr><td><b>在恐慌當下，把他自己的紀錄講成一句聽得進去的話</b></td><td>❌ 要把數據、個人歷史、當下情境編織成人話</td></tr><tr><td><b>同一組數字換三種語氣（陪伴／簡潔／分析）</b></td><td>❌ 數字不變，說法要變</td></tr><tr><td><b>「這是不是詐騙話術」的語意理解與語料檢索</b></td><td>❌ 意圖判讀 ＋ RAG</td></tr></tbody></table><p class="note">所以我們沒有把 AI 用在算數字上——<b>數字全部由程式算</b>。AI 只做程式做不到的那一半。</p><p class="foot">沒有生成式 AI，這產品會退化成一個儀表板。而<b>儀表板攔不住正在恐慌的人</b>——那個人不會在按下全賣之前先去看圖表。</p></div><div class="num">13</div></section>
 <section class="slide"><div class="inner"><div class="kicker">護欄</div><h2>四層攔截，任一層可獨立擋住</h2><p class="lead sm">「不報明牌」不是一句承諾，是四個獨立的攔截點。</p>
         <div class="grid three"><div class="card">
           <div class="h">① 提示詞 ＋ ② 後端正則</div><div class="b">系統提示明訂永不建議買賣特定標的；輸出再過一次正則，命中就整段換成安全回覆——不是遮字，因為遮一半會被腦補成建議。</div>
@@ -150,16 +159,18 @@ td.r{text-align:right;font-weight:600}
           <div class="h">③ 前端 ＋ ④ Bedrock Guardrails</div><div class="b">後端萬一漏了，畫面這關再擋一次。Bedrock Guardrails 的接點已就緒，設環境變數即疊加生效。</div>
           <div class="e">chat-core.js:26-31｜loop.py:109-115</div></div><div class="card">
           <div class="h">還做了誤判防護</div><div class="b">反詐教育內容本來就必須出現「保證獲利」這種詞——那是在教人辨識詐騙。沒有語境排除，護欄會擋掉自家的反詐功能，而且是靜默失敗。</div>
-          <div class="e">guardrails.py:24-29</div></div></div><p class="foot">護欄設計不只要問「擋不擋得住壞的」，也要問「<b>會不會擋掉好的</b>」。</p></div><div class="num">12</div></section>
-<section class="slide"><div class="inner"><div class="kicker">商業模式</div><h2>平台怎麼賺錢——不是只幫客戶省錢</h2><table><thead><tr><th>收入線</th><th>機制</th><th>為什麼成立</th></tr></thead>
-        <tbody><tr><td>① 手續費放大<br>（今天就在收）</td><td>新手不敢下第一筆 → 陪跑；恐慌離場者 LTV 歸零 → 攔住＝保住未來手續費年金</td><td>交易所的收入核心是成交手續費</td></tr><tr><td>② 冷靜期導流 DCA</td><td>三方案的「暫停」導向既有定期定額產品</td><td>衝動單的手續費是一次性的，定投是年金</td></tr><tr><td>③ Premium 訂閱</td><td>損益歸因、年度健檢、行為提醒</td><td>第二曲線</td></tr><tr><td>④ B2B 白牌</td><td>行為引擎＋合規框架授權其他交易所／銀行</td><td>台灣 VASP 專法後合規需求放大</td></tr></tbody></table><p class="note">上台順序建議：先講 ①（評審是交易所的人，手續費語言最直接），再用 ③④ 展示想像空間。</p></div><div class="num">13</div></section>
+          <div class="e">guardrails.py:24-29</div></div></div><p class="foot">護欄設計不只要問「擋不擋得住壞的」，也要問「<b>會不會擋掉好的</b>」。</p></div><div class="num">14</div></section>
+<section class="slide"><div class="inner"><div class="kicker">商業模式</div><h2>平台怎麼賺錢——不是只幫客戶省錢</h2>
+        <table><thead><tr><th>收入線</th><th>機制</th><th>為什麼成立</th></tr></thead>
+        <tbody><tr><td>① 手續費放大<br>（今天就在收）</td><td>新手不敢下第一筆 → 陪跑；恐慌離場者 LTV 歸零 → 攔住＝保住未來手續費年金</td><td>交易所的收入核心是成交手續費</td></tr><tr><td>② 冷靜期導流 DCA</td><td>三方案的「暫停」導向既有定期定額產品</td><td>衝動單的手續費是一次性的，定投是年金</td></tr><tr><td>③ Premium 訂閱</td><td>損益歸因、年度健檢、行為提醒</td><td>第二曲線</td></tr><tr><td>④ B2B 白牌</td><td>行為引擎＋合規框架授權其他交易所／銀行</td><td>台灣 VASP 專法後合規需求放大</td></tr></tbody></table><p class="note">上台順序建議：先講 ①（評審是交易所的人，手續費語言最直接），再用 ③④ 展示想像空間。</p></div><div class="num">15</div></section>
 <section class="slide"><div class="inner"><div class="kicker">單位經濟學</div><h2>一年攔住一筆衝動交易，就付得起十幾年的 AI 帳單</h2><div class="anchor"><div class="big">NT$11,545</div>
         <div class="biglabel">此帳戶平均每筆賣出的機會成本</div>
         <div class="formula">NT$26,598,877 ÷ 2,304 筆賣出 ＝ NT$11,545／筆</div></div>
         <table class="tight"><tbody><tr><td>重度使用者 AI 成本</td><td class="r">&lt; NT$60 / 月（估算）</td></tr><tr><td>攔住一筆衝動交易的價值</td><td class="r">NT$11,545（此帳戶實算）</td></tr><tr><td>換算</td><td class="r">≈ 192 個月的 AI 成本</td></tr></tbody></table>
-        <p class="note"><b>留存率每提高 1%，手續費增量遠大於整個 AI 帳單。</b> MaiMate 存在的目的是提高留存，不是省成本。</p></div><div class="num">14</div></section>
-<section class="slide"><div class="inner"><div class="kicker">產品化路徑</div><h2>掛在交易所旁邊的獨立服務，不是塞進主系統的模組</h2><table><thead><tr><th>階段</th><th>入口</th><th>下單方式</th><th>主系統改動</th></tr></thead>
-        <tbody><tr><td>黑客松（現況）</td><td>獨立 Web（S3+CloudFront）</td><td>MAX Private API＋逐筆確認</td><td>零</td></tr><tr><td>產品化</td><td>App 內嵌「麥麥」分頁，前端即現有 SPA</td><td>不變</td><td>零——只加一個入口</td></tr><tr><td>B2B 白牌</td><td>客戶自有 App</td><td>各交易所自有 API</td><td>零</td></tr></tbody></table><p class="note">升級迭代不動核心交易系統——這是可行性與合規的雙重賣點。<br>MaiMate 全程只做「讀資料＋產草稿＋留稽核」，執行永遠隔離在 LLM 之外，所以審計邊界天然清晰。</p><p class="foot">▶ 這頁有可點示意：開 host-app.html — MAX／MaiCoin 首頁多一個麥麥 icon，點下去麥麥就在 WebView 裡跑起來，左上角保留返回宿主 App 的箭頭。</p></div><div class="num">15</div></section>
+        <p class="note"><b>留存率每提高 1%，手續費增量遠大於整個 AI 帳單。</b> MaiMate 存在的目的是提高留存，不是省成本。</p></div><div class="num">16</div></section>
+<section class="slide"><div class="inner"><div class="kicker">產品化路徑</div><h2>掛在交易所旁邊的獨立服務，不是塞進主系統的模組</h2>
+        <table><thead><tr><th>階段</th><th>入口</th><th>下單方式</th><th>主系統改動</th></tr></thead>
+        <tbody><tr><td>黑客松（現況）</td><td>獨立 Web（S3+CloudFront）</td><td>MAX Private API＋逐筆確認</td><td>零</td></tr><tr><td>產品化</td><td>App 內嵌「麥麥」分頁，前端即現有 SPA</td><td>不變</td><td>零——只加一個入口</td></tr><tr><td>B2B 白牌</td><td>客戶自有 App</td><td>各交易所自有 API</td><td>零</td></tr></tbody></table><p class="note">升級迭代不動核心交易系統——這是可行性與合規的雙重賣點。<br>MaiMate 全程只做「讀資料＋產草稿＋留稽核」，執行永遠隔離在 LLM 之外，所以審計邊界天然清晰。</p><p class="foot">▶ 這頁有可點示意：開 host-app.html — MAX／MaiCoin 首頁多一個麥麥 icon，點下去麥麥就在 WebView 裡跑起來，左上角保留返回宿主 App 的箭頭。</p></div><div class="num">17</div></section>
 <section class="slide"><div class="inner"><div class="kicker">完成度</div><h2>現在就能跑</h2><div class="grid stats">
         <div class="stat c-green"><div class="v">8 支</div>
         <div class="l">前端煙測全綠</div><div class="s">含真·全斷網冷啟動實測</div></div>
@@ -168,16 +179,16 @@ td.r{text-align:right;font-weight:600}
         <div class="stat c-green"><div class="v">5 支</div>
         <div class="l">Lambda 全部部署</div><div class="s">chat / health / market / order / audit</div></div>
         <div class="stat c-gold"><div class="v">0</div>
-        <div class="l">建置步驟</div><div class="s">前端純靜態，不會 build 失敗</div></div></div><p class="foot">任一 API 掛掉自動切離線 mock 並明示標示，Golden Path 照樣走完。刻意的例外：斷網時行情顯示「—」，<b>不給假價格</b>。</p></div><div class="num">16</div></section>
+        <div class="l">建置步驟</div><div class="s">前端純靜態，不會 build 失敗</div></div></div><p class="foot">任一 API 掛掉自動切離線 mock 並明示標示，Golden Path 照樣走完。刻意的例外：斷網時行情顯示「—」，<b>不給假價格</b>。</p></div><div class="num">18</div></section>
 <section class="slide"><div class="inner"><div class="kicker">誠實頁</div><h2>還沒做到的</h2><p class="lead sm">這一頁存在的理由：前面每一條都有程式證據，這一頁才可信。</p>
         <div class="honest"><div class="hi">
           <div class="h">Bedrock Guardrails 尚未在主控台建立</div><div class="b">程式接點已就緒，設環境變數即生效。目前實際是四層護欄而非五層——前四層仍各自獨立有效。</div></div><div class="hi">
           <div class="h">費率沒有可點擊的官方出處</div><div class="b">程式寫死 maker 0.08% / taker 0.16%，註解自陳「官網查證」但沒有 URL。對使用者算成本的數字，只有自陳出處不夠。</div></div><div class="hi">
           <div class="h">成本數字是估算，不是實測</div><div class="b">系統沒有量測 AI 成本的程式碼。簡報上標的是估算值。</div></div><div class="hi">
-          <div class="h">真實成交 E2E 尚未跑完</div><div class="b">待 Lv2 KYC。「不代操」的完整鏈路目前只在單元層驗過。</div></div></div><p class="foot">完整清單在 docs/COMPLIANCE.md §5。</p></div><div class="num">17</div></section>
+          <div class="h">真實成交 E2E 尚未跑完</div><div class="b">待 Lv2 KYC。「不代操」的完整鏈路目前只在單元層驗過。</div></div></div><p class="foot">完整清單在 docs/COMPLIANCE.md §5。</p></div><div class="num">19</div></section>
 <section class="slide cover"><div class="inner">
         <h1>洞察 → 對話 → 行動</h1><p class="sub">AI 有手，方向盤在人手上</p><p class="meta">github.com/giont565/MaiMate</p>
-      </div><div class="num">18</div></section>
+      </div><div class="num">20</div></section>
 <script>
 document.addEventListener("keydown",(e)=>{
   const s=[...document.querySelectorAll(".slide")];

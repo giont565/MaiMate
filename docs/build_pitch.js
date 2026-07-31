@@ -110,6 +110,22 @@ const SLIDES = [
     title: "全 Serverless，決賽當天可在 1 小時內重新部署",
     foot: "前端零建置（純 HTML＋vanilla JS，沒有打包器）——決賽當天不會因為 build 掛掉而開天窗。" },
 
+  // 修正 issue #15 第 1 點：舊版簡報把 MAX Skill 標成執行模組。
+  // 證據：.kiro/settings/mcp.json 是 Kiro 的開發期設定（autoApprove 只給唯讀的
+  // ticker/depth/kline）；產品下單路徑是 order.py → max_private.place_order，不經過兩者。
+  { type: "table",
+    kicker: "開發工具鏈",
+    title: "會下單的只有一條路，而它不在工具鏈上",
+    head: ["元件", "實際是什麼", "在產品 runtime 裡嗎"],
+    rows: [
+      ["max-api-skill", "給 AI 看的 **API 文件包**——它不執行任何交易", "否"],
+      ["max-mcp-server", "開發期工具，接在 Kiro 裡查行情用；設定檔的 autoApprove 只給唯讀的 ticker／depth／kline", "否"],
+      ["Kiro IDE", "開發環境（spec／steering／task 執行）", "否"],
+      ["**OrderFunction → MAX Private API**", "使用者按下確認後唯一真正送單的路徑", "**是，只有這條**"],
+    ],
+    note: "這頁是修正：先前版本把 MAX Skill 標成執行模組。**文件包不會下單。**\n證據：`.kiro/settings/mcp.json`（開發期設定，唯讀白名單）、`backend/handlers/order.py:56`（唯一送單點）。",
+    foot: "為什麼要特別澄清：把開發工具畫進 runtime，等於把一個不存在的攻擊面畫給評審看——而我們整套安全敘事的地基就是「送單路徑只有一條」。" },
+
   { type: "table",
     kicker: "AI 設計",
     title: "模型分工：貴的只用在該用的地方",
@@ -125,6 +141,23 @@ const SLIDES = [
     kicker: "AI 設計",
     title: "為什麼金融數字不能讓 LLM 算",
     body: "手續費、賣後集中度、機會成本——**全部由確定性程式計算**。\n\nLLM 算錯一次數字，使用者可能就照著它下了一筆真錢的單。\n而 LLM 算術出錯是已知的、機率性的、無法用提示詞根治的。\n\n所以我們的分工是：**程式負責對，模型負責讓人聽得懂。**" },
+
+  // 補回評審 7/15 點名的「AI-native 應用對照」（issue #15 第 2 點）
+  { type: "table",
+    kicker: "AI-native",
+    title: "沒有生成式 AI，這個產品不存在",
+    lead: "誠實地逐項問一次：哪些部分其實不需要 AI？",
+    head: ["產品的一部分", "沒有生成式 AI 做得到嗎"],
+    rows: [
+      ["行為健檢的數字（追高 65%、機會成本 26.6M）", "✅ 做得到 —— 那是 `analysis/precompute.py` 算的統計"],
+      ["三方案的金額、手續費、賣後集中度", "✅ 做得到 —— `scenarios.py` 的確定性計算"],
+      ["**聽懂「ETH 跌太多幫我全部賣掉」**", "❌ 那是自由語句，不是選單上的選項"],
+      ["**在恐慌當下，把他自己的紀錄講成一句聽得進去的話**", "❌ 要把數據、個人歷史、當下情境編織成人話"],
+      ["**同一組數字換三種語氣（陪伴／簡潔／分析）**", "❌ 數字不變，說法要變"],
+      ["**「這是不是詐騙話術」的語意理解與語料檢索**", "❌ 意圖判讀 ＋ RAG"],
+    ],
+    note: "所以我們沒有把 AI 用在算數字上——**數字全部由程式算**。AI 只做程式做不到的那一半。",
+    foot: "沒有生成式 AI，這產品會退化成一個儀表板。而**儀表板攔不住正在恐慌的人**——那個人不會在按下全賣之前先去看圖表。" },
 
   { type: "cards",
     kicker: "護欄",
@@ -207,7 +240,10 @@ const SLIDES = [
 // Renderer 1：HTML（現場投影用，自帶樣式與鍵盤導覽，單一檔案）
 // ══════════════════════════════════════════════════════════════════
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
-const md = (s) => esc(s).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/\n/g, "<br>");
+const md = (s) => esc(s)
+  .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+  .replace(/`([^`]+)`/g, "<code>$1</code>") // 檔案路徑用等寬字，跟敘述文字分開
+  .replace(/\n/g, "<br>");
 
 function htmlSlide(s, i) {
   const kicker = s.kicker ? `<div class="kicker">${md(s.kicker)}</div>` : "";
@@ -249,7 +285,8 @@ function htmlSlide(s, i) {
       break;
 
     case "table":
-      body = `<table><thead><tr>${s.head.map((h) => `<th>${md(h)}</th>`).join("")}</tr></thead>
+      body = `${s.lead ? `<p class="lead sm">${md(s.lead)}</p>` : ""}
+        <table><thead><tr>${s.head.map((h) => `<th>${md(h)}</th>`).join("")}</tr></thead>
         <tbody>${s.rows.map((r) => `<tr>${r.map((c) => `<td>${md(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
       break;
 
@@ -367,13 +404,15 @@ td.r{text-align:right;font-weight:600}
 .honest .b{color:#B9C6E0;font-size:.85rem;line-height:1.7}
 .archwrap{display:grid;grid-template-columns:1.15fr .85fr;gap:1.6rem;align-items:start}
 .archcol{display:flex;flex-direction:column;align-items:stretch}
-.lay{background:rgba(234,240,251,.05);border:1px solid rgba(234,240,251,.14);border-radius:11px;padding:.6rem .8rem}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;
+  background:rgba(234,240,251,.09);padding:.05em .35em;border-radius:4px;color:#CFE0FF}
+.lay{background:rgba(234,240,251,.05);border:1px solid rgba(234,240,251,.14);border-radius:11px;padding:.48rem .8rem}
 .lay .tag{color:#E8A13A;font-size:.68rem;letter-spacing:.1em;margin-bottom:.35rem;font-weight:700}
 .bxs{display:flex;flex-wrap:wrap;gap:.4rem}
 .bx{background:#1D2B5C;border:1px solid #2B3B72;border-radius:7px;padding:.3rem .6rem;
   font-size:clamp(.68rem,1.05vw,.88rem);color:#EAF0FB;white-space:nowrap}
 .lnote{margin-top:.4rem;color:#8FA0C0;font-size:.7rem;line-height:1.5}
-.arw{text-align:center;color:#E8A13A;font-size:.95rem;line-height:1;padding:.22rem 0}
+.arw{text-align:center;color:#E8A13A;font-size:.9rem;line-height:1;padding:.1rem 0}
 .archside{background:rgba(232,161,58,.07);border:1px solid rgba(232,161,58,.28);border-radius:11px;padding:.85rem 1rem}
 .archside .sh{color:#E8A13A;font-weight:700;font-size:.78rem;letter-spacing:.06em;margin-bottom:.5rem}
 .tools{list-style:none;margin:0 0 .7rem}
@@ -414,7 +453,7 @@ function buildPptx() {
 
   const W = 13.33, H = 7.5, M = 0.7;
   const FONT = "Microsoft JhengHei";
-  const plain = (s) => String(s).replace(/\*\*/g, "");
+  const plain = (s) => String(s).replace(/\*\*/g, "").replace(/`/g, ""); // pptx 沒有行內樣式，記號直接去掉
 
   const addBase = (s) => {
     const sl = p.addSlide();
@@ -535,6 +574,11 @@ function buildPptx() {
         sl.addText(plain(s.formula), { x: M, y: y + 1.45, w: W - 2 * M, h: 0.3, fontSize: 10,
           color: "8FA0C0", fontFace: "Consolas", align: "center" });
         y += 1.9;
+      }
+      if (s.lead) {
+        sl.addText(plain(s.lead), { x: M, y, w: W - 2 * M, h: 0.35, fontSize: 13,
+          color: "B9C6E0", fontFace: FONT });
+        y += 0.5;
       }
       const head = s.head || null;
       const rows = [];
