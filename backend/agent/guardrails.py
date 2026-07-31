@@ -42,7 +42,21 @@ _FRAUD_LABEL = re.compile(
 )
 
 
-def _is_safety_context(text, match):
+# 「直接建議買賣」是最硬的紅線，它的豁免只認**否定詞**。
+# _SAFETY_CONTEXT 裡的「詐騙／對方／假冒／聲稱」是行為主體詞——它們說明「別人會這樣做」，
+# 不能拿來豁免「我建議你買入」。實測漏過：「詐騙很多，但推薦你現在賣出 ETH。」
+# 子句邊界：轉折之後主詞通常就換人了，前一個子句的防詐脈絡不該延伸過來。
+_CLAUSE_BREAK = re.compile(r"[，,；;]|但是|但|不過|然而|另外")
+
+_NEGATION_ONLY = re.compile(
+    # 「不」要排除「不過」——那是轉折連接詞，不是否定：
+    # 「這些都是詐騙話術。**不過**我建議你現在買入 BTC。」是紅線句子，不能放行。
+    r"(不要|不可|切勿|勿|不應|不能|不得|不宜|不(?!過)|沒有|沒|無法|不會|避免|拒絕)"
+    r"[^。！？\n]{0,16}$"
+)
+
+
+def _is_safety_context(text, match, negation_only=False):
     """Return True when an advice-like phrase is governed by safety language in the same sentence.
 
     只看命中詞「前面」不夠：模型最自然的寫法是把警告放在後面——
@@ -59,6 +73,13 @@ def _is_safety_context(text, match):
     # 「安全語詞出現在命中詞正前方 16 字內」。改套整句會讓 $ 錨到句尾，
     # 「定期定額**不**保證獲利，長期下跌時…」的那個「不」就不算數了——實測 F4 因此被誤攔。
     prefix = text[sentence_start + 1:match.start()]
+    if negation_only:
+        # 紅線句式（直接建議買賣）：豁免必須來自**同一個子句**。
+        #   放行「詐騙群組可能會建議你現在買入」——詐騙群組是「建議」的主詞
+        #   攔截「詐騙很多，但推薦你現在賣出 ETH」——中間跨了子句，主詞已經換成麥麥自己
+        # 否定詞（不建議、切勿）也照同一個規則判斷。
+        clause = _CLAUSE_BREAK.split(prefix)[-1]
+        return bool(_NEGATION_ONLY.search(clause) or _SAFETY_CONTEXT.search(clause))
     if _SAFETY_CONTEXT.search(prefix):
         return True
     # 後綴另外看：命中詞之後、同一句內出現防詐指認語，代表這是在指認話術而非做出承諾。
@@ -110,11 +131,21 @@ def check_output(text, educational=False):
     educational=True 只放行未指定標的的教育型敘述；保證獲利、必漲必跌，
     以及任何帶具體標的的直接買賣建議仍會被攔截。
     """
+    # 防詐回答會用條列引述話術：
+    #     1. 標榜「保證獲利」「穩賺不賠」
+    #     2. 這些都是詐騙紅旗
+    # 換行是句子邊界，所以引述那一行自己沒有防詐字眼，逐句判斷永遠救不了它。
+    # 整篇明顯在講詐騙時，引述型句式（一定會漲／保證獲利）視為舉例而非承諾；
+    # index 0「建議買入特定標的」是真正的紅線，不受此豁免。
+    quoting_scam = bool(_FRAUD_LABEL.search(text))
+
     hits = []
     for index, pattern in enumerate(_ADVICE_PATTERNS):
         unsafe_matches = []
         for match in re.finditer(pattern, text):
-            if _is_safety_context(text, match):
+            if _is_safety_context(text, match, negation_only=(index == 0)):
+                continue
+            if quoting_scam and index > 0:
                 continue
             if (
                 educational

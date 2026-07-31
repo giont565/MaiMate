@@ -105,3 +105,18 @@ class AntiFraudContextTests(unittest.TestCase):
         「定期定額**不**保證獲利，長期下跌時…」的「不」就不算數了。"""
         self.assert_allowed("定期定額不保證獲利，長期下跌時攤平成本只會讓虧損發生得比較慢。")
         self.assert_allowed("它不能保證獲利，也不能消除價格下跌、本金損失、手續費與流動性風險。")
+
+
+    def test_scam_mention_in_another_clause_does_not_excuse_a_recommendation(self):
+        """「詐騙」是行為主體詞，不是否定詞。它可以說明「別人會這樣做」，
+        但不能拿來豁免「我建議你買入」——跨了子句就是換了主詞。"""
+        self.assert_blocked("詐騙很多，但推薦你現在賣出 ETH。")
+        self.assert_blocked("這些都是詐騙話術。不過我建議你現在買入 BTC。")
+        # 同一子句內、詐騙集團是「建議」的主詞 → 這是在描述對方的行為，要放行
+        self.assert_allowed("詐騙群組可能會建議你現在買入指定商品，並要求匯款到私人帳戶。")
+
+    def test_bullet_list_quoting_scam_phrases_is_allowed(self):
+        """防詐回答會用條列引述話術，換行是句子邊界，
+        引述那一行自己沒有防詐字眼——逐句判斷永遠救不了它。"""
+        self.assert_allowed("常見紅旗：\n1. 標榜「保證獲利」「穩賺不賠」\n"
+                            "2. 聲稱「一定會漲」\n\n這些都是典型詐騙話術。")
