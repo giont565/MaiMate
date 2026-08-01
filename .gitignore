@@ -28,3 +28,5 @@ smoke_*.png
 docs/MaiMate_review-bundle.zip
 docs/review-bundle/03_PITCH_DECK.pdf
 docs/PITCH_DECK.standalone.html
+docs/PITCH_DECK.artifact.html
+.artifact_tmp/

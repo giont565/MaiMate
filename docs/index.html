@@ -55,10 +55,15 @@
   <p class="meta">這頁是給隊友對稿用的，不是給評審看的</p>
 
   <div class="cards">
-    <a class="card primary" href="PITCH_DECK.html">
-      <b>簡報 <em>← → 換頁 · F 全螢幕</em></b>
-      <p>主線 15 頁＋附錄 10 頁。第 6–10 頁右側是真的螢幕錄影，會自動播放。
-         點畫面右半邊也可以往下一頁。</p>
+    <a class="card primary" href="https://claude.ai/code/artifact/7c16896b-fb68-4998-8b93-e8ccd697c61a">
+      <b>簡報（線上版）<em>← → 換頁 · F 全螢幕</em></b>
+      <p>不用 clone、不用開檔，點下去就能看。主線 15 頁＋附錄 10 頁，
+         第 6–10 頁右側是真的螢幕錄影，會自動播放。點畫面右半邊也可以往下一頁。</p>
+    </a>
+
+    <a class="card" href="PITCH_DECK.html">
+      <b>簡報（原始檔）</b>
+      <p>要改簡報才需要開這份。線上版是它壓過圖的複本，內容完全一樣。</p>
     </a>
 
     <a class="card" href="https://github.com/giont565/MaiMate/blob/docs/pitch-6min/docs/PITCH_6MIN.md">
@@ -85,8 +90,10 @@
     <code>node scripts/pdf_pitch.js</code> 重出 PDF。<br>
     改完<b>逐頁確認沒有爆版</b>——overflow 是 hidden，螢幕上看不出來，印成 PDF 才會發現字被切掉。<br><br>
     <b>上台用哪一份？</b><br>
-    用 <code>PITCH_DECK.standalone.html</code>（單檔版，素材全部內嵌，換一台電腦也不會破圖）。
-    那份不進版控，由 <code>bundle_deck.js</code> 產生。
+    用 <code>PITCH_DECK.standalone.html</code>（單檔版，素材全部內嵌、無損，換一台電腦也不會破圖）。
+    那份不進版控，由 <code>bundle_deck.js</code> 產生。<br>
+    <b>不要用線上版上台</b>——它為了塞進部署上限把圖片壓過，而且要靠網路。
+    線上版是給隊友對稿用的，由 <code>build_artifact.js</code> 產生。
   </div>
 </div>
 </body>

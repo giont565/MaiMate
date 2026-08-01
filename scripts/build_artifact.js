@@ -1,0 +1,131 @@
+#!/usr/bin/env node
+/**
+ * build_artifact.js — 產出「可部署成網址」的簡報
+ *
+ *   node scripts/build_artifact.js
+ *   → docs/PITCH_DECK.artifact.html
+ *
+ * 跟 bundle_deck.js 的差別只有兩個，設計與內容一個字都不動：
+ *
+ *  1. 圖片會壓過再內嵌。單檔版是 17.8 MB，部署平台上限 16 MB。
+ *     沒有透明度的圖轉成 JPEG（brandsheet 2044KB → 396KB 這種等級），
+ *     有透明度的（麥麥公仔）維持 PNG，不然去背會變回白底方塊。
+ *     影片不動——那是這份簡報最重要的東西。
+ *  2. 拆掉 <!doctype><html><head><body> 骨架，平台會自己包一層。
+ *
+ * 上台請照舊用 PITCH_DECK.standalone.html，那份是無損的。
+ */
+const fs = require('fs');
+const path = require('path');
+const { execFileSync } = require('child_process');
+
+const DOCS = path.join(__dirname, '..', 'docs');
+const SRC = path.join(DOCS, 'PITCH_DECK.html');
+const OUT = path.join(DOCS, 'PITCH_DECK.artifact.html');
+const TMP = path.join(__dirname, '..', '.artifact_tmp');
+
+const VIDEO_MIME = { '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime' };
+const IMAGE_MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+                     '.gif': 'image/gif', '.svg': 'image/svg+xml', '.webp': 'image/webp' };
+
+const JPEG_QUALITY = 78;
+
+function hasAlpha(abs) {
+  try {
+    const out = execFileSync('sips', ['-g', 'hasAlpha', abs], { encoding: 'utf8' });
+    return /hasAlpha:\s*yes/.test(out);
+  } catch (_) {
+    return true;          // 問不出來就當它有透明度，寧可大一點也不要破圖
+  }
+}
+
+/** 回傳 {buf, mime}；壓不動或壓不贏原檔就用原檔 */
+function encodeImage(abs, rel) {
+  const ext = path.extname(abs).toLowerCase();
+  const original = fs.readFileSync(abs);
+  const mime = IMAGE_MIME[ext];
+  if (ext === '.svg' || ext === '.gif' || ext === '.webp') return { buf: original, mime };
+  if (hasAlpha(abs)) return { buf: original, mime, kept: '有透明度' };
+
+  const dest = path.join(TMP, rel.replace(/[\/\\]/g, '__') + '.jpg');
+  try {
+    execFileSync('sips', ['-s', 'format', 'jpeg', '-s', 'formatOptions', String(JPEG_QUALITY),
+                          abs, '--out', dest], { stdio: 'ignore' });
+    const jpg = fs.readFileSync(dest);
+    if (jpg.length >= original.length) return { buf: original, mime, kept: '轉檔沒變小' };
+    return { buf: jpg, mime: 'image/jpeg', saved: original.length - jpg.length };
+  } catch (_) {
+    return { buf: original, mime, kept: 'sips 失敗' };
+  }
+}
+
+fs.rmSync(TMP, { recursive: true, force: true });
+fs.mkdirSync(TMP, { recursive: true });
+
+let html = fs.readFileSync(SRC, 'utf8');
+const seen = new Map();
+let missing = [], savedTotal = 0, inlined = 0;
+
+function toDataUri(rel) {
+  if (seen.has(rel)) return seen.get(rel);
+  const abs = path.join(DOCS, rel);
+  if (!fs.existsSync(abs)) { missing.push(rel); seen.set(rel, null); return null; }
+
+  const ext = path.extname(abs).toLowerCase();
+  let uri = null;
+  if (VIDEO_MIME[ext]) {
+    const buf = fs.readFileSync(abs);
+    uri = `data:${VIDEO_MIME[ext]};base64,${buf.toString('base64')}`;
+  } else if (IMAGE_MIME[ext]) {
+    const { buf, mime, saved } = encodeImage(abs, rel);
+    if (saved) savedTotal += saved;
+    uri = `data:${mime};base64,${buf.toString('base64')}`;
+  }
+  if (uri) inlined++;
+  seen.set(rel, uri);
+  return uri;
+}
+
+html = html.replace(/\b(src|poster|data-video)="([^"]+)"/g, (m, attr, val) => {
+  if (/^(https?:|data:|\/\/|#)/.test(val)) return m;
+  const uri = toDataUri(val);
+  return uri ? `${attr}="${uri}"` : m;
+});
+html = html.replace(/url\((['"]?)([^'")]+)\1\)/g, (m, q, val) => {
+  if (/^(https?:|data:|\/\/|#)/.test(val)) return m;
+  const uri = toDataUri(val);
+  return uri ? `url(${uri})` : m;
+});
+
+// 拆骨架：平台會自己包 <!doctype><html><head></head><body>
+const headMatch = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
+const bodyMatch = html.match(/<body([^>]*)>([\s\S]*?)<\/body>/i);
+if (!headMatch || !bodyMatch) {
+  console.error('✗ 解析不出 head/body——PITCH_DECK.html 結構變了');
+  process.exit(1);
+}
+const head = headMatch[1]
+  .replace(/<meta\s+charset=[^>]*>/gi, '')
+  .replace(/<meta\s+name="viewport"[^>]*>/gi, '')
+  .trim();
+const bodyAttrs = bodyMatch[1].trim();
+const body = bodyMatch[2].trim();
+const out = `${head}\n${bodyAttrs ? `<div ${bodyAttrs}>\n${body}\n</div>` : body}\n`;
+
+fs.writeFileSync(OUT, out);
+fs.rmSync(TMP, { recursive: true, force: true });
+
+const mb = n => (n / 1024 / 1024).toFixed(2) + ' MB';
+const size = Buffer.byteLength(out);
+console.log(`→ ${path.relative(process.cwd(), OUT)}  ${mb(size)}（內嵌 ${inlined} 個素材，圖片省下 ${mb(savedTotal)}）`);
+if (size > 16 * 1024 * 1024) console.log(`   ⚠ 仍超過 16 MB 上限，要再減素材`);
+const vids = missing.filter(f => /\.(mp4|webm|mov)$/i.test(f));
+if (vids.length) {
+  console.log(`   ℹ 尚未錄製 ${vids.length} 支影片，該格顯示截圖：`);
+  vids.forEach(f => console.log(`     · ${f}`));
+}
+const imgs = missing.filter(f => !/\.(mp4|webm|mov)$/i.test(f));
+if (imgs.length) {
+  console.log(`   ⚠ 找不到 ${imgs.length} 個圖檔（會破圖）：`);
+  imgs.forEach(f => console.log(`     · ${f}`));
+}
