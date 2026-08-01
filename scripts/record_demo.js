@@ -62,8 +62,8 @@ const SEGMENTS = [
     },
   },
   {
-    name: '04_welcome', page: 'onboarding.html#/profile', secs: 26,
-    desc: '六題問卷從第一題答到底 → 麥麥的整理',
+    name: '04_welcome', page: 'onboarding.html#/profile', secs: 44,
+    desc: '六題問卷答到底 → 開始分析 → 麥麥整理出的投資樣貌',
     // 授權那段 03 已經完整演過，這裡不重複：用 seedConsent 先把授權狀態灌好，
     // 影片第一格就是問卷第 1 題。
     seed: 'consent',
@@ -89,8 +89,19 @@ const SEGMENTS = [
         await p.click('#btn-next');                          // 最後一題時這顆是「看麥麥的整理」
         await p.waitForTimeout(900);
       }
-      await p.waitForTimeout(4200);                          // 停在摘要標籤上（這頁不長，不用捲）
-      // 不按「完成，開始分析」——後面 05 健檢頁本來就是那一段
+      await p.waitForTimeout(3200);                          // 停在摘要標籤上（這頁不長，不用捲）
+
+      await p.click('#btn-finish');                          // 完成，開始分析
+      await p.waitForTimeout(2600);                          // 分析中的等待畫面
+      // 分析會自己往下走；萬一停在「查看我的投資樣貌」就按一下
+      if (await p.isVisible('#btn-view-result')) {
+        await p.click('#btn-view-result');
+      }
+      await p.waitForFunction(() => location.hash === '#/profile-result', null, { timeout: 25000 });
+      await p.waitForTimeout(3000);
+      await p.mouse.wheel(0, 320);                           // 把整理出來的樣貌捲一段
+      await p.waitForTimeout(3400);
+      // 不按「這很像我，進入 MaiMate」——進去之後就是第 10 頁那支影片的內容
     },
   },
   {
