@@ -5,124 +5,155 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MaiMate 麥麥</title>
 <style>
-  /* 視覺系統來源：docs/mockups/base.css（設計稿三畫面），改為響應式 */
-  :root{--navy:#16224D;--navy-d:#0D1530;--ice:#EAF0FB;--gold:#E8A13A;--green:#1F9D66;--red:#D64550;--ink:#1F2937;--mut:#6B7280;--bg:#F4F7FD}
-  *{box-sizing:border-box;font-family:"Noto Sans CJK TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;margin:0}
-  body{background:var(--bg);color:var(--ink)}
+  /* 視覺系統：與 Screen 6（home.html）同一套語言——同色票、同圓角、同平塗。
+     兩頁擺在一起要看得出是同一個產品，而不是兩個團隊各做各的。
 
-  /* ── 頂欄 ── */
-  .topbar{background:var(--navy-d);color:#fff;padding:14px 16px 12px;display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:20}
-  .topbar .logo img{width:34px;height:37px;image-rendering:pixelated;display:block}
-  .topbar h1{font-size:17px;font-weight:700}
-  .topbar .sub{font-size:10px;color:#A9B7D9}
-  .badge{margin-left:auto;background:#22315E;border:1px solid var(--gold);color:var(--gold);font-size:10.5px;padding:3px 10px;border-radius:999px;font-weight:700;white-space:nowrap}
+     這次只動 <style>：class 名稱、DOM 結構、app.js、畫面上每一個字與數字都沒有改。
+     分鏡稿的口白與【預期】引用的是文字與數字，所以劇本不受影響。 */
+  :root{
+    /* Screen 6 的色票 */
+    --bg:#FBFCFE;--card:#FFFFFF;--txt:#0F172A;--sub:#46557B;--mut:#6B7280;
+    --line:#E3E9F5;--tint:#EEF3FC;--blue:#1E4DA7;--warm:#FFF6EC;
+    /* 金融語意色沿用設計稿，不跟著換——漲跌與警示的顏色是約定，不是風格 */
+    --navy:#16224D;--gold:#E8A13A;--green:#1F9D66;--red:#D64550;
+    /* 舊變數保留別名，避免漏改一處就變成透明字 */
+    --ink:var(--txt);--ice:var(--tint);--navy-d:#0D1530
+  }
+  *{box-sizing:border-box;font-family:"Noto Sans CJK TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;margin:0}
+  html,body{max-width:100%;overflow-x:clip}
+  html{background:var(--bg)}
+  body{background:var(--bg);color:var(--txt)}
+
+  /* ── 頂欄：改成 Screen 6 的淺色半透明貼頂 ── */
+  .topbar{
+    background:rgba(251,252,254,.96);color:var(--txt);
+    padding:calc(8px + env(safe-area-inset-top)) 18px 8px;
+    display:flex;align-items:center;gap:9px;min-height:58px;
+    position:sticky;top:0;z-index:20;border-bottom:1px solid rgba(227,233,245,.86)
+  }
+  .topbar .logo img{width:35px;height:38px;image-rendering:pixelated;display:block}
+  .topbar h1{font-size:15px;font-weight:700;line-height:1.25;letter-spacing:.01em}
+  .topbar .sub{font-size:10.5px;color:var(--mut);line-height:1.35;margin-top:2px}
+  .badge{
+    margin-left:auto;background:var(--tint);border:1px solid var(--line);color:var(--blue);
+    font-size:11px;padding:0 10px;height:26px;display:inline-flex;align-items:center;
+    border-radius:999px;font-weight:800;white-space:nowrap
+  }
   /* 模式徽章可點（app.js cycleMode），但視覺是小膠囊：用透明 ::after 只放大可點範圍，
-     視覺不動。寬度已 64px≥44，只補高度；頂欄同高沒有其他控件，不會壓到別的熱區。 */
+     視覺不動。撐高不撐寬，頂欄同高沒有其他控件，不會壓到別的熱區。 */
   .badge{position:relative}
-  .badge::after{content:"";position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:46px}
-  .offline{font-size:10px;color:#FF9AA2;display:none;margin-left:8px}
+  .badge::after{content:"";position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:44px}
+  .offline{font-size:10px;color:var(--red);font-weight:700;display:none;margin-left:8px}
 
   /* ── 版面：手機單欄，桌機（≥900px）雙欄 ── */
-  main{max-width:480px;margin:0 auto;padding:14px 14px 96px}
+  main{max-width:480px;margin:0 auto;padding:14px 18px 100px}
   @media (min-width:900px){
-    main{max-width:1080px;display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start;padding-bottom:20px}
+    main{max-width:1100px;display:grid;grid-template-columns:360px 1fr;gap:22px;align-items:start;padding-bottom:24px}
     #side{position:sticky;top:76px}
   }
 
-  .hello{font-size:15px;font-weight:700;margin:4px 2px 12px}
-  .hello span{color:var(--mut);font-weight:400;font-size:12px;display:block;margin-top:3px}
-  .sec{font-size:12px;font-weight:700;color:var(--navy);margin:10px 2px 8px}
-  .navigation-source{background:#fff;border:1px solid #C9D6EE;border-left:4px solid #1E4DA7;border-radius:12px;padding:12px 14px;margin:4px 0 12px}
-  .navigation-source b{display:block;color:var(--navy);font-size:13px;line-height:1.5}
+  .hello{font-size:22px;font-weight:800;line-height:1.32;letter-spacing:-.015em;margin:6px 0 14px;text-wrap:balance}
+  .hello span{color:var(--sub);font-weight:400;font-size:12.5px;line-height:1.65;display:block;margin-top:6px;letter-spacing:0}
+  .sec{font-size:12px;font-weight:800;color:var(--sub);margin:18px 0 9px;letter-spacing:.02em}
+  .navigation-source{background:var(--tint);border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:12px;padding:11px 13px;margin:4px 0 13px}
+  .navigation-source b{display:block;color:var(--txt);font-size:12.5px;line-height:1.5}
   .navigation-source p{color:var(--mut);font-size:11.5px;line-height:1.6;margin-top:3px}
 
-  /* 麥麥健康分 hero 卡（設計稿 screen1；分數＝真實子項透明加權，公式上卡） */
-  .hero{background:#fff;border-radius:16px;padding:14px;box-shadow:0 1px 6px rgba(22,34,77,.07);display:flex;align-items:center;gap:14px;margin-bottom:10px}
-  .hero .ring{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none}
-  .hero .ring i{width:54px;height:54px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-style:normal;line-height:1}
+  /* 卡片語言：Screen 6 是 1px 邊框＋16px 圓角＋平塗，不用陰影堆層次 */
+  .hero,.card,.insight,.tick,.scen,.trail,.done,.confirm{box-shadow:none}
+
+  /* 麥麥健康分 hero 卡（分數＝真實子項透明加權，公式上卡） */
+  .hero{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 15px;display:flex;align-items:center;gap:13px;margin-bottom:10px}
+  .hero .ring{width:70px;height:70px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none}
+  .hero .ring i{width:53px;height:53px;border-radius:50%;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;font-style:normal;line-height:1}
   .hero .ring i b{font-weight:800;font-size:21px;color:var(--navy)}
   .hero .ring i s{text-decoration:none;font-size:8.5px;color:var(--mut);margin-top:2px}
   .hero .htxt{min-width:0}
-  .hero .htxt .n{font-size:14px;font-weight:800;color:var(--navy)}
-  .hero .htxt .l{font-size:10.5px;color:var(--mut);margin-top:3px;line-height:1.45}
-  .hero .htxt .pnl{font-size:11px;font-weight:700;margin-top:5px}
-  .hero .htxt .pnl b{color:var(--navy)}
+  .hero .htxt .n{font-size:14.5px;font-weight:800;color:var(--txt);letter-spacing:-.01em}
+  .hero .htxt .l{font-size:11px;color:var(--sub);margin-top:4px;line-height:1.5}
+  .hero .htxt .pnl{font-size:11px;font-weight:700;margin-top:5px;color:var(--sub)}
+  .hero .htxt .pnl b{color:var(--txt)}
   .hero .htxt .pnl .pos{color:var(--green)} .hero .htxt .pnl .neg{color:var(--red)}
-  .hero .htxt .formula{font-size:9px;color:var(--mut);margin-top:5px;line-height:1.4}
+  .hero .htxt .formula{font-size:9px;color:var(--mut);margin-top:5px;line-height:1.45}
 
   /* 健檢 2×2 卡 */
-  .cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
-  .card{background:#fff;border-radius:16px;padding:14px;box-shadow:0 1px 6px rgba(22,34,77,.07)}
-  .card .n{font-size:22px;font-weight:800}
-  .card .l{font-size:10.5px;color:var(--mut);margin-top:3px;line-height:1.4}
-  .insight{background:#fff;border-left:4px solid var(--red);border-radius:12px;padding:11px 13px;font-size:12px;line-height:1.6;margin-bottom:10px;box-shadow:0 1px 6px rgba(22,34,77,.06)}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:4px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 14px}
+  .card .n{font-size:23px;font-weight:800;letter-spacing:-.02em}
+  .card .l{font-size:10px;color:var(--mut);margin-top:4px;line-height:1.45}
+  .insight{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--red);border-radius:12px;padding:11px 13px;font-size:12px;line-height:1.65;margin-bottom:9px;color:var(--sub)}
   .insight b{color:var(--red)}
-  .insight.g{border-color:var(--green)} .insight.g b{color:var(--green)}
+  .insight.g{border-left-color:var(--green)} .insight.g b{color:var(--green)}
 
   /* 行情膠囊列 */
-  .tick{display:flex;justify-content:space-between;background:#fff;border-radius:12px;padding:9px 13px;margin-bottom:8px;font-size:12.5px;box-shadow:0 1px 5px rgba(22,34,77,.05)}
-  .tick b{color:var(--navy)}
-  .tick .v{font-variant-numeric:tabular-nums;transition:color .3s;font-weight:700}
+  .tick{display:flex;justify-content:space-between;align-items:center;background:var(--tint);border-radius:11px;padding:0 13px;min-height:44px;margin-bottom:7px;font-size:12.5px}
+  .tick b{color:var(--navy);font-weight:700}
+  .tick .v{font-variant-numeric:tabular-nums;transition:color .3s;font-weight:800}
   .tick .v.up{color:var(--green)}
   .tick .v.down{color:var(--red)}
 
   /* ── 對話 ── */
   #chatlog{display:flex;flex-direction:column;gap:2px;margin-top:6px}
-  .msg{max-width:86%;padding:11px 14px;border-radius:14px;font-size:13.5px;line-height:1.65;margin-bottom:10px}
-  .msg.user{align-self:flex-end;background:var(--ice);border-bottom-right-radius:4px}
-  .msg.ai{align-self:flex-start;background:var(--navy);color:#fff;border-bottom-left-radius:4px}
+  .msg{max-width:86%;padding:12px 14px;border-radius:15px;font-size:13.5px;line-height:1.7;margin-bottom:10px}
+  .msg.user{align-self:flex-end;background:var(--tint);color:var(--txt);border-bottom-right-radius:5px}
+  .msg.ai{align-self:flex-start;background:var(--navy);color:#fff;border-bottom-left-radius:5px}
   .msg.ai b{color:var(--gold)}
   .tools{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 10px}
-  .tool{font-size:10px;background:#fff;border:1px solid #C9D6EE;color:var(--navy);border-radius:999px;padding:3px 9px;font-weight:600}
+  .tool{font-size:10px;background:var(--card);border:1px solid var(--line);color:var(--sub);border-radius:999px;padding:4px 10px;font-weight:700}
   .tool .ok{color:var(--green)}
 
-  /* 三方案卡（README §3 scenarios） */
-  .scen{background:#fff;border:1.5px solid #E3E9F5;border-radius:14px;padding:12px 14px;margin-bottom:9px;box-shadow:0 1px 5px rgba(22,34,77,.05);cursor:pointer}
+  /* 三方案卡 */
+  .scen{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:9px;cursor:pointer}
   .scen:active{transform:scale(.99)}
-  .scen .hint{font-size:10px;color:var(--mut);margin-top:7px;text-align:right}
-  .scen.pick{border-color:var(--gold);background:#FFFDF6}
-  .scen .t{display:flex;align-items:center;font-size:13.5px;font-weight:800;color:var(--navy);margin-bottom:6px}
-  .scen .tag{margin-left:auto;font-size:9.5px;font-weight:700;border-radius:999px;padding:2px 8px;background:var(--ice);color:var(--navy)}
+  .scen .hint{font-size:10px;color:var(--mut);margin-top:8px;text-align:right}
+  .scen.pick{border-color:var(--gold);border-width:1.5px;background:var(--warm)}
+  .scen .t{display:flex;align-items:center;font-size:13.5px;font-weight:800;color:var(--txt);margin-bottom:7px}
+  .scen .tag{margin-left:auto;font-size:9.5px;font-weight:800;border-radius:999px;padding:3px 9px;background:var(--tint);color:var(--blue)}
   .scen.pick .tag{background:var(--gold);color:#fff}
-  .scen .row{display:flex;gap:10px;font-size:10.5px;color:var(--mut)}
-  .scen .row b{display:block;font-size:12.5px;color:var(--ink);margin-top:1px}
+  .scen .row{display:flex;gap:10px;font-size:10px;color:var(--mut)}
+  .scen .row b{display:block;font-size:12.5px;color:var(--txt);margin-top:2px;font-weight:800}
   .scen .row>div{flex:1}
-  .scen .note{font-size:10.5px;color:var(--mut);margin-top:7px;line-height:1.5}
+  .scen .note{font-size:10.5px;color:var(--sub);margin-top:8px;line-height:1.55}
 
-  /* 下單確認卡（設計稿 screen3） */
-  .confirm{background:#FFF8EA;border:2px solid var(--gold);border-radius:16px;padding:16px;margin-bottom:12px}
-  .confirm .h{font-size:14.5px;font-weight:800;color:var(--navy);margin-bottom:10px}
+  /* 下單確認卡 */
+  .confirm{background:var(--warm);border:1.5px solid var(--gold);border-radius:16px;padding:16px;margin-bottom:12px}
+  .confirm .h{font-size:14.5px;font-weight:800;color:var(--txt);margin-bottom:11px}
   .confirm table{width:100%;font-size:12.5px;border-collapse:collapse}
-  .confirm td{padding:5px 0;color:var(--mut)}
-  .confirm td:last-child{text-align:right;color:var(--ink);font-weight:700}
-  .confirm .warn{font-size:10.5px;color:var(--red);margin-top:8px;line-height:1.5}
-  .btns{display:flex;gap:10px;margin-top:12px}
-  .btns button{border:0;border-radius:12px;padding:12px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit}
+  .confirm td{padding:6px 0;color:var(--mut)}
+  .confirm td:last-child{text-align:right;color:var(--txt);font-weight:800}
+  .confirm .warn{font-size:10.5px;color:var(--red);margin-top:9px;line-height:1.55}
+  .btns{display:flex;gap:9px;margin-top:13px}
+  .btns button{border:0;border-radius:12px;padding:13px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit}
   .btns button:disabled{opacity:.55;cursor:not-allowed}
   .btns .ok{flex:1.4;background:var(--green);color:#fff}
-  .btns .no{flex:1;background:#E8EDF7;color:var(--ink)}
-  .done{background:#EBF9F1;border:1.5px solid var(--green);color:#116b45;border-radius:12px;padding:10px 14px;font-size:12.5px;font-weight:700;margin-bottom:12px}
+  .btns .no{flex:1;background:var(--tint);color:var(--sub)}
+  .done{background:#EBF9F1;border:1px solid var(--green);color:#116b45;border-radius:12px;padding:11px 14px;font-size:12.5px;font-weight:700;margin-bottom:12px}
 
-  /* 決策軌跡面板（設計稿 screen3） */
-  .trail{background:#fff;border-radius:14px;padding:14px;box-shadow:0 1px 6px rgba(22,34,77,.06);margin-bottom:12px}
-  .trail .h{font-size:12.5px;font-weight:800;color:var(--navy);display:flex;margin-bottom:10px}
+  /* 決策軌跡面板 */
+  .trail{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+  .trail .h{font-size:12.5px;font-weight:800;color:var(--txt);display:flex;margin-bottom:11px}
   .trail .h span{margin-left:auto;font-size:10px;color:var(--green);font-weight:700}
-  .step{display:flex;gap:10px;font-size:11px;color:var(--ink);margin-bottom:7px;align-items:baseline}
+  .step{display:flex;gap:10px;font-size:11px;color:var(--sub);margin-bottom:8px;align-items:baseline}
   .step i{font-style:normal;color:var(--mut);font-size:10px;flex:none;width:40px}
-  .step em{font-style:normal;font-family:ui-monospace,Consolas,monospace;background:var(--ice);color:var(--navy);border-radius:6px;padding:1px 7px;font-size:10px}
+  .step em{font-style:normal;font-family:ui-monospace,Consolas,monospace;background:var(--tint);color:var(--blue);border-radius:6px;padding:2px 7px;font-size:10px}
   .step.hl em{background:#FFEBC2;color:#8a5a00}
 
   /* 底部輸入列：手機固定、桌機貼齊對話欄 */
-  .inputbar{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:10px 14px calc(14px + env(safe-area-inset-bottom));display:flex;gap:8px;border-top:1px solid #E3E9F5;z-index:20}
-  .inputbar input{flex:1;background:var(--bg);border:1px solid #D5DEF0;border-radius:999px;padding:10px 16px;font-size:13px;font-family:inherit}
-  /* 44px 是 Apple HIG 的最小觸控目標；原本 42px 差兩格，手機上按送出容易點空 */
-  .inputbar button{width:44px;height:44px;border-radius:999px;background:var(--navy);color:#fff;border:0;font-size:16px;cursor:pointer;flex:none}
+  .inputbar{
+    position:fixed;bottom:0;left:0;right:0;background:rgba(251,252,254,.96);
+    padding:10px 18px calc(14px + env(safe-area-inset-bottom));
+    display:flex;gap:9px;border-top:1px solid var(--line);z-index:20
+  }
+  .inputbar input{flex:1;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:11px 16px;font-size:13px;font-family:inherit;color:var(--txt)}
+  .inputbar input::placeholder{color:var(--mut)}
+  /* 44px 是 Apple HIG 的最小觸控目標 */
+  .inputbar button{width:44px;height:44px;border-radius:999px;background:var(--blue);color:#fff;border:0;font-size:16px;cursor:pointer;flex:none}
   @media (min-width:900px){
-    .inputbar{position:sticky;bottom:0;border:1px solid #E3E9F5;border-radius:16px;margin-top:8px}
+    .inputbar{position:sticky;bottom:0;border:1px solid var(--line);border-radius:16px;margin-top:8px}
   }
 
   /* 鍵盤焦點可見（a11y）：滑鼠點擊不顯示、鍵盤 tab 才顯示 */
-  :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  :focus-visible{outline:2px solid var(--blue);outline-offset:2px}
   .badge:focus-visible{outline-offset:3px}
 </style>
 </head>
