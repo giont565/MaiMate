@@ -102,15 +102,17 @@
   .tool{font-size:10px;background:var(--card);border:1px solid var(--line);color:var(--sub);border-radius:999px;padding:4px 10px;font-weight:700}
   .tool .ok{color:var(--green)}
 
-  /* 三方案卡 */
+  /* 三方案卡。次要文字用 --sub 不用 --mut：選中時底色換成 --warm（金框），
+     --mut 在暖底上只剩 4.52 對比，離 AA 門檻 4.5 只差 0.02，而這些字只有 10px。
+     這三屏是分鏡稿鏡 4–7 的主角，餘裕留窄不划算。 */
   .scen{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:9px;cursor:pointer}
   .scen:active{transform:scale(.99)}
-  .scen .hint{font-size:10px;color:var(--mut);margin-top:8px;text-align:right}
+  .scen .hint{font-size:10px;color:var(--sub);margin-top:8px;text-align:right}
   .scen.pick{border-color:var(--gold);border-width:1.5px;background:var(--warm)}
   .scen .t{display:flex;align-items:center;font-size:13.5px;font-weight:800;color:var(--txt);margin-bottom:7px}
   .scen .tag{margin-left:auto;font-size:9.5px;font-weight:800;border-radius:999px;padding:3px 9px;background:var(--tint);color:var(--blue)}
   .scen.pick .tag{background:var(--gold);color:#fff}
-  .scen .row{display:flex;gap:10px;font-size:10px;color:var(--mut)}
+  .scen .row{display:flex;gap:10px;font-size:10px;color:var(--sub)}
   .scen .row b{display:block;font-size:12.5px;color:var(--txt);margin-top:2px;font-weight:800}
   .scen .row>div{flex:1}
   .scen .note{font-size:10.5px;color:var(--sub);margin-top:8px;line-height:1.55}
@@ -119,7 +121,7 @@
   .confirm{background:var(--warm);border:1.5px solid var(--gold);border-radius:16px;padding:16px;margin-bottom:12px}
   .confirm .h{font-size:14.5px;font-weight:800;color:var(--txt);margin-bottom:11px}
   .confirm table{width:100%;font-size:12.5px;border-collapse:collapse}
-  .confirm td{padding:6px 0;color:var(--mut)}
+  .confirm td{padding:6px 0;color:var(--sub)}
   .confirm td:last-child{text-align:right;color:var(--txt);font-weight:800}
   .confirm .warn{font-size:10.5px;color:var(--red);margin-top:9px;line-height:1.55}
   .btns{display:flex;gap:9px;margin-top:13px}
