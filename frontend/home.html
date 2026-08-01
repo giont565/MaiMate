@@ -63,28 +63,18 @@
   .profile-reminder p{margin-top:2px;color:var(--sub);font-size:11.5px;line-height:1.55}
   .profile-reminder button{flex:none;min-height:44px;padding:0 8px;border:0;background:none;color:var(--blue);font-size:12px;font-weight:800;cursor:pointer}
 
-  /* ── 三種版面（＝問卷 Q6 的三種溝通風格；呈現密度不同，資料完全相同）──
-     貼在頂欄下的窄橫幅。原本是內容流裡三顆帶框 44px 按鈕＋一行提示，約 84px；
-     改成無框文字鈕後剩約 50px，而且不再把問候語往下推。 */
-  /* 底部留白放在橫幅上而不是提示行上：提示行選過就收起（見 home.js applyStyle），
-     留白掛在它身上會一起消失，橫幅會突然變得很擠。 */
-  .style-bar{
-    position:sticky;top:58px;z-index:19;padding:0 18px 6px;
-    background:rgba(251,252,254,.96);border-bottom:1px solid rgba(227,233,245,.86)
-  }
-  .style-switch{display:flex;align-items:center;gap:2px;overflow-x:auto;scrollbar-width:none}
-  .style-switch::-webkit-scrollbar{display:none}
-  .style-switch .sw-label{flex:none;font-size:11px;color:var(--mut);font-weight:800;margin-right:6px}
-  /* 視覺 32px、字 11.5px，但下面的 ::after 會把可點範圍撐到 44px（Apple HIG 最小值）。
-     橫幅本身沒有其他控件，放大的熱區不會壓到別人。 */
-  .style-switch button{
-    position:relative;flex:none;height:32px;padding:0 9px;border:0;border-radius:8px;
-    background:none;color:var(--mut);font-size:11.5px;font-weight:700;cursor:pointer;
+  /* ── 版面徽章（＝問卷 Q6 的三種溝通風格；呈現密度不同，資料完全相同）──
+     做在頂欄那一行，點一下換下一個，同 index.html 的模式徽章。
+     視覺是 26px 小膠囊，但 ::after 把可點範圍撐到 44px（Apple HIG 最小值）——
+     視覺不動、熱區合規。左右鄰居是 44px 的鈴鐺與齒輪，中間 gap 4px，
+     撐高不撐寬所以不會壓到它們的熱區。 */
+  .style-badge{
+    position:relative;flex:none;align-self:center;height:26px;padding:0 10px;
+    border:1px solid var(--line);border-radius:999px;background:var(--tint);
+    color:var(--blue);font-size:11px;font-weight:800;cursor:pointer;
     font-family:inherit;white-space:nowrap
   }
-  .style-switch button::after{content:"";position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:44px}
-  .style-switch button[aria-pressed="true"]{background:var(--tint);color:var(--blue)}
-  .style-hint{margin:-1px 0 0;color:var(--mut);font-size:10px;line-height:1.5}
+  .style-badge::after{content:"";position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:44px}
 
   /* 成長陪跑（concise）：留結論與摘要，收起解釋段落與證據數字 */
   body[data-home-style="concise"] .today-explanation,
@@ -353,6 +343,13 @@
       <div class="brand-copy"><b>麥麥 MaiMate</b><span>投資導航</span></div>
     </div>
     <div class="header-actions">
+      <!-- 版面切換：同 index.html 的模式徽章，點一下換下一個。
+           標籤與 app.js 的 MODE_LABELS 同名同序（安心白話／成長陪跑／專業效率），
+           smoke:home:integration 第 12 段逐字比對，改一邊就會紅。
+           權衡：三顆並排的 radio 群組 a11y 較好（可直接跳選），但頂欄放不下，
+           而且與 index 的操作方式不一致。用 aria-label 播報「目前 X，點一下換成 Y」
+           把可讀性補回來——這是 index.html 徽章用過、實機驗過的做法。 -->
+      <button class="style-badge" id="home-style-badge" type="button" hidden></button>
       <button class="icon-button" id="home-notifications" type="button" aria-label="查看通知" aria-haspopup="dialog" aria-controls="notification-sheet" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
         <span class="notice-dot" id="notification-dot" aria-hidden="true"></span>
@@ -362,24 +359,6 @@
       </button>
     </div>
   </header>
-
-  <!-- 版面切換做成貼在頂欄下的窄橫幅（原本是內容流裡三顆 44px 帶框按鈕＋提示行，
-       吃掉約 84px 首屏）。窄化不能犧牲熱區：視覺 32px，靠 ::after 撐出 44px 隱形
-       觸控範圍——同 index.html 模式徽章那招。內容還沒好之前整條隱藏，避免使用者
-       在骨架畫面上切一個還沒東西可切的版面。 -->
-  <div class="style-bar" id="home-style-bar" hidden>
-    <div class="style-switch" id="home-style-switch" role="group" aria-label="選擇版面呈現方式"
-         aria-describedby="home-style-hint">
-      <span class="sw-label">版面</span>
-      <!-- 標籤與 app.js 的 MODE_LABELS 同名同序（安心白話／成長陪跑／專業效率）。
-           同一個「麥麥怎麼跟你說話」在三個畫面叫三套名字，使用者會以為是三件事。
-           smoke:home:integration 第 12 段會逐字比對，改一邊就會紅。 -->
-      <button type="button" data-style="guided" aria-pressed="false">安心白話</button>
-      <button type="button" data-style="concise" aria-pressed="false">成長陪跑</button>
-      <button type="button" data-style="analytical" aria-pressed="false">專業效率</button>
-    </div>
-    <p class="style-hint" id="home-style-hint" aria-live="polite"></p>
-  </div>
 
   <main class="home-main" id="home-main">
     <section class="skeleton" id="home-loading" aria-label="正在整理首頁" aria-busy="true">

@@ -390,17 +390,33 @@ const MARKET_PATH = /\/market(\?|$)/;
       const modes = await page.evaluate(() => MODE_ORDER.map((k) => MODE_LABELS[k]));
 
       await page.goto(`${base}/home.html?demo=STEADY_PLANNER`);
-      await page.waitForSelector(".style-switch button");
-      const switches = await page.evaluate(
-        () => [...document.querySelectorAll(".style-switch button")].map((b) => b.textContent.trim())
-      );
+      await page.waitForSelector("#home-style-badge:not([hidden])");
+      /* home 的徽章是循環切換，所以要點三下才看得完整組標籤。
+         從目前這一個開始收集，繞一圈回到原點，順序必須和 index 的 MODE_ORDER 一致。 */
+      const badge = page.locator("#home-style-badge");
+      const start = await badge.textContent();
+      const cycle = [start.trim()];
+      for (let i = 0; i < 2; i++) {
+        await badge.click();
+        await page.waitForFunction(
+          (prev) => document.getElementById("home-style-badge").textContent.trim() !== prev,
+          cycle[cycle.length - 1]
+        );
+        cycle.push((await badge.textContent()).trim());
+      }
       await page.close();
 
-      assert(modes.length === 3 && switches.length === 3,
-        `模式數量不是三個：index ${modes.length}／home ${switches.length}`);
-      modes.forEach((label, i) => {
-        assert(label === switches[i],
-          `第 ${i + 1} 個模式兩頁不同名：\n  index.html：${label}\n  home.html ：${switches[i]}`);
+      assert(modes.length === 3 && cycle.length === 3,
+        `模式數量不是三個：index ${modes.length}／home ${cycle.length}`);
+      assert(new Set(cycle).size === 3, `home 徽章循環有重複：${cycle.join("／")}`);
+      /* 兩邊起點不一定相同（home 跟著問卷答案），所以比對的是「同一組標籤、同一個
+         循環順序」，而不是逐位相等。 */
+      const from = modes.indexOf(cycle[0]);
+      assert(from >= 0, `home 的「${cycle[0]}」不在 index 的模式清單裡：${modes.join("／")}`);
+      cycle.forEach((label, i) => {
+        const expected = modes[(from + i) % modes.length];
+        assert(label === expected,
+          `第 ${i + 1} 個模式兩頁不同：\n  index.html：${expected}\n  home.html ：${label}`);
       });
 
       /* 問卷 Q6 是使用者第一次選這個設定的地方，也要同名。 */

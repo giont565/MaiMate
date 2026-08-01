@@ -944,7 +944,7 @@
     byId("home-content").setAttribute("aria-busy", "false");
     /* 版面橫幅在頂欄下、內容區之外，要跟著內容一起開關——骨架畫面上放一個
        切了也沒東西可切的控制列只會讓人困惑。 */
-    byId("home-style-bar").hidden = false;
+    byId("home-style-badge").hidden = false;
     if (!options || !options.background) {
       analytics("maimate_home_viewed");
       window.scrollTo({ top: 0, behavior: "auto" });
@@ -956,14 +956,14 @@
     byId("home-loading").hidden = false;
     byId("home-error").hidden = true;
     byId("home-content").hidden = true;
-    byId("home-style-bar").hidden = true;
+    byId("home-style-badge").hidden = true;
   }
 
   function showError(error) {
     uiState.loading = false;
     byId("home-loading").hidden = true;
     byId("home-content").hidden = true;
-    byId("home-style-bar").hidden = true;
+    byId("home-style-badge").hidden = true;
     const errorState = byId("home-error");
     errorState.hidden = false;
     if (error && error.userMessage) setText("home-error-copy", error.userMessage);
@@ -1174,34 +1174,54 @@
     default: "可以選一種你看起來最舒服的呈現方式。",
   };
 
+  /* 標籤與順序跟 app.js 的 MODE_LABELS／MODE_ORDER 一致——同一個「麥麥怎麼跟你說話」
+     在 index、home、問卷 Q6 三處必須同名同序（smoke:home:integration 第 12 段逐字比對）。 */
+  const STYLE_LABELS = { guided: "安心白話", concise: "成長陪跑", analytical: "專業效率" };
+  const STYLE_ORDER = ["guided", "concise", "analytical"];
+  const STYLE_ONCE_KEY = "mm_home_style_hinted";
+
   function applyStyle() {
     const services = window.MM_HOME_SERVICES;
     if (!services || typeof services.currentStyle !== "function") return;
     const { style, source } = services.currentStyle();
     document.body.dataset.homeStyle = style;
-    document.querySelectorAll("[data-style]").forEach((button) => {
-      button.setAttribute("aria-pressed", String(button.dataset.style === style));
-    });
-    const hint = byId("home-style-hint");
-    if (hint) {
-      hint.textContent = STYLE_HINTS[source] || STYLE_HINTS.default;
-      /* 使用者自己選過之後就收起：那行字是引導，看過一次就只剩佔位，而橫幅是常駐的。
-         還沒選過（問卷帶入或全新使用者）仍要說明「為什麼現在是這個版面」。
-         文字留在 DOM 不清空——aria-describedby 指著它，煙測也靠它確認選擇有被記住。 */
-      hint.hidden = source === "userChoice";
-    }
+    const badge = byId("home-style-badge");
+    if (!badge) return;
+    badge.dataset.style = style;
+    badge.textContent = STYLE_LABELS[style] || STYLE_LABELS.guided;
+    /* 徽章只顯示目前模式，看不出點下去會發生什麼。aria-label 補上「點一下換成 X」，
+       讀屏使用者才知道這是循環切換而不是一個狀態標示。 */
+    const next = STYLE_ORDER[(STYLE_ORDER.indexOf(style) + 1) % STYLE_ORDER.length];
+    badge.setAttribute("aria-label",
+      "版面：" + STYLE_LABELS[style] + "。點一下換成 " + STYLE_LABELS[next] + "。");
+    badge.title = STYLE_HINTS[source] || STYLE_HINTS.default;
+
+    /* 「為什麼現在是這個版面」原本是橫幅裡一行常駐小字。徽章塞不下那行字，
+       改成每個 session 提示一次就好——問卷幫你選了版面卻不說一聲會很莫名其妙，
+       但講第二次以後就只是雜訊。自己選過的人不需要被告知。 */
+    if (source === "userChoice") return;
+    try {
+      if (sessionStorage.getItem(STYLE_ONCE_KEY)) return;
+      sessionStorage.setItem(STYLE_ONCE_KEY, "1");
+    } catch (_) { return; }
+    showToast(STYLE_HINTS[source] || STYLE_HINTS.default);
   }
 
   function bindStyleSwitch() {
-    document.querySelectorAll("[data-style]").forEach((button) => {
-      button.addEventListener("click", async () => {
-        analytics("maimate_home_style_changed");
-        const svc = window.MM_HOME_SERVICES && window.MM_HOME_SERVICES.home;
-        if (svc && typeof svc.updatePresentationStyle === "function") {
-          try { await svc.updatePresentationStyle(button.dataset.style); } catch (_) {}
-        }
-        applyStyle();
-      });
+    const badge = byId("home-style-badge");
+    if (!badge) return;
+    badge.addEventListener("click", async () => {
+      analytics("maimate_home_style_changed");
+      const current = badge.dataset.style || STYLE_ORDER[0];
+      const next = STYLE_ORDER[(STYLE_ORDER.indexOf(current) + 1) % STYLE_ORDER.length];
+      const svc = window.MM_HOME_SERVICES && window.MM_HOME_SERVICES.home;
+      if (svc && typeof svc.updatePresentationStyle === "function") {
+        try { await svc.updatePresentationStyle(next); } catch (_) {}
+      }
+      applyStyle();
+      /* 徽章很小、字也小，切換後畫面密度的變化又在捲軸下方看不到，
+         不給回饋使用者會不確定自己按到了沒。 */
+      showToast("版面：" + STYLE_LABELS[next]);
     });
   }
 
