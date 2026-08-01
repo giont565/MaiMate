@@ -280,7 +280,48 @@ const MARKET_PATH = /\/market(\?|$)/;
       ok("9 SW 清單 OK：三支 core 都在快取名單內");
     }
 
-    /* ── 10. 年度報酬純函式（return-core）──────────────────────────────
+    /* ── 10. index.html 與 home.html 的健檢用語必須逐字相同 ──────────────
+     * 兩頁現在吃同一顆 health-core，這支是在防「有人為了排版在其中一頁手改字串」。
+     * 同一個健檢在兩個畫面講成兩套說法，使用者會以為那是兩件不同的事。 */
+    {
+      const grab = async (url, sel) => {
+        const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+        await page.route(HEALTH_PATH, (r) => r.fulfill({ json: HEALTH }));
+        await page.route(MARKET_PATH, (r) => r.fulfill({ json: { kind: "ticker", market: "btctwd", data: { last: "100" } } }));
+        await page.goto(url);
+        await page.waitForSelector(sel.ready);
+        const out = await page.evaluate((s) => ({
+          cards: [...document.querySelectorAll(s.card)].map((e) => e.textContent.trim()),
+          notes: [...document.querySelectorAll(s.note)].map((e) => e.textContent.trim()),
+          score: (document.querySelector(s.score) || {}).textContent,
+        }), sel);
+        await page.close();
+        return out;
+      };
+
+      const idx = await grab(`${base}/index.html`, {
+        ready: "#hero .ring", card: "#health .card .l", note: "#insights .insight", score: "#hero .ring i b",
+      });
+      const home = await grab(`${base}/home.html?demo=STEADY_PLANNER`, {
+        ready: ".health-card", card: ".health-cell span", note: ".health-insight", score: ".health-ring-inner b",
+      });
+
+      assert(idx.cards.length === 4 && home.cards.length === 4,
+        `四格數量不符：index ${idx.cards.length}／home ${home.cards.length}`);
+      idx.cards.forEach((label, i) => {
+        assert(label === home.cards[i], `第 ${i + 1} 格標籤兩頁不一致：\n  index：${label}\n  home ：${home.cards[i]}`);
+      });
+      assert(idx.notes.length === home.notes.length, "insight 句數兩頁不一致");
+      idx.notes.forEach((text, i) => {
+        assert(text === home.notes[i], `第 ${i + 1} 句 insight 兩頁不一致：\n  index：${text}\n  home ：${home.notes[i]}`);
+      });
+      /* 同一份 /health 在兩頁必須算出同一個分數——這是共用 core 的重點。 */
+      assert(idx.score.trim() === home.score.trim(),
+        `健檢分兩頁不一致：index ${idx.score}／home ${home.score}`);
+      ok(`10 兩頁用語一致 OK：四格標籤／${idx.notes.length} 句 insight／健檢分 ${idx.score.trim()} 皆逐字相同`);
+    }
+
+    /* ── 11. 年度報酬純函式（return-core）──────────────────────────────
      * 模組還沒接上畫面——2026 的年初市值與 2025 的逐月淨流都要等 B 包（見 issue）。
      * 但算法先測起來放：等資料一到就只剩接線，不必在決賽日現寫財務數學。 */
     {
@@ -329,7 +370,7 @@ const MARKET_PATH = /\/market(\?|$)/;
 
       /* 缺什麼要講得出來，不能只說「資料不足」。 */
       assert(core.reasonText("NO_START_VALUE") === "缺年初市值", "缺漏原因沒有具體說明");
-      ok("10 return-core OK：剔除入金／未滿一年不年化／分母≤0 不給數字／TWR 串接");
+      ok("11 return-core OK：剔除入金／未滿一年不年化／分母≤0 不給數字／TWR 串接");
     }
 
     console.log("全部通過 ✅");

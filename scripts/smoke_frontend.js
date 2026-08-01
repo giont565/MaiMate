@@ -97,7 +97,11 @@ const server = http.createServer((req, res) => {
   const hero = await page.$eval("#hero", (e) => e.textContent);
   const heroScore = await page.$eval("#hero .ring i b", (e) => e.textContent);
   const ringBg = await page.$eval("#hero .ring", (e) => e.getAttribute("style") || "");
-  if (!hero.includes("投資健康分")) throw new Error(`hero 卡缺標題：${hero}`);
+  // 標題與 home.html 的健檢卡同語：兩頁都叫「行為健檢」、圓環都標「健檢分」。
+  // 不叫「投資健康分」是因為 home-core 的 MM_HOME_PROHIBITED_NARRATIVE 擋這個詞
+  //（替使用者的投資能力評等），兩頁不能一邊擋一邊用。
+  if (!hero.includes("行為健檢")) throw new Error(`hero 卡缺標題：${hero}`);
+  if (!hero.includes("健檢分")) throw new Error(`hero 圓環缺「健檢分」標籤：${hero}`);
   if (!/^\d{1,3}$/.test(heroScore.trim())) throw new Error(`hero 分數非數字：${heroScore}`);
   if (!hero.includes("117,482")) throw new Error(`hero 已實現損益未千分位：${hero}`);
   if (!ringBg.includes(`0 ${heroScore.trim()}%`)) throw new Error(`圓環填充未對應分數：${ringBg}`);
