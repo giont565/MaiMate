@@ -15,14 +15,14 @@ const path = require("path");
   const out = path.join(__dirname, "..", "docs", "PITCH_DECK.pdf");
 
   const browser = await chromium.launch(launchOpts);
-  const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
   await page.goto("file://" + src, { waitUntil: "networkidle" });
   await page.emulateMedia({ media: "print" });
   await page.waitForTimeout(800);
   await page.pdf({
     path: out,
-    width: "1280px",
-    height: "720px",
+    width: "1920px",
+    height: "1080px",
     printBackground: true,
     margin: { top: 0, right: 0, bottom: 0, left: 0 },
   });
