@@ -54,7 +54,7 @@
   .name span{font-size:52px;font-weight:700;color:#6E6E73;letter-spacing:-.02em}
   .split{display:flex;gap:0;justify-content:center;margin-top:44px;width:100%;max-width:1180px}
   .sp{flex:1;padding:0 46px;border-left:1px solid rgba(0,0,0,.12)}
-  .sp:first-child{border-left:0}
+  .sp:first-child{border-left:0;padding-left:0}   /* 第一欄要跟標題切齊，不留內縮 */
   .sp .k{font-size:64px;font-weight:800;letter-spacing:-.03em;margin-bottom:12px}
   .sp .d{font-size:26px;line-height:1.6;color:#6E6E73}
   .sp .d b{color:#1D1D1F;font-weight:700}
@@ -233,14 +233,22 @@
 
   /* ═══ 產品地圖：一條由左到右的旅程 ═══ */
   .journey{display:flex;gap:0;width:100%;flex:1;min-height:0;margin-top:24px}
-  .jst{flex:1;padding:0 26px;position:relative;display:flex;flex-direction:column}
+  .jst{flex:1;padding:0 26px;position:relative;display:flex;flex-direction:column;text-align:left}
   .jst:first-child{padding-left:0} .jst:last-child{padding-right:0}
   .jst::after{content:"";position:absolute;right:0;top:34px;bottom:34px;width:1px;background:#26262A}
   .jst:last-child::after{display:none}
   .jn{font-size:21px;font-weight:800;color:#5A5A5F;margin-bottom:12px}
   .jh{font-size:31px;font-weight:800;letter-spacing:-.02em;margin-bottom:14px}
   .jst:nth-child(odd) .jh{color:#FF6B6B} .jst:nth-child(even) .jh{color:#6C9BFF}
-  .jd{font-size:20px;line-height:1.55;color:#A1A1A6;margin-bottom:auto}
+  .jd{font-size:20px;line-height:1.55;color:#A1A1A6}
+  /* 每一階段底下實際做到的功能——評審提示「時間太少，盡量提到有的功能」，
+     這頁是產品地圖，是全場唯一適合密集列舉的地方，講者只念大標 */
+  .jfeat{margin:18px 0 auto;display:flex;flex-direction:column;gap:8px}
+  .jfeat span{font-size:16.5px;line-height:1.45;color:#78787E;
+              padding-left:14px;position:relative}
+  .jfeat span::before{content:"";position:absolute;left:0;top:.6em;
+                      width:5px;height:5px;border-radius:50%;background:#3A3A42}
+  .jfeat b{color:#C7C7CC;font-weight:700}
   .jscore{margin-top:26px;padding-top:18px;border-top:1px solid #26262A;
           font-size:17px;line-height:1.7;color:#86868B;font-weight:600}
   .stackline{font-size:20px;color:#5A5A5F;text-align:center;margin-top:32px;letter-spacing:.06em}
@@ -381,26 +389,61 @@
     <div class="jst">
       <div class="jn">①</div><div class="jh">看懂你</div>
       <div class="jd">交易紀錄、投資樣貌、行為盲點</div>
+      <div class="jfeat">
+        <span><b>10,000 筆</b>交易全解析</span>
+        <span>追高指數 <b>65.0%</b>、殺低 34.1%</span>
+        <span>已實現損益 <b>+117,482</b>、勝率 66.6%</span>
+        <span>機會成本歸因、最痛單筆回推</span>
+        <span>投資健康分 <b>60</b>（加權公開）</span>
+      </div>
       <div class="jscore">創意度 25%<br>AI 設計 15%<br>企業資料應用</div>
     </div>
     <div class="jst">
       <div class="jn">②</div><div class="jh">看懂現在</div>
       <div class="jd">MAX 即時行情、持倉、交易史、RAG 知識庫</div>
+      <div class="jfeat">
+        <span>ticker／kline／depth <b>三支公開 API</b></span>
+        <span>OHLCV 與價差<b>由程式正規化</b></span>
+        <span>行情列可展開 K 線</span>
+        <span>RAG 知識庫，回答附出處</span>
+        <span>Bedrock 工具迴圈，LLM 手上<b>六個工具</b></span>
+      </div>
       <div class="jscore">技術可行性 20%<br>主題切合度 10%<br>MAX Public API</div>
     </div>
     <div class="jst">
       <div class="jn">③</div><div class="jh">把選擇說清楚</div>
       <div class="jd">人話解釋、風險提醒、三方案比較</div>
+      <div class="jfeat">
+        <span>保守／原意圖／<b>暫停冷靜期</b>三方案</span>
+        <span>每案四個數字：金額、手續費、<br>執行後集中度、行為註記</span>
+        <span>手續費 maker 0.08%／taker 0.16%</span>
+        <span><b>對等呈現，不標推薦</b>（不報明牌）</span>
+        <span>工具鏈 chips，看得見它在查什麼</span>
+      </div>
       <div class="jscore">AI 設計 15%<br>商業應用性 20%<br>個人化體驗</div>
     </div>
     <div class="jst">
       <div class="jn">④</div><div class="jh">安全地行動</div>
       <div class="jd">訂單草稿、二次確認、Private API、完整留痕</div>
+      <div class="jfeat">
+        <span><b>prepare／execute 分離</b>，送單在另一支 Lambda</span>
+        <span>60 秒<b>單次憑證</b>，重放回 410</span>
+        <span>確認卡列出手續費與滑價提醒</span>
+        <span>7/31 <b>真實成交兩筆</b>（最小額度）</span>
+        <span>金鑰只開讀取＋交易，<b>不開提領</b></span>
+      </div>
       <div class="jscore">完成度 10%<br>MAX Lv2 Private API +5%<br>安全與法遵</div>
     </div>
     <div class="jst">
       <div class="jn">⑤</div><div class="jh">陪你繼續成長</div>
       <div class="jd">三種模式、投資健康、學習與回顧</div>
+      <div class="jfeat">
+        <span>安心白話／成長陪跑／<b>專業效率</b></span>
+        <span><b>數字不隨模式變</b>，只換說法密度</span>
+        <span>決策軌跡 append-only，六種事件</span>
+        <span>逐項授權開關，<b>可隨時撤回</b></span>
+        <span>PWA 可加到主畫面、斷網有離線劇本</span>
+      </div>
       <div class="jscore">創意度 25%<br>商業應用性 20%<br>留存與長期價值</div>
     </div>
   </div>
