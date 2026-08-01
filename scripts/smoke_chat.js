@@ -289,6 +289,47 @@ const ALLOWED_EVENT_KEYS = ["e", "q", "src", "intent", "tool", "style", "status"
   }
   console.log("26 版面 OK：375／390px 無水平捲動，Composer 不遮內容");
 
+  /* ── 27. Golden Path 有狀態：進去之後不能中途掉回 mock ──────────────────
+   * 後端遇到講不清楚的交易意圖會先反問（「你想保留多少比例？」——刻意設計，
+   * AI 不替使用者決定），而回答「賣一半就好」時那句話不含任何交易關鍵字。
+   * 閘門若逐則比對正則，這一句就會掉回 mock，畫面接上一段完全不相干的分析——
+   * 對話斷在半路，看起來像功能壞掉，而且不會有任何錯誤訊息。
+   *
+   * 用「有沒有再打 /chat」判斷，因為那是兩條路唯一可靠的分界。 */
+  {
+    let calls = 0;
+    await page.route(/\/chat(\?|$)/, (route) => { calls += 1; route.abort(); });
+    await page.goto(`${base}/chat.html`);
+    await page.waitForSelector("#q");
+    const send = async (text) => {
+      await page.fill("#q", text);
+      await page.click("#chat-send").catch(() => page.press("#q", "Enter"));
+      await page.waitForTimeout(1600);
+    };
+
+    await send("ETH 跌太多了，幫我全部賣掉！");
+    const afterFirst = calls;
+    if (afterFirst === 0) throw new Error("交易意圖沒有走 /chat（Golden Path 沒進去）");
+
+    await send("賣一半就好");
+    if (calls === afterFirst) {
+      throw new Error("回答反問的那一句掉回 mock——Golden Path 中途斷線"
+        + "（使用者會看到一段和下單無關的回覆）");
+    }
+
+    /* 也要出得來：流程結束後每一句都繼續送 /chat 同樣是錯的，
+       使用者問「什麼是手續費」不該被當成還在下單對話裡。 */
+    await page.click(".scen").catch(() => {});
+    await page.waitForSelector(".confirm", { timeout: 6000 }).catch(() => {});
+    await page.click(".btns .no").catch(() => {});
+    await page.waitForTimeout(400);
+    const afterCancel = calls;
+    await send("什麼是手續費？");
+    if (calls !== afterCancel) throw new Error("取消後仍黏在 Golden Path，一般問題也送去 /chat");
+    console.log("27 Golden Path 狀態 OK：反問的回答留在流程內、取消後回到一般對話");
+    await page.unroute(/\/chat(\?|$)/);
+  }
+
   if (errors.length) throw new Error("頁面拋出例外：" + errors[0].slice(0, 160));
   await page.screenshot({ path: "smoke_chat.png", fullPage: true });
   await browser.close();

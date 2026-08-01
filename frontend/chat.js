@@ -393,11 +393,16 @@
     const ok = el("button", "ok", "確認" + (card.side === "buy" ? "買入" : "賣出"));
     const no = el("button", "no", "取消");
     ok.type = "button"; no.type = "button";
+    /* 這段流程走完就離開 Golden Path：不清掉的話，之後每一句都會繼續送 /chat，
+       使用者問「什麼是手續費」也會被當成還在下單對話裡。 */
+    const endGoldenPath = () => { ui.goldenMessages = []; };
+
     ok.onclick = async () => {
       if (token === "offline-demo") {
         byId("chatlog").append(el("div", "done", "✅（離線展示）訂單流程示意完成 — 真實環境將經 60 秒憑證驗證與 MAX Private API 成交"));
         renderTrail(GOLDEN_MOCK.trail);
         wrap.remove();
+        endGoldenPath();
         return;
       }
       try {
@@ -412,9 +417,14 @@
         } else addPlainAssistant("⚠️ " + (response.message || "下單未成功"));
       } catch (_) { addPlainAssistant("⚠️ 送單失敗，請再試一次。"); }
       wrap.remove();
+      endGoldenPath();
       scrollBottom();
     };
-    no.onclick = () => { addPlainAssistant("已取消，沒有送出任何訂單。"); wrap.remove(); };
+    no.onclick = () => {
+      addPlainAssistant("已取消，沒有送出任何訂單。");
+      wrap.remove();
+      endGoldenPath();
+    };
     btns.append(ok, no);
     wrap.append(btns);
     byId("chatlog").append(wrap);
@@ -494,8 +504,18 @@
     scrollBottom();
     track("maimate_message_sent", { src: ui.conversation.source, style: ui.conversation.communicationStyle });
 
-    // Golden Path：使用者自己的交易意圖（要求 AI 自行執行的仍走安全邊界）
-    if (!AUTO_EXEC.test(text) && TRADE_INTENT.test(text)) {
+    /* Golden Path：使用者自己的交易意圖（要求 AI 自行執行的仍走安全邊界）。
+     *
+     * 這個判斷必須看狀態，不能只看這一句。後端遇到講不清楚的意圖會先反問
+     *（「你想保留多少比例的 ETH？」——這是刻意的設計，AI 不替你決定），
+     * 而使用者回答「賣一半就好」時，那句話不含任何交易關鍵字。
+     * 原本逐則比對正則，於是回答反問的那一句會掉回 mock，畫面接上一段完全不相干的
+     * 資金分布分析——對話斷在半路，而且看起來像功能壞掉。實測可重現。
+     *
+     * 所以：一旦進了 Golden Path（goldenMessages 有東西）就待在裡面，直到這段流程
+     * 結束（成交／取消／開新對話會清空）。AUTO_EXEC 的安全邊界仍然優先於一切。 */
+    const inGoldenPath = ui.goldenMessages.length > 0;
+    if (!AUTO_EXEC.test(text) && (inGoldenPath || TRADE_INTENT.test(text))) {
       hideComposerContext();
       return runGoldenPath(text);
     }
