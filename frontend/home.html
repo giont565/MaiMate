@@ -33,7 +33,12 @@
   .home-brand img{width:35px;height:41px;object-fit:contain;object-position:center bottom}
   .brand-copy{min-width:0}
   .brand-copy b{display:block;font-size:15px;line-height:1.25;letter-spacing:.01em}
-  .brand-copy span{display:block;margin-top:2px;color:var(--mut);font-size:10.5px;line-height:1.35}
+  /* 副標從「投資導航」換成完整標語後字變長：360px 寬時這裡只有 121px 可用，
+     而這句話需要 179px——縮到 8.5px 仍要 145px，單行怎麼樣都塞不下。
+     所以折兩行（最多兩行，第三行會把頂欄撐得太高），不用省略號：
+     這是品牌標語，截成「市場一直在變，麥麥會陪你一…」比佔兩行難看得多。 */
+  .brand-copy span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+    overflow:hidden;margin-top:2px;color:var(--mut);font-size:10px;line-height:1.35}
   .header-actions{display:flex;gap:4px;margin-left:auto}
   .icon-button{
     position:relative;display:grid;place-items:center;width:44px;height:44px;border:0;
@@ -49,7 +54,6 @@
   .greeting-copy{padding:7px 0 14px}
   .greeting h1{font-size:28px;line-height:1.32;letter-spacing:-.015em;text-wrap:balance}
   .greeting p{margin-top:5px;color:var(--sub);font-size:13px;line-height:1.65}
-  .greeting .brand-subtitle{margin-top:3px;color:var(--mut);font-size:11px}
   .greeting img{width:70px;height:auto;align-self:end;margin-bottom:-3px}
   @keyframes breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
   @media (prefers-reduced-motion:no-preference){.greeting img{animation:breathe 3.6s ease-in-out infinite}}
@@ -340,7 +344,7 @@
   <header class="home-header" id="home-header">
     <div class="home-brand" aria-label="麥麥 MaiMate">
       <img src="maimate_hero.png" alt="">
-      <div class="brand-copy"><b>麥麥 MaiMate</b><span>投資導航</span></div>
+      <div class="brand-copy"><b>麥麥 MaiMate</b><span>市場一直在變，麥麥會陪你一起看懂。</span></div>
     </div>
     <div class="header-actions">
       <!-- 版面切換：同 index.html 的模式徽章，點一下換下一個。
@@ -383,7 +387,6 @@
         <div class="greeting-copy">
           <h1 id="home-greeting-title"></h1>
           <p id="home-greeting-subtitle"></p>
-          <p class="brand-subtitle" id="home-brand-subtitle">市場一直在變，麥麥會陪你一起看懂。</p>
         </div>
         <img src="maimate_hero.png" alt="麥麥在這裡陪你">
       </section>
