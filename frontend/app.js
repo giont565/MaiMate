@@ -2,6 +2,10 @@
  * 視覺依 docs/mockups 三畫面；API 失敗自動切離線 mock（tech.md 的完成度保險）。
  * 金額顯示鐵則：一律千分位逗號（fmt）。 */
 const API = window.API_BASE || "/api";
+/* /chat 的逾時上限（與 chat.js 同值、同理由）。/health 那種存活探測 2.5 秒就夠，
+   但 /chat 要跑 LLM 加一整串工具，實測中位數約 9 秒、尾巴到 12.6 秒，
+   設太短會在後端明明會成功時把它誤殺成離線 mock。 */
+const CHAT_TIMEOUT_MS = 30000;
 let messages = []; // Converse 格式對話歷史
 
 // session_id：稽核軌跡的關聯鍵（README §3；audit-log spec）
@@ -457,12 +461,21 @@ document.getElementById("chatform").onsubmit = async (e) => {
   input.value = "";
   addMsg("user", text);
   messages.push({ role: "user", content: [{ text }] });
+  /* 逾時保護，寫法同 settings.js:66-67。沒有這段，場地網路「卡住但沒斷線」時
+     fetch 既不 resolve 也不 reject，離線劇本永遠不會接手，畫面就停在半路。 */
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), CHAT_TIMEOUT_MS);
   try {
     const body = { messages, session_id: SESSION_ID };
     if (modeOverride) body.mode = modeOverride;
     const navigationContext = window.MM_CHAT_CONTEXT && window.MM_CHAT_CONTEXT.takeRequestContext();
     if (navigationContext) body.navigation_context = navigationContext;
-    const r = await (await fetch(`${API}/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json();
+    const res = await fetch(`${API}/chat`, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body), signal: abort.signal });
+    /* 非 2xx 也要走離線劇本。舊寫法直接 .json()：錯誤回應照樣 parse 成功，
+       messages 被覆寫成 undefined，之後每一句都送不出去，而畫面毫無異狀。 */
+    if (!res.ok) throw new Error(`CHAT_HTTP_${res.status}`);
+    const r = await res.json();
     messages = r.messages;
     if (r.mode) setBadge(r.mode, !!modeOverride);
     addTrail(r.tool_trail);
@@ -470,12 +483,18 @@ document.getElementById("chatform").onsubmit = async (e) => {
     addScenarios(r.scenarios);
     if (r.confirm) addConfirmCard(r.confirm.confirmation_card, r.confirm.confirm_token, feeForConfirm(r.confirm.confirmation_card, r.scenarios));
   } catch { // 離線劇本接手：依意圖回展示回應，Golden Path 全鏈路照走
+    /* 這則使用者訊息刻意留在歷史裡，理由同 chat.js：離線時 Golden Path 仍要往下走，
+       使用者回答後端的反問（「賣一半就好」）時那句不含交易關鍵字，必須帶著前文
+       一起送出，否則後端會當成全新問題。代價是後端復原後那一次請求會帶連續兩則
+       role=user、該輪偏慢——已由上面 30 秒的門檻吸收。 */
     offline();
     const m = MOCK.chat(text);
     addTrail(m.tool_trail);
     addMsg("ai", m.reply);
     addScenarios(m.scenarios);
     if (m.confirm) addConfirmCard(m.confirm.confirmation_card, m.confirm.confirm_token, feeForConfirm(m.confirm.confirmation_card, m.scenarios));
+  } finally {
+    clearTimeout(timer);
   }
 };
 

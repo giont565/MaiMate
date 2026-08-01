@@ -50,10 +50,18 @@ jobs:
       - name: Test frontend Golden Path
         run: npm run smoke
 
+      # 問麥麥（chat.html）走的是真 /chat，但 smoke 這條從來沒有涵蓋 chat 頁——
+      # 「CI 綠」因此不代表對話流程跑過（#62／#71／#72 三個 chat 的洞都是這樣溜上線的）。
+      # 逾時／取消那道防線就在這支裡（第 30 項），不排進 CI 的話它永遠不會被執行到。
+      - name: Test 問麥麥 chat flow
+        run: npm run smoke:chat
+
       - name: Upload smoke screenshot on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: smoke-mobile
-          path: smoke_mobile.png
+          path: |
+            smoke_mobile.png
+            smoke_chat.png
           if-no-files-found: ignore

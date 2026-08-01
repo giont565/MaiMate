@@ -19,6 +19,26 @@
   const AUTO_EXEC = /(自動下單|替我下單|不用問我|直接幫我(買|賣|下單)|幫我操作帳戶)/;
   const TRADE_INTENT = /(全賣|賣掉|賣出|想賣|想買|買進|加碼|減碼|停損|出清)/;
 
+  /* /chat 的逾時上限。寫法與 settings.js:66-67、home-service.js、welcome.js 一致
+   * （AbortController + setTimeout + finally clearTimeout），只有秒數不同。
+   *
+   * 為什麼要有：場地網路每 5 次掉 1 次，而「卡住但沒斷線」時 fetch 既不 resolve
+   * 也不 reject，沒有逾時就會永遠停在「正在查看你的持倉與市場資料」——畫面看起來
+   * 還在跑，其實已經死了，正是本專案最忌諱的「看不出來的失效」。
+   *
+   * 為什麼是 30 秒而不是 12 秒：實測 demo 那一題「ETH 跌太多了，幫我全部賣掉！」
+   * 第一輪 /chat，private us-east-1 curl 8 次落在 8.56～12.63 秒、另量 5 次 6.86～10.36 秒，
+   * official us-west-2 量 3 次 6.31～8.01 秒，中位數約 9 秒、尾巴已經壓到 12.6 秒。
+   * 設 12 秒等於在後端「明明會成功」的時候把它誤殺成離線 mock，畫面就會貼出
+   * GOLDEN_MOCK 的舊數字冒充後端結果——那正是這道防線要防的東西，不能自己製造。
+   * 逾時的價值是防「永遠不回」，不是防「慢」；慢的時候取消鈕就在畫面上，
+   * 讓使用者自己決定要不要停。30 秒 ≈ 中位數的 3 倍、實測最慢值的 2.4 倍。
+   *
+   * MM_CHAT_TIMEOUT_MS 是給煙測用的縮短鈕（同 window.API_BASE 的注入慣例），
+   * 好讓 smoke 不必真的空等 30 秒；smoke_chat.js 另有一條斷言守住這裡的預設值。 */
+  const CHAT_TIMEOUT_MS = Number(window.MM_CHAT_TIMEOUT_MS) > 0
+    ? Number(window.MM_CHAT_TIMEOUT_MS) : 30000;
+
   const byId = (id) => document.getElementById(id);
   const el = (tag, className, text) => {
     const node = document.createElement(tag);
@@ -35,6 +55,7 @@
     conversation: null,
     messages: [],
     stream: null,
+    cancel: null,      // 真 /chat 等待期間的取消把手（ui.stream 只管 mock 串流）
     pendingFeedback: null,
     lastEvidence: [],
     context: null,
@@ -370,7 +391,9 @@
       if (scenario.behavior_note) card.append(el("div", "note", scenario.behavior_note));
       card.append(el("div", "hint", "點這張卡片選它 →"));
       const choose = () => {
-        if (ui.stream) return;              // 正在等回覆時不要重複送出
+        // 正在等回覆時不要重複送出。ui.stream 只涵蓋 mock 串流，真 /chat 等待中是
+        // ui.cancel——少判這個，卡住期間點卡片會把標題塞進輸入框卻送不出去。
+        if (ui.stream || ui.cancel) return;
         const input = byId("q");
         input.value = scenario.label;
         byId("chatform").requestSubmit();
@@ -500,12 +523,28 @@
 
     ui.goldenMessages.push({ role: "user", content: [{ text }] });
     let payload = null;
+    let failure = null;      // null｜"timeout"｜"cancelled"｜"error"
+    let usedMock = false;    // 這次畫面上的內容是離線劇本，不是後端算的
+
+    /* 逾時／取消保護。三件事必須一起做，少一件就會卡住：
+     *   1. signal —— 讓 fetch 真的停得下來；
+     *   2. 取消鈕看得見（chat-stop 預設 hidden，舊路徑只有 mock 串流會叫它出來）；
+     *   3. 輸入框停用 —— 等待期間 ui.stream 是 null，submitQuestion 的
+     *      `if (!text || ui.stream) return` 擋不住重送，兩個 in-flight 請求會互相
+     *      覆寫 ui.goldenMessages。 */
+    const abort = new AbortController();
+    const timer = setTimeout(() => { failure = "timeout"; abort.abort(); }, CHAT_TIMEOUT_MS);
+    ui.cancel = () => { failure = "cancelled"; abort.abort(); };
+    byId("chat-stop").hidden = false;
+    byId("q").disabled = true;
+
     try {
       const body = { messages: ui.goldenMessages, session_id: SESSION_ID };
       const navigationContext = ui.context && ui.context.requestContext;
       if (navigationContext) body.navigation_context = navigationContext;
       const response = await fetch(API + "/chat", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body), signal: abort.signal,
       });
       if (!response.ok) throw new Error("CHAT_HTTP_" + response.status);
       payload = await response.json();
@@ -513,20 +552,55 @@
       setOffline(false);
     } catch (_) {
       payload = null;
-      setOffline(true);
+      if (!failure) failure = "error";   // 逾時／取消已經先標好，其餘都是連線或非 2xx
+      /* 使用者自己按停止 ≠ 後端壞掉。無條件 setOffline(true) 會在後端明明健康時
+         點亮頂欄「離線展示」，等於把真資料標成假的——本專案紅線的反面，一樣要擋。 */
+      if (failure !== "cancelled") setOffline(true);
+    } finally {
+      /* 收尾一律放 finally：舊版把 toolNode.remove() 寫在 try 外面，只要中間任何一行
+         丟例外，「正在查看你的持倉與市場資料」就會永遠留在畫面上。 */
+      clearTimeout(timer);
+      ui.cancel = null;
+      byId("chat-stop").hidden = true;
+      byId("q").disabled = false;
+      toolNode.remove();
+      byId("chatlog").setAttribute("aria-busy", "false");
     }
-    toolNode.remove();
-    byId("chatlog").setAttribute("aria-busy", "false");
 
     if (!payload) {
+      /* 使用者自己按了停止：不要拿離線劇本頂替他取消掉的那句話。
+         這則使用者訊息沒有得到任何回覆，從歷史移除——他等一下重問時會重新 push。 */
+      if (failure === "cancelled") {
+        ui.goldenMessages.pop();
+        addPlainAssistant("已停止回答。這一題沒有送出結果，你可以再問一次。");
+        track("maimate_generation_cancelled", { status: "cancelled" });
+        scrollBottom();
+        return true;
+      }
       /* 這一句本來就不是交易意圖 → 把送出的那則從歷史移除，交還給結構化服務。
-         留著會讓下一次請求帶著一則沒有回覆的訊息，也會讓流程誤判成還在下單對話裡。 */
+         留著會讓下一次請求帶著一則沒有回覆的訊息，也會讓流程誤判成還在下單對話裡。
+
+         注意：交易意圖那一支刻意「不」移除。離線時 Golden Path 仍要繼續往下走，
+         後端反問「賣多少」而使用者回「賣一半就好」時，那句話不含任何交易關鍵字，
+         必須帶著前文一起送出去，否則後端會把它當成全新的問題（smoke 第 27 項在守）。 */
       if (!tradeIntent) { ui.goldenMessages.pop(); return false; }
+
+      /* 先說實話，再給離線內容。畫面上一定要看得出這段不是後端算的——
+         直接把 GOLDEN_MOCK 當成後端的回答貼上去，就是「畫面正常但資料是假的」。 */
+      addPlainAssistant(failure === "timeout"
+        ? "這次沒問到——等了 " + Math.round(CHAT_TIMEOUT_MS / 1000)
+          + " 秒還是沒有等到後端回應，可能是網路卡住了。請再試一次。"
+          + "下面是內建的離線示範內容，不是你帳戶的即時資料。"
+        : "這次沒問到——暫時連不上後端。請再試一次。"
+          + "下面是內建的離線示範內容，不是你帳戶的即時資料。");
       payload = GOLDEN_MOCK;
+      usedMock = true;
     }
 
-    /* chip 用後端實際跑過的工具，不用前端猜的——分鏡稿鏡 2 就是在看這排。 */
-    renderToolChips(payload.tool_trail);
+    /* chip 用後端實際跑過的工具，不用前端猜的——分鏡稿鏡 2 就是在看這排。
+       離線劇本不畫：那排打勾的「✓ 查持倉」「✓ 方案試算」是在宣稱後端真的跑過這些
+       工具，但它根本沒跑成功，chip 本身又沒有任何離線記號。 */
+    if (!usedMock) renderToolChips(payload.tool_trail);
     addPlainAssistant(payload.reply || GOLDEN_MOCK.reply);
     addScenarios(payload.scenarios);
     if (payload.confirm) {
@@ -560,7 +634,10 @@
   async function submitQuestion() {
     const input = byId("q");
     const text = input.value.trim();
-    if (!text || ui.stream) return;
+    /* ui.cancel ≠ null 代表真 /chat 還在飛。追問按鈕直接呼叫這支，不經過已停用的
+       輸入框，所以旗標要在這裡擋，否則兩個 in-flight 請求會各自 push 使用者訊息、
+       又各自用自己的回應覆寫整段 ui.goldenMessages。 */
+    if (!text || ui.stream || ui.cancel) return;
     input.value = "";
     updateCount();
     byId("chat-empty").hidden = true;
@@ -637,7 +714,13 @@
   }
 
   byId("chatform").onsubmit = (event) => { event.preventDefault(); submitQuestion(); };
-  byId("chat-stop").onclick = () => { if (ui.stream) ui.stream.cancel(); };
+  /* 兩條路都要能停：真 /chat 等待中用 ui.cancel（abort fetch），mock 串流用 ui.stream。
+     只認 ui.stream 的話，等待真後端時按下去是空操作——按鈕看得見卻沒有作用，
+     比按鈕藏起來更糟。 */
+  byId("chat-stop").onclick = () => {
+    if (ui.cancel) ui.cancel();
+    else if (ui.stream) ui.stream.cancel();
+  };
   byId("q").addEventListener("input", updateCount);
   byId("q").addEventListener("keydown", (event) => {
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); submitQuestion(); }
