@@ -169,6 +169,22 @@ function mmHomeTrack(name, metadata) {
   if (typeof track === "function") track(name, safe);
 }
 
+/* 拿得到真報告就回它，否則 null。所有 Adapter 共用同一個判斷——
+ * 有的接了有的沒接，畫面會半真半假而且完全看不出來，那比全假更難查。 */
+function mmHomeLiveReport() {
+  return mmHomeRuntime.health && mmHomeRuntime.health.source === "live"
+    ? mmHomeRuntime.health.report
+    : null;
+}
+
+/* 歸因的類別對應。上游 health_report 用 marketPrice／netDeposit／realizedPnl，
+ * 前端契約用 marketPrice／funding／recentTrades——與 mocks/home.js 的對應表一致。 */
+const MM_HOME_ATTRIBUTION_MAP = Object.freeze({
+  marketPrice: { category: "marketPrice", label: "市價波動" },
+  netDeposit: { category: "funding", label: "出入金淨額" },
+  realizedPnl: { category: "recentTrades", label: "近期交易" },
+});
+
 const PortfolioAdapter = Object.freeze({
   /** @param {Object} state */
   read(state) {
@@ -188,9 +204,8 @@ const PortfolioAdapter = Object.freeze({
      * 這一層換掉，上面所有吃 PortfolioAdapter 的東西一起變真——首頁模組、
      * chat.html 的結構化回答（chat-service.js 的工具全部呼叫這些 Adapter）、
      * 歸因與集中度敘事。回傳形狀刻意與 demoPortfolio 相同，下游一行都不用改。 */
-    const live = mmHomeRuntime.health && mmHomeRuntime.health.source === "live"
-      ? window.MM_HEALTH_CORE.holdings(mmHomeRuntime.health.report)
-      : null;
+    const report = mmHomeLiveReport();
+    const live = report ? window.MM_HEALTH_CORE.holdings(report) : null;
     const source = live && live.ok
       ? {
         assets: live.assets,
@@ -268,7 +283,12 @@ const TransactionAdapter = Object.freeze({
     }
     /* 真實帳戶報告只有「每月交易次數」，沒有逐筆明細（官方 CSV 不進 git）。
      * 因此比較單位是「月」而不是滾動 30 天，欄位語意見 periodLabel。 */
-    const activity = window.MM_ONBOARDING_MOCK && window.MM_ONBOARDING_MOCK.tradeActivity;
+    /* 同 PortfolioAdapter：真報告優先，形狀與 tradeActivity 相同，下游不分支。 */
+    const report = mmHomeLiveReport();
+    const fresh = report ? window.MM_HEALTH_CORE.activity(report) : null;
+    const activity = fresh && fresh.ok
+      ? fresh
+      : (window.MM_ONBOARDING_MOCK && window.MM_ONBOARDING_MOCK.tradeActivity);
     if (!activity || !Number.isFinite(Number(activity.total))) {
       return {
         available: true,
@@ -460,7 +480,35 @@ const EffectiveProfileAdapter = Object.freeze({
 const AttributionAdapter = Object.freeze({
   read(portfolio, market) {
     if (!portfolio.available || !market) return null;
-    const source = window.MM_HOME_MOCK && window.MM_HOME_MOCK.attributionInput;
+    /* 真報告優先。effectUnits 取絕對值：歸因看的是「誰造成多少變化」，
+       出金是負的但它的影響力不是負的，帶號進來會把比重算成負數。 */
+    const report = mmHomeLiveReport();
+    const fresh = report ? window.MM_HEALTH_CORE.attribution(report) : null;
+    const live = fresh && fresh.ok && /^\d{4}-\d{2}$/.test(String(fresh.period))
+      ? {
+        id: "attribution_health_report_" + fresh.period,
+        period: fresh.period,
+        /* 報告的 period 是月份（2026-06），驗證層要的是 ISO 日期，換算成該月起訖。 */
+        periodStart: fresh.period + "-01T00:00:00+08:00",
+        periodEnd: new Date(Date.UTC(
+          Number(fresh.period.slice(0, 4)), Number(fresh.period.slice(5, 7)), 0
+        )).toISOString().slice(0, 10) + "T23:59:59+08:00",
+        type: fresh.estimated ? "estimated" : "calculated",
+        note: fresh.note,
+        components: fresh.contributors
+          .filter((item) => MM_HOME_ATTRIBUTION_MAP[item.category] && item.valueTwd != null)
+          .map((item) => Object.assign({ id: "attr_" + item.category }, MM_HOME_ATTRIBUTION_MAP[item.category], {
+            effectUnits: Math.abs(item.valueTwd),
+          }))
+          /* 由大到小排序：下游一律拿 contributors[0] 當「主要來源」，順序錯了文案會說反。
+             真報告是 marketPrice 36,394 排在 netDeposit 12,213,519 之前，不排就會把
+             0.3% 的市價波動講成帳戶變化的主因。 */
+          .sort((a, b) => b.effectUnits - a.effectUnits),
+      }
+      : null;
+    const source = live && live.components.length
+      ? live
+      : (window.MM_HOME_MOCK && window.MM_HOME_MOCK.attributionInput);
     if (!source || !Array.isArray(source.components) || !source.components.length) return null;
     const categories = new Set();
     const components = source.components.map((item) => {
@@ -558,7 +606,13 @@ const SimilarMomentAdapter = Object.freeze({
    * 相似時刻一律以它為準，不再依賴逐筆交易明細（報告沒有）。 */
   read(transactionMetrics) {
     const source = window.MM_HOME_MOCK && window.MM_HOME_MOCK.similarMomentInput;
-    const sell = window.MM_ONBOARDING_MOCK && window.MM_ONBOARDING_MOCK.notableSell;
+    /* notableSell 就是報告的 opportunity_cost.worst_single_sell，形狀完全相同，
+       所以真報告在手時直接取用，不需要轉換。 */
+    const report = mmHomeLiveReport();
+    const liveSell = report && report.opportunity_cost && report.opportunity_cost.worst_single_sell;
+    const sell = (liveSell && liveSell.date)
+      ? liveSell
+      : (window.MM_ONBOARDING_MOCK && window.MM_ONBOARDING_MOCK.notableSell);
     if (!source || !transactionMetrics.available || !sell || !sell.date) return null;
     const symbol = String(sell.currency || "").toUpperCase();
     const periodLabel = mmHomeDateRangeLabel([sell.date]);
@@ -703,8 +757,35 @@ function mmHomeValidateStructuredOutput(source, facts) {
 
 /* 帳戶變化來源：報告補上 change_attribution（issue #29）後才講得出來源比重。
  * 報告標 type=estimated（殘差法），所以一律說「估算」，不得寫成會計歸因。 */
+/* 相似時刻的摘要句與對應的追問。兩者都會提到幣種與月份，必須跟 Adapter 用同一筆
+ * worst_single_sell，否則畫面會自己跟自己說不同的事。拿不到真報告回 null，
+ * 由呼叫端沿用敘事層的既有文案。 */
+function mmHomeNotableSell() {
+  const report = mmHomeLiveReport();
+  const sell = report && report.opportunity_cost && report.opportunity_cost.worst_single_sell;
+  if (!sell || typeof sell.date !== "string" || !sell.currency) return null;
+  const month = Number(sell.date.slice(5, 7));
+  return {
+    symbol: String(sell.currency).toUpperCase(),
+    year: sell.date.slice(0, 4),
+    month: Number.isFinite(month) && month > 0 ? month : null,
+  };
+}
+
+function mmHomeSimilarMomentSummary() {
+  const sell = mmHomeNotableSell();
+  if (!sell || sell.month == null) return null;
+  return sell.year + " 年 " + sell.month + " 月那筆 " + sell.symbol
+    + " 賣出是報告裡唯一有明細的事件，可以拿來回顧當時的決定。";
+}
+
 function mmHomeAttributionSummary() {
-  const attribution = window.MM_ACCOUNT && window.MM_ACCOUNT.changeAttribution;
+  /* 真報告優先。這句話原本直接讀 window.MM_ACCOUNT 的靜態快照，繞過 Adapter——
+     結果同一張卡的比重列已經是新資料、上面這句摘要還是舊的，畫面自己跟自己矛盾。
+     凡是講得出數字的地方都得走同一個來源。 */
+  const report = mmHomeLiveReport();
+  const attribution = (report && report.change_attribution)
+    || (window.MM_ACCOUNT && window.MM_ACCOUNT.changeAttribution);
   if (!attribution || !Array.isArray(attribution.contributors) || !attribution.contributors.length) {
     return "這份報告沒有各幣種持倉明細，因此不拆解帳戶變化來源。";
   }
@@ -1232,7 +1313,11 @@ function mmHomeBuildResponse(state) {
       ],
     }));
   } else if (similarMoment) {
-    similarMoment.summary = narrative.value.similarMomentSummary;
+    /* 敘事的 similarMomentSummary 把幣種與月份寫死在 mocks/home.js（「2025 年 1 月那筆
+       DOGE 賣出…」）。Adapter 已經改吃報告的 worst_single_sell，這句沒跟上就會出現
+       模組講 SOL、它自己的摘要講 DOGE 的矛盾——與 mmHomeAttributionSummary 同一種問題。
+       拿得到真報告就照它現組，拿不到才用敘事層那句。 */
+    similarMoment.summary = mmHomeSimilarMomentSummary() || narrative.value.similarMomentSummary;
     add(mmHomeModule({
       id: "module_similar_moment",
       type: "similarMoment",
@@ -1407,7 +1492,17 @@ function mmHomeBuildResponse(state) {
     actions: insightActions,
   }));
 
-  const contextualQuestions = narrative.value.contextualQuestions.slice(0, 5).map((question) => ({
+  /* 追問清單裡「1 月那筆 DOGE 賣出，當時發生什麼？」把幣種與月份寫死在 mocks/home.js。
+     相似時刻已經改吃報告的 worst_single_sell，這句沒跟上，使用者就會被引導去問一筆
+     畫面上根本不存在的交易。用同一筆資料改寫，拿不到真報告就維持原文。 */
+  const notableSell = mmHomeNotableSell();
+  const contextualQuestions = narrative.value.contextualQuestions.slice(0, 5).map((question) => (
+    question.id === "question_similar" && notableSell && notableSell.month != null
+      ? Object.assign({}, question, {
+        text: notableSell.month + " 月那筆 " + notableSell.symbol + " 賣出，當時發生什麼？",
+      })
+      : question
+  )).map((question) => ({
     id: String(question.id),
     text: String(question.text),
     contextType: question.contextType,

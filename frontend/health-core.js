@@ -205,7 +205,99 @@
     };
   }
 
-  var api = { score: score, realized: realized, cards: cards, insights: insights, holdings: holdings, fmt: fmt };
+  /* activity_profile ＋ chase_index → 交易節奏。
+   * 形狀對齊 MM_ONBOARDING_MOCK.tradeActivity，Adapter 兩種來源共用下游。
+   *
+   * 月份一律用鍵值排序取最後兩個，不假設報告的鍵是照時間排的——JSON 物件的鍵序
+   * 在規格上不保證，靠它取「最近一個月」是會突然壞掉而且很難查的那種錯。 */
+  function activity(report) {
+    var ap = report && report.activity_profile;
+    var perMonth = ap && ap.trades_per_month;
+    if (!perMonth || typeof perMonth !== "object") return { ok: false, reason: "NO_ACTIVITY" };
+    var months = Object.keys(perMonth).filter(function (m) {
+      return isNum(perMonth[m]) != null;
+    }).sort();
+    if (months.length === 0) return { ok: false, reason: "NO_MONTHS" };
+
+    var counts = months.map(function (m) { return Number(perMonth[m]); });
+    var sum = counts.reduce(function (a, b) { return a + b; }, 0);
+    var ci = report.chase_index || {};
+    var buy = isNum(ci.buy_total);
+    var sell = isNum(ci.sell_total);
+    var busiest = ap.busiest_month && typeof ap.busiest_month === "object"
+      ? ap.busiest_month.month
+      : null;
+
+    return {
+      ok: true,
+      /* 總筆數用買＋賣，不用 action_counts 的總和——後者含 deposit／withdrawal，
+         那是出入金不是交易，混進來會讓「你今年交易了幾筆」多算一倍。 */
+      total: buy != null && sell != null ? buy + sell : sum,
+      buyTotal: buy,
+      sellTotal: sell,
+      perMonth: Object.assign({}, perMonth),
+      latestMonth: months[months.length - 1],
+      previousMonth: months.length > 1 ? months[months.length - 2] : null,
+      latestMonthCount: counts[counts.length - 1],
+      previousMonthCount: months.length > 1 ? counts[counts.length - 2] : 0,
+      averagePerMonth: Math.round(sum / months.length),
+      byCurrency: Object.assign({}, ap.trades_by_currency || {}),
+      busiestMonth: typeof busiest === "string" ? busiest : null,
+      periodEnd: (report.period && report.period.end) || null,
+      detailAvailable: false,   // 逐筆明細永遠不會有：官方 CSV 不進 git
+    };
+  }
+
+  /* change_attribution → 帳戶變化歸因。contributors 的 pct 是百分數，下游要的是比例。 */
+  function attribution(report) {
+    var ca = report && report.change_attribution;
+    var rows = ca && Array.isArray(ca.contributors) ? ca.contributors : null;
+    if (!rows || rows.length === 0) return { ok: false, reason: "NO_ATTRIBUTION" };
+    var items = [];
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      var pct = isNum(r && r.pct);
+      if (!r || typeof r.category !== "string" || pct == null) {
+        return { ok: false, reason: "BAD_CONTRIBUTOR" };
+      }
+      items.push({ category: r.category, ratio: pct / 100, valueTwd: isNum(r.value_twd) });
+    }
+    return {
+      ok: true,
+      period: typeof ca.period === "string" ? ca.period : null,
+      /* estimated＝殘差法推估（Δ市值−出入金淨額→市價波動）。畫面要標示得出來，
+         不能讓推估值看起來和實際結算一樣可靠。 */
+      estimated: ca.type !== "calculated",
+      deltaTwd: isNum(ca.delta_twd),
+      note: typeof ca.note === "string" ? ca.note : "",
+      contributors: items,
+    };
+  }
+
+  /* concentration.monthly_top_holding → 逐月最大持有與組合市值（相似時刻／年度報酬都會用）。 */
+  function monthlyConcentration(report) {
+    var src = report && report.concentration && report.concentration.monthly_top_holding;
+    if (!src || typeof src !== "object") return { ok: false, reason: "NO_MONTHLY" };
+    var months = Object.keys(src).sort();
+    if (months.length === 0) return { ok: false, reason: "NO_MONTHLY" };
+    var rows = [];
+    for (var i = 0; i < months.length; i++) {
+      var v = src[months[i]] || {};
+      rows.push({
+        month: months[i],
+        topCurrency: typeof v.top_currency === "string" ? v.top_currency.toLowerCase() : null,
+        topRatio: isNum(v.top_pct) == null ? null : isNum(v.top_pct) / 100,
+        portfolioTwd: isNum(v.portfolio_twd),
+      });
+    }
+    return { ok: true, months: rows };
+  }
+
+  var api = {
+    score: score, realized: realized, cards: cards, insights: insights,
+    holdings: holdings, activity: activity, attribution: attribution,
+    monthlyConcentration: monthlyConcentration, fmt: fmt,
+  };
   if (typeof window !== "undefined") window.MM_HEALTH_CORE = Object.freeze(api);
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })();

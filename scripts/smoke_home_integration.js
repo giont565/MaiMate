@@ -439,6 +439,7 @@ const MARKET_PATH = /\/market(\?|$)/;
     {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
       const shifted = Object.assign({}, HEALTH, {
+        period: { start: "2026-01-01", end: "2026-06-30" },
         holdings_snapshot: {
           asOf: "2026-06-30",
           method: "各幣最後成交價估值",
@@ -448,22 +449,74 @@ const MARKET_PATH = /\/market(\?|$)/;
             { currency: "eth", pct: 10, value_twd: 100000 },
           ],
         },
+        /* 每個欄位都刻意和 mocks/account.js 不同，才分得出來畫面吃的是誰。 */
+        activity_profile: {
+          trades_per_month: { "2026-05": 222, "2026-06": 111 },
+          busiest_month: { month: "2026-05", trades: 222 },
+          trades_by_currency: { btc: 200, eth: 133 },
+          action_counts: { buy: 180, sell: 153, deposit: 9, withdrawal: 9 },
+        },
+        chase_index: Object.assign({}, HEALTH.chase_index, { buy_total: 180, sell_total: 153 }),
+        change_attribution: {
+          period: "2026-06", type: "estimated", delta_twd: 500000,
+          contributors: [
+            { category: "marketPrice", pct: 80, value_twd: 400000 },
+            { category: "netDeposit", pct: 20, value_twd: 100000 },
+          ],
+          note: "殘差法",
+        },
+        opportunity_cost: {
+          total_missed_twd: 26598877,
+          worst_single_sell: { date: "2026-03-09", currency: "sol", qty: 1, sell_price: 100, eoy_price: 250, missed_twd: 150 },
+        },
       });
       await page.route(HEALTH_PATH, (r) => r.fulfill({ json: shifted }));
       await page.route(MARKET_PATH, (r) => r.fulfill({ json: { kind: "ticker", market: "btctwd", data: { last: "100" } } }));
       await page.goto(`${base}/home.html?demo=STEADY_PLANNER`);
       await page.waitForSelector("#account-snapshot-grid");
-      const snapshot = await page.evaluate(
-        () => document.getElementById("account-snapshot-grid").innerText
-      );
+      const seen = await page.evaluate(() => {
+        const byType = (type) => {
+          const node = document.querySelector(`[data-module-type="${type}"]`);
+          return node ? node.innerText : "";
+        };
+        return {
+          snapshot: document.getElementById("account-snapshot-grid").innerText,
+          modules: document.getElementById("home-modules").innerText,
+          /* 相似時刻要單獨看：行情卡本來就會出現「DOGE/TWD」這個幣對，
+             拿整頁文字找 DOGE 會把幣對誤判成那筆賣出。 */
+          similar: byType("similarMoment"),
+          questions: byType("contextualQuestions"),
+        };
+      });
       await page.close();
 
-      assert(snapshot.includes("BTC"),
-        `最大持有沒有跟著 /health 走（仍是本機快照？）：\n${snapshot}`);
-      assert(!snapshot.includes("98.6"),
-        `畫面仍顯示本機快照的 98.6%，表示 /health 沒有生效：\n${snapshot}`);
-      assert(/70(\.0)?%/.test(snapshot), `占比未反映 /health 的 70%：\n${snapshot}`);
-      ok("13 持倉來源 OK：/health 的 holdings_snapshot 蓋過 mocks/account.js 的靜態複本");
+      // 持倉：holdings_snapshot
+      assert(seen.snapshot.includes("BTC"),
+        `最大持有沒有跟著 /health 走（仍是本機快照？）：\n${seen.snapshot}`);
+      assert(!seen.snapshot.includes("98.6"),
+        `畫面仍顯示本機快照的 98.6%，表示 /health 沒有生效：\n${seen.snapshot}`);
+      assert(/70(\.0)?%/.test(seen.snapshot), `占比未反映 /health 的 70%：\n${seen.snapshot}`);
+
+      // 交易節奏：activity_profile。111／222 是本機快照不可能出現的數字
+      assert(seen.modules.includes("111"),
+        `交易筆數沒有跟著 /health 走（期待最近一個月 111 筆）：\n${seen.modules.slice(0, 400)}`);
+      assert(seen.modules.includes("2026-06"),
+        "期間標籤仍是本機快照的 2025 月份，未反映 /health 的 2026-06");
+
+      // 歸因：change_attribution。本機快照是 0.3%／99.7%，這裡是 80%／20%
+      assert(/80%/.test(seen.modules) && !/99\.7%/.test(seen.modules),
+        `歸因比重沒有跟著 /health 走（期待市價波動 80%）：\n${seen.modules.slice(0, 600)}`);
+
+      /* 相似時刻：opportunity_cost.worst_single_sell。本機快照是 2025-01 的 DOGE。
+         模組本體、它自己的摘要句、以及引導使用者去問的那句追問，三處都必須是同一筆——
+         其中兩處原本把幣種與月份寫死在 mocks/home.js，會出現模組講 SOL、摘要講 DOGE
+         的自我矛盾，而使用者還會被引導去問一筆畫面上不存在的交易。 */
+      assert(seen.similar.includes("SOL") && !seen.similar.includes("DOGE"),
+        `相似時刻仍用本機快照的 DOGE：\n${seen.similar}`);
+      assert(!seen.questions.includes("DOGE"),
+        `追問仍指向本機快照的 DOGE 賣出：\n${seen.questions}`);
+
+      ok("13 四個 Adapter 來源 OK：持倉／交易節奏／歸因／相似時刻都蓋過 mocks 的靜態複本，敘事句不落單");
     }
 
     console.log("全部通過 ✅");

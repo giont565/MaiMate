@@ -1,7 +1,7 @@
 /* 自動生成——請勿手改。重生：npm run build:sw
  * 內容：service worker 的 precache 清單與版本（版本＝所有檔案內容的雜湊，
  * 改了任何檔就換版本，舊快取自動淘汰）。 */
-self.SW_VERSION = "4d40555be7";
+self.SW_VERSION = "dfe8ed7101";
 self.SW_ASSETS = [
   "app.js",
   "brand/maicoin.png",
