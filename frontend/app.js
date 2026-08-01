@@ -194,9 +194,19 @@ function initMarket() {
   el.innerHTML = "";
   for (const m of MOCK.markets) {
     const name = m.replace("twd", "").toUpperCase() + "/TWD";
-    el.insertAdjacentHTML("beforeend", `<div class="tick"><b>${name}</b><span class="v">—</span></div>`);
+    // 每列是 <button>：鍵盤可達、有 aria-expanded；K 線面板同層綁在下面，
+    // 展開不影響上方數值節點，行情輪詢照樣就地更新不重建。
+    el.insertAdjacentHTML("beforeend",
+      `<div class="mrow" data-m="${esc(m)}">
+         <button type="button" class="tick" aria-expanded="false">
+           <b>${esc(name)}</b>
+           <span class="rt"><span class="v">—</span><span class="caret" aria-hidden="true">▼</span></span>
+         </button>
+         <div class="kl"></div>
+       </div>`);
     tickEls[m] = el.lastElementChild.querySelector(".v");
   }
+  el.addEventListener("click", onTickClick);
 }
 
 async function loadMarket() {
@@ -217,6 +227,92 @@ async function loadMarket() {
     el.dataset.last = res.value.last;
   }
   if (!anyOk) offline();
+}
+
+// ---------- K 線（#18 的 kline 契約，前端消費端） ----------
+// 一次只展開一列：手機上同時開四張圖要一直捲，而且四路輪詢沒有意義。
+const KL = window.MM_KLINE_CORE;
+const klState = {}; // market -> 目前選的 period
+
+function onTickClick(e) {
+  const btn = e.target.closest(".tick");
+  if (!btn) return;
+  const row = btn.closest(".mrow");
+  if (!row) return;
+  const opening = !row.classList.contains("open");
+  for (const other of document.querySelectorAll("#market .mrow.open")) {
+    other.classList.remove("open");
+    other.querySelector(".tick").setAttribute("aria-expanded", "false");
+  }
+  if (!opening) return;
+  row.classList.add("open");
+  btn.setAttribute("aria-expanded", "true");
+  const m = row.dataset.m;
+  loadKline(m, klState[m] || KL.DEFAULT_PERIOD);
+}
+
+function klBox(m) {
+  const row = document.querySelector(`#market .mrow[data-m="${CSS.escape(m)}"]`);
+  return row ? row.querySelector(".kl") : null;
+}
+
+function klChips(m, period) {
+  return `<div class="pd" role="group" aria-label="K 線週期">` +
+    KL.PERIODS.map((p) =>
+      `<button type="button" data-p="${p.minutes}" aria-pressed="${p.minutes === period}">${esc(p.label)}</button>`
+    ).join("") + `</div>`;
+}
+
+async function loadKline(m, period) {
+  klState[m] = period;
+  const box = klBox(m);
+  if (!box) return;
+  box.innerHTML = klChips(m, period) + `<div class="na ld">載入中…</div>`;
+  bindKlChips(box, m);
+  let parsed;
+  try {
+    const r = await (await fetch(`${API}/market?market=${m}&kind=kline&period=${period}`)).json();
+    parsed = KL.parse(r);
+  } catch {
+    parsed = { ok: false, reason: "FETCH_FAILED" };
+  }
+  // 離線／壞資料一律明說，不畫假 K 線——與行情「維持舊值、不假造」是同一條原則
+  if (!parsed.ok) {
+    offline();
+    box.innerHTML = klChips(m, period) + `<div class="na">目前取不到 K 線資料</div>`;
+    bindKlChips(box, m);
+    return;
+  }
+  box.innerHTML = klChips(m, period) + renderKline(parsed);
+  bindKlChips(box, m);
+}
+
+function bindKlChips(box, m) {
+  for (const b of box.querySelectorAll(".pd button")) {
+    b.addEventListener("click", () => loadKline(m, Number(b.dataset.p)));
+  }
+}
+
+function renderKline(parsed) {
+  const s = KL.summarize(parsed.bars);
+  const W = 320, H = 118;
+  const g = KL.geometry(parsed.bars, W, H);
+  if (!g.ok) return `<div class="na">資料不足，無法繪製</div>`;
+  const dir = s.up === null ? "" : s.up ? " up" : " down";
+  const body = g.candles.map((c) => {
+    const col = c.up ? "var(--green)" : "var(--red)";
+    return `<line x1="${c.cx.toFixed(2)}" y1="${c.wickTop.toFixed(2)}" x2="${c.cx.toFixed(2)}" y2="${c.wickBottom.toFixed(2)}" stroke="${col}" stroke-width="1"/>` +
+      `<rect x="${c.x.toFixed(2)}" y="${c.y.toFixed(2)}" width="${c.w.toFixed(2)}" height="${c.h.toFixed(2)}" fill="${col}"/>`;
+  }).join("");
+  return `<div class="sm">
+      <span>${esc(KL.periodLabel(parsed.periodMinutes))}・${s.count} 根</span>
+      <span class="ch${dir}">${esc(KL.fmtPct(s.changePct))}</span>
+    </div>
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
+         aria-label="${esc(KL.periodLabel(parsed.periodMinutes))} K 線，期間漲跌 ${esc(KL.fmtPct(s.changePct))}">${body}</svg>
+    <div class="ax"><span>${esc(KL.fmtTime(s.from))}</span>
+      <span>高 ${esc(KL.fmtPrice(s.high))}・低 ${esc(KL.fmtPrice(s.low))}</span>
+      <span>${esc(KL.fmtTime(s.to))}</span></div>`;
 }
 
 // ---------- 對話 ----------
