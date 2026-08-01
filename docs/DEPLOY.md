@@ -29,8 +29,26 @@ python3 analysis/precompute.py     # 產出 data/health_report.json（會隨 Lam
 ```bash
 cd infra
 sam build
-sam deploy --guided     # 第一次；之後 sam deploy 即可
+sam deploy --stack-name maimate --region <region> \
+  --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND --resolve-s3 \
+  --no-confirm-changeset --no-fail-on-empty-changeset \
+  --parameter-overrides KnowledgeBaseId=<本帳號的 KB> GuardrailId=off GuardrailVersion=1
 ```
+
+🚨 **參數一定要明寫，兩個原因**（08-01 官方環境部署踩到）：
+
+1. `samconfig.toml` 在 `.gitignore` 裡，新 clone 一定沒有 → 少了 `--stack-name` 會直接報
+   `Missing option '--stack-name'`；`sam deploy --guided` 只是幫你把這些存進 samconfig。
+2. **不寫 `--parameter-overrides` 會把 `KnowledgeBaseId` 洗回 template 預設值 `DSIYBVI1IX`**
+   ——那是別的隊員帳號的 KB，洗掉後 RAG 靜默失效（畫面正常、只是不附出處）。
+   要沿用現況就把**現值原封傳回去**；現值可以這樣讀（不含任何金鑰）：
+
+```bash
+aws lambda get-function-configuration --function-name <ChatFunction> --region <region> \
+  --query 'Environment.Variables.{KB:KB_ID,GUARD:GUARDRAIL_ID,VER:GUARDRAIL_VERSION}'
+```
+
+> 參數原值傳回＝Environment 區塊不變＝手動設的 MAX 金鑰**不會**被清（見下方「部署後手動設定」）。
 
 - guided 選項：stack 名 `maimate`、region 同上、其餘預設；確認 IAM 變更
 - [ ] 記下 Outputs：**ApiUrl**、**FrontendUrl（CloudFront HTTPS）**、FrontendBucket、
@@ -52,13 +70,16 @@ python3 scripts/setup_rag_kb.py --corpus <repo外的語料檔路徑>   # 沒有�
 腳本冪等（可重跑）、會印出新的 KB ID 與對應的 `sam deploy` 指令，並拒絕 repo 內的語料路徑（鐵則 1）。
 完整說明看腳本開頭的 docstring。**語料 `chunks.jsonl` 只在 Drive／S3，不進 git**。
 
-| 本帳號（525237381533）已建好 | 值 |
-|---|---|
-| Knowledge Base | `PDEGDAUUH9`（`maimate-rag-kb`，Titan Embed V2 / 1024 維） |
-| 語料 bucket | `maimate-rag-corpus-525237381533`，prefix `corpus/` |
-| 向量索引 | `maimate-rag-vectors` / `maimate-kb-index`（FLOAT32 / cosine） |
-| IAM role | `MaiMateRagKbRole` |
-| ⚠ 語料 | **尚未上傳**，KB 目前是空的（檢索回空、F3 仍紅） |
+| | 隊長帳號 525237381533 / us-east-1 | **官方環境 234472092814 / us-west-2** |
+|---|---|---|
+| Knowledge Base | `PDEGDAUUH9` | **`ZGBLEOY7CR`** |
+| 語料 bucket | `maimate-rag-corpus-525237381533` | `maimate-rag-corpus-234472092814` |
+| 語料 | 13 篇（隊長 4 篇 md ＋隊友 chunks.jsonl 9 段） | **9 段**（`chunks.jsonl`，08-01 灌入，檢索煙測過） |
+| F3 附出處 | 通過 | 通過 |
+
+兩邊都是 `maimate-rag-kb`／Titan Embed V2 1024 維／`maimate-rag-vectors`＋`maimate-kb-index`
+（FLOAT32 cosine）／IAM role `MaiMateRagKbRole`。語料檔在 Drive「黑客松／MaiMate_RAG_語料」，
+下載到 **repo 以外**的路徑再餵給腳本，灌完刪掉本機副本。
 
 ### 部署後手動設定（模板刻意不含，金鑰嚴禁進版控）
 
@@ -130,6 +151,8 @@ curl "<ApiUrl>/market?market=btctwd&kind=ticker"        # 應回 MAX 行情
 | 某一頁全走離線 mock（其他頁正常） | 那頁的 API_BASE 忘了改——回 §3 跑 `sort -u` 驗證 |
 | RAG 問答退化成一般回答 | `KB_ID` 被 CLI `--environment` 洗掉了（見 §2 警告） |
 | /chat 500 | Bedrock model access 未開通／region 不符 → 開通或設 BEDROCK_REGION |
+| /chat 只有「為什麼／分析／歸因」類問題 500 | 那類問題會路由到 Sonnet（`loop.py` `pick_model`）。推論設定檔 ID **必須帶日期**：`us.anthropic.claude-sonnet-4-5-20250929-v1:0`。短別名 `...-sonnet-4-5-v1:0` 兩個 region 都是 ValidationException。08-01 決賽當天才抓到，因為 `verify_live.py` 22 項沒有一句會觸發深度意圖 |
+| 換 region 後不確定模型 ID | `aws bedrock list-inference-profiles --region <region>` 查 ACTIVE 的完整 ID，別用記憶中的別名 |
 | /chat ValidationException | ENABLE_PROMPT_CACHE 先關掉再查 |
 | /order 一直 410 | 憑證 60 秒過期＝正常；重新對話產生新確認卡 |
 | /order 500 | MAX 金鑰未設或權限不足（要「讀取＋交易」） |

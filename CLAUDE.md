@@ -63,20 +63,24 @@ cd docs/brand && python3 render_pixel_bot.py   # 重出麥麥像素吉祥物
 已驗證：`/health` 為 07-28 資料含 realized_pnl／`/market` 含 fetched_at_taipei／`/audit` 不回 404／
 前端健康分卡圓環正常、顯示 +NT$117,482。**驗收清單 D1–D4 已過，D5–D18 未測。**
 
-## 交接（2026-08-01 02:20，決賽當天）
+## 交接（2026-08-01 04:00，決賽當天）
 
-### 線上環境（帳號 525237381533／us-east-1）
+**兩套環境都是活的，用途不同**：舊環境是錄影與備援，官方環境是比賽平台。
+前端 `frontend/*.html` 的 `API_BASE` 目前指向**官方環境**。
 
-| 資源 | 值 |
-|---|---|
-| 前端 | https://d1ttogc25b56n5.cloudfront.net |
-| ApiUrl | `https://hwgog76s3a.execute-api.us-east-1.amazonaws.com` |
-| FrontendBucket / DistributionId | `maimate-frontendbucket-tdpftef0y2d6` / `ECJ9UVQF1D5O3` |
-| Knowledge Base | `PDEGDAUUH9`（13 篇語料，metadata 掛出處） |
-| Guardrail | `6v38f3jue77y` v1，**刻意停用**（`GuardrailId=off`） |
-| ChatFunction / OrderFunction | `maimate-ChatFunction-gJoISvAx91RA` / `maimate-OrderFunction-OtPA9sr4MOWp` |
+| 資源 | 隊長帳號 525237381533／us-east-1（錄影用） | **官方環境 234472092814／us-west-2** |
+|---|---|---|
+| 前端 | https://d1ttogc25b56n5.cloudfront.net | **https://d1z0776b4u2tmf.cloudfront.net** |
+| ApiUrl | `https://hwgog76s3a.execute-api.us-east-1.amazonaws.com` | **`https://10n5xyf7i4.execute-api.us-west-2.amazonaws.com`** |
+| FrontendBucket / DistributionId | `maimate-frontendbucket-tdpftef0y2d6` / `ECJ9UVQF1D5O3` | `maimate-frontendbucket-c6ydvtulu9fc` / `E2OC6B03DVGXWI` |
+| Knowledge Base | `PDEGDAUUH9`（13 篇） | **`ZGBLEOY7CR`**（9 段） |
+| Guardrail | `6v38f3jue77y` v1，**刻意停用**（`GuardrailId=off`） | 未建，同樣 `GuardrailId=off` |
+| ChatFunction | `maimate-ChatFunction-gJoISvAx91RA` | `maimate-ChatFunction-flPz0wdpoqyq` |
+| OrderFunction | `maimate-OrderFunction-OtPA9sr4MOWp` | `maimate-OrderFunction-iGtkHLYQJyLF` |
 
-部署與驗收指令、金鑰補回步驟全在 `docs/DEPLOY.md`；RAG 重建用 `scripts/setup_rag_kb.py`。
+官方環境憑證是主辦發的**臨時憑證**（`ASIA` 開頭＋session token），會過期，過期就回主辦端重拿，
+存成 `--profile hackathon` 使用。部署與驗收指令、金鑰補回步驟全在 `docs/DEPLOY.md`；
+RAG 重建用 `scripts/setup_rag_kb.py`。
 
 ### 已完成（都有線上實測證據）
 
@@ -88,9 +92,21 @@ cd docs/brand && python3 render_pixel_bot.py   # 重出麥麥像素吉祥物
 - 驗收：後端 22 項通過 21、前端完整性 13/13、Python 50 項、九組煙測
 - 手機實機：離線劇本、行情保留舊值、PWA 加到主畫面（standalone ＋ 斷網可開）
 
+### 08-01 凌晨補修（兩個都會在評審面前出事）
+
+1. **深度意圖問題一律 500**：`MODEL_SONNET` 用了不存在的短別名，任何含「為什麼／分析／歸因／
+   比較」的問題都掛掉。改成帶日期的 `us.anthropic.claude-sonnet-4-5-20250929-v1:0`，兩套環境都已部署驗過。
+   **`verify_live.py` 的 22 項沒有一句會觸發深度意圖**，所以一直是綠的——賽後補一項進去。
+2. **LLM 自行標「✓ 推薦全部賣出」**（約 1/6 機率）：與 UI 金框推薦互相矛盾，也踩「不報明牌」。
+   修在 `loop.py` SYSTEM 規則 4（三方案對等呈現）。不走 `guardrails.py`——護欄一命中會把整段
+   回覆換成 `SAFE_FALLBACK` 罐頭語，反問敘事會整個消失，比原問題更糟。
+
 ### 待辦
 
-- [ ] **#8 Demo 錄影**（最重要，環境目前是好的；分鏡稿 `docs/DEMO_SCRIPT.md`）
+- [ ] **#8 Demo 錄影**（最重要，環境目前是好的；提詞卡 `docs/DEMO_SCRIPT.md` 已對線上實況改寫）
+- [ ] 場地網路每 5 次連線掉 1 次（實測 API Gateway、CloudFront、github 都一樣，`ping` 不掉但
+      TLS 被 reset）。**`verify_live.py` 紅字要先懷疑網路**：失敗率與該項要打幾次 API 成正比，
+      多步驟的 D9/D12/D13/D15 最常紅。判斷方式是直接單獨探測那條路徑
 - [ ] TEST_CHECKLIST D14（憑證 61 秒過期）、D16（語氣切換）、E5–E10
 - [ ] 簡報「RAG 附出處尚未穩定」那條已不成立，可改寫（`docs/build_pitch.js` 誠實頁）
 - [ ] #6 Guardrail 要正確啟用需對 input／output 套用不同政策——賽後做
