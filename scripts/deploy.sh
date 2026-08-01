@@ -14,13 +14,13 @@ MODE="${2:-all}"
 
 case "${ENV}" in
   private)
-    PROFILE_ARG=(); REGION="us-east-1"; KB="PDEGDAUUH9"
+    PROFILE=""; REGION="us-east-1"; KB="PDEGDAUUH9"
     API="https://hwgog76s3a.execute-api.us-east-1.amazonaws.com"
     BUCKET="maimate-frontendbucket-tdpftef0y2d6"; DIST="ECJ9UVQF1D5O3"
     SITE="https://d1ttogc25b56n5.cloudfront.net"; LABEL="私人／錄影環境"
     ;;
   official)
-    PROFILE_ARG=(--profile hackathon); REGION="us-west-2"; KB="ZGBLEOY7CR"
+    PROFILE="hackathon"; REGION="us-west-2"; KB="ZGBLEOY7CR"
     API="https://10n5xyf7i4.execute-api.us-west-2.amazonaws.com"
     BUCKET="maimate-frontendbucket-c6ydvtulu9fc"; DIST="E2OC6B03DVGXWI"
     SITE="https://d1z0776b4u2tmf.cloudfront.net"; LABEL="比賽環境（上台用）"
@@ -54,7 +54,7 @@ echo "✔ 版本閘門通過：main @ $(git rev-parse --short HEAD)"
 # ── 後端 ──────────────────────────────────────────────────────────
 if [ "${MODE}" != "--frontend-only" ]; then
   echo "▶ 後端部署（KB=${KB}）"
-  ( cd infra && sam build && sam deploy --stack-name maimate --region "${REGION}" "${PROFILE_ARG[@]}" \
+  ( cd infra && sam build && sam deploy --stack-name maimate --region "${REGION}" ${PROFILE:+--profile ${PROFILE}} \
       --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND --resolve-s3 \
       --no-confirm-changeset --no-fail-on-empty-changeset \
       --parameter-overrides "KnowledgeBaseId=${KB}" GuardrailId=off GuardrailVersion=1 )
@@ -70,8 +70,8 @@ if [ "${MODE}" != "--backend-only" ]; then
   ORIG=$(grep -h -o 'window.API_BASE = "[^"]*"' frontend/index.html)
   perl -pi -e "s|window\.API_BASE = \"[^\"]*\"|window.API_BASE = \"${API}\"|" frontend/*.html
   npm run --silent build:sw >/dev/null
-  aws s3 sync frontend/ "s3://${BUCKET}/" --region "${REGION}" "${PROFILE_ARG[@]}" --exclude "mocks/*" --delete
-  aws cloudfront create-invalidation --distribution-id "${DIST}" --paths "/*" "${PROFILE_ARG[@]}" \
+  aws s3 sync frontend/ "s3://${BUCKET}/" --region "${REGION}" ${PROFILE:+--profile ${PROFILE}} --exclude "mocks/*" --delete
+  aws cloudfront create-invalidation --distribution-id "${DIST}" --paths "/*" ${PROFILE:+--profile ${PROFILE}} \
     --query 'Invalidation.Id' --output text | sed 's/^/  快取清除 id: /'
   git checkout -- frontend/*.html && npm run --silent build:sw >/dev/null
   echo "  （本機前端已還原成 main 的版本：${ORIG}）"
