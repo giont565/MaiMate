@@ -12,6 +12,7 @@ import uuid
 from pathlib import Path
 
 HEALTH_REPORT = Path(__file__).parent.parent.parent / "data" / "health_report.json"
+STRATEGY_REPORT = Path(__file__).parent.parent.parent / "data" / "strategy_report.json"
 # RAG 知識庫（#9）：B 包建好 Bedrock KB 後設 KB_ID 環境變數，工具即自動註冊（見 DEPLOY.md）
 KB_ID = os.environ.get("KB_ID")
 
@@ -86,6 +87,28 @@ TOOLS = [
                 "amount_twd": {"type": "number", "description": "buy 用：TWD 金額"},
             },
             "required": ["market", "side"],
+        }},
+    }},
+    {"toolSpec": {
+        "name": "compare_entry_strategies",
+        "description": (
+            "使用者問「要一次買完還是分批買」「網格好不好」「怎麼分散進場風險」「定期定額比較好嗎」"
+            "時呼叫。回傳三種進場方式（一次全買／分批買入／網格）在上漲、下跌、橫盤三種真實市況下的"
+            "報酬與最大回撤（MAX 公開日線回測，非命題 CSV），並依使用者風險等級標出該先看哪個數字。"
+            "**三種方式必須對等呈現，不得推薦其中一種**；回答時務必連同回測期間與情境一起講，"
+            "並照 data_notes 說明取捨。本工具不會下單。"
+        ),
+        "inputSchema": {"json": {
+            "type": "object",
+            "properties": {
+                "market": {"type": "string",
+                           "description": "交易對，如 btctwd、ethtwd、soltwd、dogetwd"},
+                "amount_twd": {"type": "number",
+                               "description": "使用者打算投入的 TWD 金額，用來換算成實際金額與檢查單筆下限"},
+                "risk_mode": {"type": "string", "enum": ["cautious", "growth", "pro"],
+                              "description": "使用者風險等級；未提供時用系統推斷的模式"},
+            },
+            "required": ["market", "amount_twd"],
         }},
     }},
     {"toolSpec": {
@@ -220,6 +243,109 @@ def calculate_trade_scenarios(market, side, fraction=1.0, amount_twd=None):
     return scenarios.calculate_trade_scenarios(market, side, fraction=fraction, amount_twd=amount_twd)
 
 
+def compare_entry_strategies(market, amount_twd, risk_mode=None):
+    """三種進場方式的取捨對照（#進場策略）。數字全部來自 analysis/strategy_compare.py 的離線回測。
+
+    只呈現取捨、不推薦（紅線 1）。風險等級只決定「先看哪個數字」，不決定選誰。
+    另外做**可行性檢查**：分批 10 次／網格 10 格會把金額切成十份，每份仍必須高於交易所單筆下限——
+    07/31 那次「買 500 元 ETH 卻推薦 125 元試水溫」就是漏了這道檢查（tests/test_scenarios_min_order.py）。
+    """
+    report = json.loads(STRATEGY_REPORT.read_text(encoding="utf-8"))
+    market = (market or "").lower()
+    data = report["markets"].get(market)
+    if data is None:
+        return {"error": f"尚未回測 {market}",
+                "available_markets": sorted(report["markets"]),
+                "data_notes": "如實告知目前只有這幾個交易對有回測資料，不要拿其他幣的數字套用。"}
+
+    tier = report["risk_tiers"].get(risk_mode) or report["risk_tiers"]["growth"]
+    slices = report["assumptions"]["dca_times"]
+    per_slice = amount_twd / slices
+
+    scenarios = {}
+    for name, sc in data["scenarios"].items():
+        rows = {}
+        for key, s in sc["strategies"].items():
+            rows[key] = {
+                **s,
+                "end_value_twd": round(amount_twd * (1 + s["return_pct"] / 100)),
+                "profit_twd": round(amount_twd * s["return_pct"] / 100),
+                "deepest_paper_loss_twd": round(amount_twd * s["max_drawdown_pct"] / 100),
+            }
+        scenarios[name] = {**sc, "strategies": rows}
+
+    feasibility = _entry_feasibility(market, per_slice, slices)
+    ret = {
+        "market": market,
+        "amount_twd": amount_twd,
+        "backtest_period": data["data_period"],
+        "scenarios": scenarios,
+        "full_period_grid_vs_hold": data["full_period_grid_vs_hold"],
+        "risk_tier": {"mode": risk_mode or "growth", **tier},
+        "feasibility": feasibility,
+        "assumptions": report["assumptions"],
+        "key_findings": {
+            "橫盤時": (
+                f"網格 {scenarios['sideways']['strategies']['grid']['return_pct']:+.1f}%"
+                f"、一次全買 {scenarios['sideways']['strategies']['lump_sum']['return_pct']:+.1f}%"
+                "——網格的獲利來源是來回震盪"
+            ),
+            "多頭時的代價": (
+                f"網格只有 {scenarios['uptrend']['strategies']['grid']['return_pct']:+.1f}%，"
+                f"一次全買 {scenarios['uptrend']['strategies']['lump_sum']['return_pct']:+.1f}%；"
+                f"網格期末有 {scenarios['uptrend']['strategies']['grid']['end_cash_pct']:.0f}% 的本金還躺在現金"
+                "＝整段幾乎沒買到，這就是踏空成本"
+            ),
+            "空頭時": (
+                f"一次全買 {scenarios['downtrend']['strategies']['lump_sum']['return_pct']:+.1f}%、"
+                f"分批 {scenarios['downtrend']['strategies']['dca']['return_pct']:+.1f}%、"
+                f"網格 {scenarios['downtrend']['strategies']['grid']['return_pct']:+.1f}%"
+                "——少虧的主因是「還沒買完、留著現金」，不是網格本身"
+            ),
+            "全期回撤對照": (
+                f"網格最大回撤 {data['full_period_grid_vs_hold']['grid']['max_drawdown_pct']}%"
+                f" vs 買入持有 {data['full_period_grid_vs_hold']['buy_and_hold']['max_drawdown_pct']}%"
+            ),
+            "這一級先看": f"{tier['label']}：{tier['why']}",
+        },
+        "data_notes": [
+            "三種方式對等呈現，**不得推薦任何一種**，也不得說「建議你用網格／定期定額」。"
+            "正確講法是把取捨講清楚讓使用者選：多頭賺多少 vs 空頭痛多少。",
+            "引用數字必須連同回測期間與情境（上漲／下跌／橫盤）一起說，不能當成通則或未來預測。",
+            "不得宣稱能事前判斷市況該不該開網格——該規則測過並失敗（見報告 data_notes）。",
+            *report["data_notes"],
+        ],
+    }
+    return ret
+
+
+def _entry_feasibility(market, per_slice_twd, slices):
+    """每一份是否高於交易所單筆下限。取不到行情就如實回 unknown，不要猜。"""
+    from ..integrations import max_public
+    try:
+        rules = max_public.market_rules(market)
+        price = float(max_public.fetch(market, "ticker")["data"].get("last") or 0)
+    except Exception as exc:  # noqa: BLE001 — 行情掛掉不該讓整個比較掛掉
+        return {"status": "unknown", "reason": f"取不到 {market} 下單限制或現價（{exc}）",
+                "note": "如實說明無法檢查單筆下限，不要編造門檻數字。"}
+    floor = max(rules["min_quote_amount"], rules["min_base_amount"] * price)
+    ok = per_slice_twd >= floor
+    return {
+        "status": "ok" if ok else "below_minimum",
+        "per_slice_twd": round(per_slice_twd),
+        "slices": slices,
+        "exchange_floor_twd": round(floor),
+        "min_total_twd": round(floor * slices),
+        "note": (
+            f"分成 {slices} 份、每份 NT${per_slice_twd:,.0f}，高於 {market.upper()} 單筆下限 NT${floor:,.0f}，可執行。"
+            if ok else
+            f"分成 {slices} 份後每份只有 NT${per_slice_twd:,.0f}，低於 {market.upper()} 單筆下限 NT${floor:,.0f}"
+            f"（金額下限與數量下限取大者），交易所會退件。要分 {slices} 次至少需要 NT${floor * slices:,.0f}；"
+            "必須主動告訴使用者這件事，不要給一個他按下去會失敗的方案。"
+        ),
+    }
+
+
 TABLE = os.environ.get("TABLE_NAME")
 
 
@@ -275,6 +401,7 @@ _DISPATCH = {
     "get_market_data": get_market_data,
     "get_account_balance": get_account_balance,
     "calculate_trade_scenarios": calculate_trade_scenarios,
+    "compare_entry_strategies": compare_entry_strategies,
     "prepare_order": prepare_order,
 }
 if KB_ID:

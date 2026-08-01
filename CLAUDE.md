@@ -113,6 +113,14 @@ RAG 重建用 `scripts/setup_rag_kb.py`。
 
 ### 待辦
 
+- [x] **進場方式比較（`compare_entry_strategies`）已上線並驗證**（08/01，私人環境 15/15 全過）：
+      SYSTEM 規則 10 與 `guardrails._ADVICE_PATTERNS` 的「不得推薦進場方式」補丁只在 repo，
+      規則 10 需寫明「**立刻**呼叫」＋涵蓋「為什麼…」「那 X 呢」句型，否則模型會改用 query_knowledge 硬答。風險盤點與評審 Q&A：`docs/_internal/RISK_STRATEGY_COMPARE.md`（**隊內文件，已 gitignore**——
+      repo 是公開的，那份寫法不適合對外；另存 Drive）。
+      **未重部署前不要在 Demo 主線示範這個功能**（走該文件的路 B）。
+      注意這次**有**走 `guardrails.py`，與上面第 2 點的決定相反——差別在 pattern 強制帶「你／您」，
+      只攔祈使句、放行中性比較與教育敘述，`tests/test_guardrails.py::EntryMethodAdviceTests`
+      有一半的案例就在守「不誤攔」。誤攔的代價仍然是整段被換成 `SAFE_FALLBACK`，改 pattern 前先看那些測試。
 - [ ] **#8 Demo 錄影**（最重要，環境目前是好的；提詞卡 `docs/DEMO_SCRIPT.md` 已對線上實況改寫）
 - [ ] 場地網路每 5 次連線掉 1 次（實測 API Gateway、CloudFront、github 都一樣，`ping` 不掉但
       TLS 被 reset）。**`verify_live.py` 紅字要先懷疑網路**：失敗率與該項要打幾次 API 成正比，

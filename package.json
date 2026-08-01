@@ -23,7 +23,8 @@
     "smoke:hostapp": "node scripts/smoke_hostapp.js",
     "verify:ui": "node scripts/verify_live_ui.js",
     "pitch": "node docs/build_pitch.js",
-    "handbook": "node docs/build_handbook.js"
+    "handbook": "node docs/build_handbook.js",
+    "verify:strategy": "python3 scripts/verify_strategy_tool.py"
   },
   "devDependencies": {
     "playwright": "^1.61.1",

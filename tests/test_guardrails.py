@@ -120,3 +120,63 @@ class AntiFraudContextTests(unittest.TestCase):
         引述那一行自己沒有防詐字眼——逐句判斷永遠救不了它。"""
         self.assert_allowed("常見紅旗：\n1. 標榜「保證獲利」「穩賺不賠」\n"
                             "2. 聲稱「一定會漲」\n\n這些都是典型詐騙話術。")
+
+
+class EntryMethodAdviceTests(unittest.TestCase):
+    """推薦「進場方式」和推薦「標的」一樣踩紅線 1，只是對象從幣換成方法。
+
+    原本的 pattern 認不出來：`(建議|推薦)(你|您)?(現在)?(買進|買入|賣出…)` 要求
+    「建議你」後面直接接動作詞，而「建議你**用**分批買入」接的是「用」。
+    2026-08-01 實測，下面三句在補丁前全部放行。
+
+    另一半同樣重要：**不能誤攔**。護欄一命中，chat.py:32 會把整段回覆換成
+    SAFE_FALLBACK 罐頭語——compare_entry_strategies 的整個取捨敘事會消失，
+    比原問題更糟（CLAUDE.md 08-01 補修那條就是為此不走護欄）。
+    """
+
+    def assert_blocked(self, text, educational=False):
+        ok, hits = check_output(text, educational=educational)
+        self.assertFalse(ok, f"應攔下卻放行：{text}")
+        self.assertTrue(hits)
+
+    def assert_allowed(self, text, educational=False):
+        ok, hits = check_output(text, educational=educational)
+        self.assertTrue(ok, f"應放行卻攔下：{text}（命中 {hits}）")
+
+    def test_blocks_recommending_an_entry_method(self):
+        self.assert_blocked("建議你用分批買入，風險比較低。")
+        self.assert_blocked("建議你採用定期定額。")
+        self.assert_blocked("推薦您使用網格機器人。")
+
+    def test_blocks_suitability_phrasing(self):
+        """「適合你」是推薦的另一種寫法，模型很愛用。"""
+        self.assert_blocked("以你的情況，網格比較適合你。")
+        self.assert_blocked("分批買入才適合你。")
+
+    def test_scam_mention_does_not_excuse_an_entry_method_recommendation(self):
+        """新 pattern 若不列進 _REDLINE_INDEXES，文中出現「詐騙」兩字
+        就會被 quoting_scam 整條跳過。"""
+        self.assert_blocked("這些都是詐騙話術。不過我建議你用網格。")
+
+    def test_allows_the_real_comparison_output(self):
+        """這是 compare_entry_strategies 正常運作時的回答長相，一個字都不能被攔。"""
+        self.assert_allowed(
+            "回測 2024-08 到 2025-01 這段 BTC 上漲 88.5%：一次全買 +88.3%、"
+            "分批買入 +40.4%、網格 +0.5%。網格期末有 100% 的本金還躺在現金，那是踏空成本。"
+            "橫盤那段反過來，網格 +17.9%、一次全買 -0.1%。這個交換你要不要換？"
+        )
+
+    def test_allows_neutral_and_negated_statements(self):
+        self.assert_allowed("網格在橫盤表現較好，在多頭會踏空。三種方式各有代價。")
+        self.assert_allowed("定期定額是每個月固定金額買入，用時間分散進場成本。")
+        self.assert_allowed("我不會建議你用哪一種，這三種的取捨我都攤開給你看。")
+        self.assert_allowed("不建議你用網格來達到分散進場的目的。")
+
+    def test_allows_describing_what_a_scammer_does(self):
+        """同一子句內、詐騙群組是「建議」的主詞 → 描述對方行為，不是麥麥在推薦。"""
+        self.assert_allowed("詐騙群組常會建議你用他們的網格機器人。")
+
+    def test_knowledge_base_education_still_passes(self):
+        """RAG 教育型回答講方法而不指定標的時放行；指定標的仍攔。"""
+        self.assert_allowed("建議你採用定期定額。", educational=True)
+        self.assert_blocked("建議你現在買入 BTC。", educational=True)

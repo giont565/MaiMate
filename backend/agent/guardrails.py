@@ -8,9 +8,26 @@ import re
 # 輸出檢查：不得出現直接的買賣建議句式
 _ADVICE_PATTERNS = [
     r"(建議|推薦)(你|您)?(現在)?(買進|買入|賣出|加倉|全倉|梭哈)",
+    # 推薦「進場方式」和推薦「標的」一樣是替使用者做決定，只是對象從幣換成方法。
+    # compare_entry_strategies 回傳三種方式的取捨，模型很容易順手補一句
+    # 「以你的情況建議用分批」——上面那條攔不到（「建議你」後面接的是「用」不是動作詞）。
+    #
+    # 為什麼一定要帶「你／您」：護欄一命中，chat.py:32 會把**整段回覆**換成 SAFE_FALLBACK
+    # 罐頭語，整個取捨敘事會消失，比原問題更糟。所以只攔真正指向使用者的祈使句，
+    # 教育型敘述（「定期定額是每月固定金額買入」）與中性比較（「網格在橫盤表現較好」）一律放行。
+    r"(建議|推薦)(你|您)(現在)?(可以)?(採用|使用|用|選|做|開|走)?"
+    r"(一次全買|分批|定期定額|定額|網格|梭哈)",
+    r"(一次全買|分批買入|分批|定期定額|網格)(策略|方式|機器人)?"
+    r"(會|才|最)?(比較)?(適合|推薦給)(你|您)",
     r"(一定|絕對)(會)?(漲|跌)",
     r"保證(獲利|賺)",
 ]
+
+# 紅線句式的索引：直接建議買賣（0）＋建議採用某種進場方式（1、2）。
+# 這三條走同一套嚴格判斷——豁免只認否定詞、且不吃「整篇在講詐騙」的引述豁免。
+# 少了這個集合，新加的兩條會被當成一般句式：文中只要出現「詐騙」兩個字，
+# quoting_scam 就會讓「建議你用網格」整條跳過。
+_REDLINE_INDEXES = frozenset({0, 1, 2})
 
 # 教育型回答仍不得推薦具體標的。這份清單只用於判斷「直接買賣建議」，
 # 不會攔截單純解釋定期定額中「固定金額買入」之類的中性描述。
@@ -143,13 +160,13 @@ def check_output(text, educational=False):
     for index, pattern in enumerate(_ADVICE_PATTERNS):
         unsafe_matches = []
         for match in re.finditer(pattern, text):
-            if _is_safety_context(text, match, negation_only=(index == 0)):
+            if _is_safety_context(text, match, negation_only=(index in _REDLINE_INDEXES)):
                 continue
-            if quoting_scam and index > 0:
+            if quoting_scam and index not in _REDLINE_INDEXES:
                 continue
             if (
                 educational
-                and index == 0
+                and index in _REDLINE_INDEXES
                 and not _SPECIFIC_ASSET.search(_sentence_containing(text, match))
             ):
                 continue
