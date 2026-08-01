@@ -238,5 +238,162 @@
       }
     ],
     "note": "期初持倉無買入紀錄之賣出不計（792 筆）"
+  },
+  "annual_return": {
+    "2025": {
+      "source": "demo",
+      "complete": true,
+      "start": "2025-01-01",
+      "end": "2025-12-31",
+      "start_value_twd": 0,
+      "end_value_twd": 118168980,
+      "periods": [
+        {
+          "start": "2025-01-01",
+          "end": "2025-02-01",
+          "start_value_twd": 0,
+          "end_value_twd": 10009890,
+          "flows": [
+            {
+              "date": "2025-01-31",
+              "amount_twd": 2212477
+            }
+          ]
+        },
+        {
+          "start": "2025-02-01",
+          "end": "2025-03-01",
+          "start_value_twd": 10009890,
+          "end_value_twd": 17143471,
+          "flows": [
+            {
+              "date": "2025-02-28",
+              "amount_twd": 820384
+            }
+          ]
+        },
+        {
+          "start": "2025-03-01",
+          "end": "2025-04-01",
+          "start_value_twd": 17143471,
+          "end_value_twd": 25935134,
+          "flows": [
+            {
+              "date": "2025-03-31",
+              "amount_twd": 1697030
+            }
+          ]
+        },
+        {
+          "start": "2025-04-01",
+          "end": "2025-05-01",
+          "start_value_twd": 25935134,
+          "end_value_twd": 35535888,
+          "flows": [
+            {
+              "date": "2025-04-30",
+              "amount_twd": 2391725
+            }
+          ]
+        },
+        {
+          "start": "2025-05-01",
+          "end": "2025-06-01",
+          "start_value_twd": 35535888,
+          "end_value_twd": 47755884,
+          "flows": [
+            {
+              "date": "2025-05-31",
+              "amount_twd": 3230625
+            }
+          ]
+        },
+        {
+          "start": "2025-06-01",
+          "end": "2025-07-01",
+          "start_value_twd": 47755884,
+          "end_value_twd": 58767691,
+          "flows": [
+            {
+              "date": "2025-06-30",
+              "amount_twd": 2508930
+            }
+          ]
+        },
+        {
+          "start": "2025-07-01",
+          "end": "2025-08-01",
+          "start_value_twd": 58767691,
+          "end_value_twd": 66019828,
+          "flows": [
+            {
+              "date": "2025-07-31",
+              "amount_twd": 1187933
+            }
+          ]
+        },
+        {
+          "start": "2025-08-01",
+          "end": "2025-09-01",
+          "start_value_twd": 66019828,
+          "end_value_twd": 76286568,
+          "flows": [
+            {
+              "date": "2025-08-31",
+              "amount_twd": 2690700
+            }
+          ]
+        },
+        {
+          "start": "2025-09-01",
+          "end": "2025-10-01",
+          "start_value_twd": 76286568,
+          "end_value_twd": 88909691,
+          "flows": [
+            {
+              "date": "2025-09-30",
+              "amount_twd": 3013550
+            }
+          ]
+        },
+        {
+          "start": "2025-10-01",
+          "end": "2025-11-01",
+          "start_value_twd": 88909691,
+          "end_value_twd": 97023162,
+          "flows": [
+            {
+              "date": "2025-10-31",
+              "amount_twd": 1343363
+            }
+          ]
+        },
+        {
+          "start": "2025-11-01",
+          "end": "2025-12-01",
+          "start_value_twd": 97023162,
+          "end_value_twd": 105919067,
+          "flows": [
+            {
+              "date": "2025-11-30",
+              "amount_twd": 798884
+            }
+          ]
+        },
+        {
+          "start": "2025-12-01",
+          "end": "2026-01-01",
+          "start_value_twd": 105919067,
+          "end_value_twd": 118168980,
+          "flows": [
+            {
+              "date": "2025-12-31",
+              "amount_twd": 2378946
+            }
+          ]
+        }
+      ],
+      "missing": []
+    }
   }
 }

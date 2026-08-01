@@ -9,8 +9,10 @@ def handler(event, context):
     market = q.get("market", "btctwd")
     kind = q.get("kind", "ticker")
     period = q.get("period")
+    timestamp = q.get("timestamp")
+    limit = q.get("limit")
     try:
-        data = max_public.fetch(market, kind, period=period)
+        data = max_public.fetch(market, kind, period=period, timestamp=timestamp, limit=limit)
         return _resp(200, data)
     except ValueError as e:
         return _resp(400, {"code": "bad_request", "message": str(e), "retryable": False})

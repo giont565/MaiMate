@@ -6,6 +6,7 @@ as order-book ordering and spread are never delegated to the LLM.
 import json
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
@@ -20,7 +21,7 @@ _tickers_cache = {}
 
 ENDPOINTS = {
     "ticker": "/api/v3/ticker?market={market}",
-    "kline": "/api/v3/k?market={market}&period={period}&limit=48",
+    "kline": "/api/v3/k",
     "depth": "/api/v3/depth?market={market}&limit=20",
 }
 
@@ -146,6 +147,7 @@ def market_rules(market):
     return {
         "market": market,
         "base_unit": rules["base_unit"],
+        "quote_unit": rules["quote_unit"],
         "base_precision": int(rules["base_unit_precision"]),
         "min_base_amount": float(rules["min_base_amount"]),
         "min_quote_amount": float(rules["min_quote_amount"]),
@@ -184,26 +186,47 @@ def twd_prices():
     return prices
 
 
-def fetch(market, kind, period=None):
+def _positive_int(value, name, maximum=None):
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be an integer") from exc
+    if parsed <= 0:
+        raise ValueError(f"{name} must be greater than zero")
+    if maximum is not None and parsed > maximum:
+        raise ValueError(f"{name} must not exceed {maximum}")
+    return parsed
+
+
+def fetch(market, kind, period=None, timestamp=None, limit=None):
+    """取得公開行情；Kline 可指定起始 Unix 秒數與最多 10,000 根。
+
+    ``timestamp`` 與 ``limit`` 僅適用於 Kline。預設仍取 48 根，保持既有聊天與
+    行情面板的流量不變；年度報酬可明確傳入 2026-01-01 與較大 limit 回看年初價。
+    """
     if kind not in ENDPOINTS:
         raise ValueError(f"unknown kind: {kind}")
     if kind == "kline":
-        try:
-            period = 60 if period is None else int(period)
-        except (TypeError, ValueError) as exc:
-            raise ValueError("kline period must be an integer number of minutes") from exc
-        if period <= 0:
-            raise ValueError("kline period must be greater than zero")
-    elif period is not None:
-        raise ValueError("period is only supported for kline")
+        period = _positive_int(60 if period is None else period, "kline period")
+        limit = _positive_int(48 if limit is None else limit, "kline limit", maximum=10000)
+        timestamp = None if timestamp is None else _positive_int(timestamp, "kline timestamp")
+    elif period is not None or timestamp is not None or limit is not None:
+        raise ValueError("period, timestamp and limit are only supported for kline")
 
-    key = f"{kind}:{market}:{period}"
+    key = f"{kind}:{market}:{period}:{timestamp}:{limit}"
     now = time.time()
     hit = _cache.get(key)
     if hit and hit[0] > now:
         return hit[1]
 
-    data = _get(BASE + ENDPOINTS[kind].format(market=market, period=period))
+    if kind == "kline":
+        params = {"market": market, "period": period, "limit": limit}
+        if timestamp is not None:
+            params["timestamp"] = timestamp
+        url = BASE + ENDPOINTS[kind] + "?" + urllib.parse.urlencode(params)
+    else:
+        url = BASE + ENDPOINTS[kind].format(market=market)
+    data = _get(url)
     if kind == "ticker":
         data = _normalize_ticker(data)
     elif kind == "kline":
@@ -216,6 +239,8 @@ def fetch(market, kind, period=None):
         "kind": kind,
         "market": market,
         "period_minutes": period if kind == "kline" else None,
+        "requested_timestamp": timestamp if kind == "kline" else None,
+        "limit": limit if kind == "kline" else None,
         "fetched_at_utc": fetched.isoformat().replace("+00:00", "Z"),
         "fetched_at_taipei": fetched.astimezone(TAIPEI_TZ).isoformat(),
         "data": data,
