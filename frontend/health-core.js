@@ -148,7 +148,64 @@
     return out;
   }
 
-  var api = { score: score, realized: realized, cards: cards, insights: insights, fmt: fmt };
+  /* holdings_snapshot → 持倉權重。
+   *
+   * 權重用 value_twd 算而不是直接吃 pct：報告的 pct 只有一位小數，七個幣種各自
+   * 進位之後總和不保證是 100（這份剛好是，換一份就未必），而 PortfolioAdapter 有
+   * 「總和必須 ≈1」的斷言，踩到會讓整個首頁掉進錯誤畫面。用金額算就沒有這個問題，
+   * pct 只在沒有金額時當後備。
+   *
+   * 回傳形狀刻意對齊 MM_ONBOARDING_MOCK.demoPortfolio，讓 Adapter 兩種來源共用同一段
+   * 下游邏輯——不要為了真資料另開一條分支，那是 bug 的溫床。 */
+  function holdings(report) {
+    var snap = report && report.holdings_snapshot;
+    var rows = snap && Array.isArray(snap.holdings) ? snap.holdings : null;
+    if (!rows || rows.length === 0) return { ok: false, reason: "NO_HOLDINGS" };
+
+    var parsed = [];
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      var code = r && typeof r.currency === "string" ? r.currency.toLowerCase() : "";
+      if (!code) return { ok: false, reason: "BAD_HOLDING" };
+      var value = isNum(r.value_twd);
+      var pct = isNum(r.pct);
+      if (value == null && pct == null) return { ok: false, reason: "BAD_HOLDING" };
+      parsed.push({ code: code, value: value, pct: pct });
+    }
+
+    var totalValue = 0;
+    var haveAllValues = true;
+    for (var j = 0; j < parsed.length; j++) {
+      if (parsed[j].value == null) { haveAllValues = false; break; }
+      totalValue += parsed[j].value;
+    }
+    var useValue = haveAllValues && totalValue > 0;
+
+    var assets = parsed.map(function (p) {
+      var isCash = p.code === "twd";
+      return {
+        symbol: p.code.toUpperCase(),
+        /* 「現金（TWD）」而不是光一個「TWD」——98.6% 是資金停在現金（保守），
+           不標清楚會被讀成危險的加密資產過度集中，意思正好相反。 */
+        label: isCash ? "現金（TWD）" : p.code.toUpperCase(),
+        isCash: isCash,
+        weight: useValue ? p.value / totalValue : (p.pct || 0) / 100,
+        valueTwd: p.value,
+      };
+    }).sort(function (a, b) { return b.weight - a.weight; });
+
+    return {
+      ok: true,
+      assets: assets,
+      /* holdings_snapshot 本身就是各幣種明細，所以這份來源一定有細分。 */
+      breakdownAvailable: true,
+      snapshotAsOf: typeof snap.asOf === "string" ? snap.asOf : null,
+      snapshotMethod: typeof snap.method === "string" ? snap.method : null,
+      asOfMonth: typeof snap.asOf === "string" ? snap.asOf.slice(0, 7) : null,
+    };
+  }
+
+  var api = { score: score, realized: realized, cards: cards, insights: insights, holdings: holdings, fmt: fmt };
   if (typeof window !== "undefined") window.MM_HEALTH_CORE = Object.freeze(api);
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })();

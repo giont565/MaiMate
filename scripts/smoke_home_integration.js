@@ -428,6 +428,44 @@ const MARKET_PATH = /\/market(\?|$)/;
       ok(`12 模式同名 OK：${modes.join("／")} 在 index、home、問卷 Q6 三處一致`);
     }
 
+    /* ── 13. 持倉來源：/health 的 holdings_snapshot 要真的蓋過本機快照 ──────
+     * mocks/account.js 裡的 holdingsSnapshot 是 /health 報告的靜態複本（數字逐位
+     * 相同），所以「有沒有走真資料」用線上那份是看不出來的——兩邊長得一樣。
+     * 這裡故意餵一份和快照完全不同的報告：真的有接線就會顯示 BTC 70%，
+     * 還在吃本機快照就會顯示現金 98.6%。
+     *
+     * 這條擋的是「不會報錯的失敗」：precompute 重跑後 /health 變了、
+     * mocks/account.js 沒變，新 UI 會安靜地顯示過期數字而畫面完全正常。 */
+    {
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      const shifted = Object.assign({}, HEALTH, {
+        holdings_snapshot: {
+          asOf: "2026-06-30",
+          method: "各幣最後成交價估值",
+          holdings: [
+            { currency: "btc", pct: 70, value_twd: 700000 },
+            { currency: "twd", pct: 20, value_twd: 200000 },
+            { currency: "eth", pct: 10, value_twd: 100000 },
+          ],
+        },
+      });
+      await page.route(HEALTH_PATH, (r) => r.fulfill({ json: shifted }));
+      await page.route(MARKET_PATH, (r) => r.fulfill({ json: { kind: "ticker", market: "btctwd", data: { last: "100" } } }));
+      await page.goto(`${base}/home.html?demo=STEADY_PLANNER`);
+      await page.waitForSelector("#account-snapshot-grid");
+      const snapshot = await page.evaluate(
+        () => document.getElementById("account-snapshot-grid").innerText
+      );
+      await page.close();
+
+      assert(snapshot.includes("BTC"),
+        `最大持有沒有跟著 /health 走（仍是本機快照？）：\n${snapshot}`);
+      assert(!snapshot.includes("98.6"),
+        `畫面仍顯示本機快照的 98.6%，表示 /health 沒有生效：\n${snapshot}`);
+      assert(/70(\.0)?%/.test(snapshot), `占比未反映 /health 的 70%：\n${snapshot}`);
+      ok("13 持倉來源 OK：/health 的 holdings_snapshot 蓋過 mocks/account.js 的靜態複本");
+    }
+
     console.log("全部通過 ✅");
   } catch (error) {
     console.error("FAIL:", error.message);

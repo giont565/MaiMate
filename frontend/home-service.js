@@ -184,7 +184,25 @@ const PortfolioAdapter = Object.freeze({
         topTwoAssetsRatio: null,
       };
     }
-    const source = window.MM_ONBOARDING_MOCK && window.MM_ONBOARDING_MOCK.demoPortfolio;
+    /* 資料源：拿得到真報告就用 /health 的 holdings_snapshot，否則落回示範資料。
+     * 這一層換掉，上面所有吃 PortfolioAdapter 的東西一起變真——首頁模組、
+     * chat.html 的結構化回答（chat-service.js 的工具全部呼叫這些 Adapter）、
+     * 歸因與集中度敘事。回傳形狀刻意與 demoPortfolio 相同，下游一行都不用改。 */
+    const live = mmHomeRuntime.health && mmHomeRuntime.health.source === "live"
+      ? window.MM_HEALTH_CORE.holdings(mmHomeRuntime.health.report)
+      : null;
+    const source = live && live.ok
+      ? {
+        assets: live.assets,
+        breakdownAvailable: live.breakdownAvailable,
+        asOfMonth: live.asOfMonth,
+        snapshotAsOf: live.snapshotAsOf,
+        snapshotMethod: live.snapshotMethod,
+        /* 報告沒有前期快照，前端不得自行推估（Screen 8 的期間對照寧可留白）。 */
+        previousAsOfMonth: null,
+        previousTopWeight: null,
+      }
+      : (window.MM_ONBOARDING_MOCK && window.MM_ONBOARDING_MOCK.demoPortfolio);
     const assets = source && Array.isArray(source.assets)
       ? source.assets.map((asset) => ({
         symbol: String(asset.symbol),
