@@ -46,6 +46,21 @@
     if (text != null) node.textContent = String(text);
     return node;
   };
+  /* 模型回覆會帶 markdown 粗體（**方案 1：…**）。app.js:311 早就有 md() 做這個轉換，
+   * chat.js 沒有——於是比賽版第一次問「幫我買 500 NTD 的 USDT」，三方案標題整排星號
+   * 露在畫面上。**先 escape 再轉，順序不能反**（workflow.md 前端紀律③：插 DOM 先 escape）。
+   * 只支援粗體與換行，與 app.js 保持一致——這裡不是要做 markdown 引擎。 */
+  const escHtml = (s) => String(s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const mdEl = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    node.innerHTML = escHtml(text == null ? "" : text)
+      .replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>")
+      .replace(/\n/g, "<br>");
+    return node;
+  };
+
   const fmt = (n, maxDec) => {
     const num = Number(n);
     return Number.isFinite(num) ? num.toLocaleString("en-US", { maximumFractionDigits: maxDec == null ? 4 : maxDec }) : "—";
@@ -77,8 +92,8 @@
 
   /* ── 區塊渲染 ── */
   const blockRenderers = {
-    summary: (payload) => el("div", "direct", payload.directAnswer),
-    text: (payload) => el("div", "text", payload.text),
+    summary: (payload) => mdEl("div", "direct", payload.directAnswer),
+    text: (payload) => mdEl("div", "text", payload.text),
     metric: (payload) => kvBlock(payload.title, payload.items),
     comparison: (payload) => kvBlock(payload.title, payload.items),
     timeline: (payload) => kvBlock(payload.title, payload.items),
@@ -360,9 +375,12 @@
   };
   const SCEN_META = { partial: ["🛡️", "麥麥陪跑建議看看"], full: ["📤", "你的原意圖"], pause: ["⏸️", "冷靜期"] };
 
+  /* Golden Path 這條把**後端 LLM 原文**直接貼上來，是唯一會出現 markdown 的路徑
+   * （blockRenderers 那些是前端自己組的字串，不帶 **）。所以星號問題只在這裡爆——
+   * 也因此七套煙測全綠卻沒抓到：煙測走的是本地 service，不是真模型的回覆。 */
   function addPlainAssistant(text) {
     const card = el("div", "card-ai");
-    card.append(el("div", "text", text));
+    card.append(mdEl("div", "text", text));
     byId("chatlog").append(card);
     return card;
   }
