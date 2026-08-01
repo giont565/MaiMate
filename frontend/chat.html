@@ -314,6 +314,8 @@
 <script src="onboarding-core.js"></script>
 <script src="home-core.js"></script>
 <script src="navigation-context.js"></script>
+<!-- health-core.js 必須在 home-service.js 之前：Adapter 會呼叫 MM_HEALTH_CORE -->
+<script src="health-core.js"></script>
 <script src="home-service.js"></script>
 <script src="chat-core.js"></script>
 <script src="chat-service.js"></script>

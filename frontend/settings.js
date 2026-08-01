@@ -44,4 +44,45 @@
   document.querySelectorAll("[data-route]").forEach((button) => {
     button.addEventListener("click", () => navigate(button.dataset.route));
   });
+
+  /* ── 資料來源 ────────────────────────────────────────────────────────
+   * 這頁其餘項目都是本機偏好，唯一有後端可接的是「數字從哪來、算到哪一天」。
+   * 刻意不載入 home-service.js 那條鏈（4 支檔、僅為了一行字不划算），直接查 /health。
+   *
+   * 逾時 2.5 秒與 home-service 一致：場地網路每 5 次連線掉 1 次（CLAUDE.md 待辦），
+   * 沒有逾時這行字會一直卡在「正在確認…」。取不到就明說是示範資料，不留白也不假裝。
+   */
+  (async function renderDataSource() {
+    const title = document.getElementById("data-source-title");
+    const detail = document.getElementById("data-source-detail");
+    if (!title || !detail) return;
+
+    const demo = () => {
+      title.textContent = "目前使用示範資料";
+      detail.textContent = "尚未連上分析服務，畫面上的數字來自內建的示範報告，不是你的帳戶。";
+    };
+    if (!window.API_BASE) return demo();
+
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), 2500);
+    let report = null;
+    try {
+      const response = await fetch(window.API_BASE + "/health", { signal: abort.signal });
+      if (response.ok) report = await response.json();
+    } catch (_) { /* 落回示範資料 */ }
+    finally { clearTimeout(timer); }
+
+    const period = report && report.period;
+    if (!report || !period || typeof period.start !== "string") return demo();
+
+    title.textContent = "你的交易紀錄分析報告";
+    const rows = Number(report.row_count);
+    const parts = [period.start + " 至 " + period.end];
+    if (Number.isFinite(rows)) parts.push("共 " + rows.toLocaleString("en-US") + " 筆紀錄");
+    /* 只裁切後端給的字串，不自行換算時區（鐵則：時間以後端為準）。 */
+    if (typeof report.generated_at === "string" && report.generated_at.length >= 10) {
+      parts.push("報告產生於 " + report.generated_at.slice(0, 10));
+    }
+    detail.textContent = parts.join("　·　");
+  })();
 })();

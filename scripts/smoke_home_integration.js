@@ -519,6 +519,61 @@ const MARKET_PATH = /\/market(\?|$)/;
       ok("13 四個 Adapter 來源 OK：持倉／交易節奏／歸因／相似時刻都蓋過 mocks 的靜態複本，敘事句不落單");
     }
 
+    /* ── 14. 依賴順序：載 home-service 就必須先載 health-core ────────────
+     * Adapter 會呼叫 MM_HEALTH_CORE.*。少了它不會在載入時報錯，要等到「真的取到
+     * /health」那一刻才炸——在此之前 report 恆為 null，那條路走不到。而 insights.js
+     * 的 catch 會把例外吞掉，畫面直接退回索引頁，主控台一片乾淨。
+     * 程式碼那層已經擋住（mmHomeLiveReport 檢查 MM_HEALTH_CORE），這裡再釘住
+     * script 順序，免得下一頁又漏。 */
+    {
+      const pages = fs.readdirSync(ROOT).filter((f) => f.endsWith(".html"));
+      const bad = [];
+      pages.forEach((page) => {
+        const html = fs.readFileSync(path.join(ROOT, page), "utf8");
+        const service = html.indexOf("home-service.js");
+        if (service < 0) return;
+        const core = html.indexOf("health-core.js");
+        if (core < 0) bad.push(`${page}（沒載 health-core.js）`);
+        else if (core > service) bad.push(`${page}（health-core.js 排在 home-service.js 之後）`);
+      });
+      assert(bad.length === 0, `依賴順序錯誤：${bad.join("、")}`);
+      ok(`14 依賴順序 OK：${pages.length} 個頁面中，載 home-service 的都先載了 health-core`);
+    }
+
+    /* ── 15. insights.html 也要吃得到真報告 ──────────────────────────────
+     * 這頁的每個洞察都由 adapters 現算，但它不經過 refreshHome——沒有人呼叫
+     * ensureHealth 就永遠是示範資料，而畫面完全正常、主控台零錯誤。 */
+    {
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      const shifted = Object.assign({}, HEALTH, {
+        holdings_snapshot: {
+          asOf: "2026-06-30", method: "各幣最後成交價估值",
+          holdings: [
+            { currency: "btc", pct: 70, value_twd: 700000 },
+            { currency: "twd", pct: 30, value_twd: 300000 },
+          ],
+        },
+      });
+      await page.route(HEALTH_PATH, (r) => r.fulfill({ json: shifted }));
+      await page.route(MARKET_PATH, (r) => r.fulfill({ json: { kind: "ticker", market: "btctwd", data: { last: "100" } } }));
+      /* 先過首頁建立 demo 授權：沒有 consent 時 PortfolioAdapter 一律回 available:false，
+         測起來會像「沒接上真資料」，其實是根本沒資料可讀。 */
+      await page.goto(`${base}/home.html?demo=STEADY_PLANNER`);
+      await page.waitForSelector(".health-card");
+      await page.goto(`${base}/insights.html`);
+      await page.waitForSelector("#index-root:not([hidden]), #detail-root:not([hidden])");
+      await page.waitForTimeout(600);
+      const text = await page.evaluate(async () => {
+        await window.MM_HOME_SERVICES.ensureHealth();
+        const detail = await window.MM_INSIGHT_SERVICES.insight.getInsight("cash-concentration");
+        return JSON.stringify(detail).slice(0, 4000);
+      });
+      await page.close();
+      assert(text.includes("BTC"), "insights 的資金分布沒有跟著 /health 走（仍是本機快照？）");
+      assert(!text.includes("98.6"), "insights 仍顯示本機快照的 98.6%，表示 /health 沒有生效");
+      ok("15 insights 來源 OK：洞察內容跟著 /health 的 holdings_snapshot 走");
+    }
+
     console.log("全部通過 ✅");
   } catch (error) {
     console.error("FAIL:", error.message);

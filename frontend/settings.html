@@ -82,6 +82,17 @@
     </button>
   </div>
 
+  <!-- 資料來源：這頁其餘四個項目都是本機偏好，沒有可接的後端資料。真正值得放上來的
+       是「麥麥講的數字是哪來的、算到哪一天」——資料來源可查證是這個專案的鐵則之一，
+       而先前全站沒有任何一個地方說得出來。 -->
+  <h2 class="section-title">資料來源</h2>
+  <div class="settings-list">
+    <div class="setting" id="data-source" aria-live="polite">
+      <b id="data-source-title">正在確認資料來源…</b>
+      <span id="data-source-detail">麥麥用的每個數字都來自你的交易紀錄分析報告。</span>
+    </div>
+  </div>
+
   <aside class="info" id="settings-message" aria-live="polite">
     <b>你的資料仍由你決定</b>
     <p>投資樣貌只用來調整 MaiMate 的解釋與提醒方式，不代表投資能力、績效或獲利預測。</p>
@@ -95,6 +106,7 @@
   <button type="button" aria-current="page">我的</button>
 </nav>
 
+<script>window.API_BASE = "https://10n5xyf7i4.execute-api.us-west-2.amazonaws.com";</script>
 <script src="navigation-context.js"></script>
 <script src="onboarding-core.js"></script>
 <script src="settings.js"></script>
