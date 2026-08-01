@@ -291,6 +291,7 @@
   </div>
 </nav>
 
+<script>window.API_BASE = "https://10n5xyf7i4.execute-api.us-west-2.amazonaws.com";</script>
 <script src="mocks/account.js"></script>
 <script src="mocks/onboarding.js"></script>
 <script src="mocks/home.js"></script>
@@ -298,6 +299,8 @@
 <script src="onboarding-core.js"></script>
 <script src="home-core.js"></script>
 <script src="navigation-context.js"></script>
+<!-- health-core.js 必須在 home-service.js 之前：Adapter 會呼叫 MM_HEALTH_CORE -->
+<script src="health-core.js"></script>
 <script src="home-service.js"></script>
 <script src="chat-core.js"></script>
 <script src="insights-core.js"></script>

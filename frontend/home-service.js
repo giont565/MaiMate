@@ -172,6 +172,14 @@ function mmHomeTrack(name, metadata) {
 /* 拿得到真報告就回它，否則 null。所有 Adapter 共用同一個判斷——
  * 有的接了有的沒接，畫面會半真半假而且完全看不出來，那比全假更難查。 */
 function mmHomeLiveReport() {
+  /* health-core.js 沒載入就當作沒有真報告。
+   *
+   * 這不是防禦性冗餘：insights.html 與 chat.html 都載 home-service.js 卻沒載
+   * health-core.js，而下面幾個 Adapter 會呼叫 MM_HEALTH_CORE.*。少了它會在
+   * 「真的取到 /health」的那一刻才炸（在此之前 report 恆為 null，永遠走不到），
+   * 而且例外被 insights.js 的 catch 吞掉——畫面直接退回索引頁，主控台一片乾淨。
+   * 依賴要在程式碼裡擋住，不能靠「記得在每個 HTML 補一行 script」。 */
+  if (typeof window === "undefined" || !window.MM_HEALTH_CORE) return null;
   return mmHomeRuntime.health && mmHomeRuntime.health.source === "live"
     ? mmHomeRuntime.health.report
     : null;
@@ -1846,8 +1854,11 @@ function mmHomeStartHealthLoad() {
   if (mmHomeRuntime.healthPromise) return mmHomeRuntime.healthPromise;
   mmHomeRuntime.healthPromise = mmHomeFetchHealth().then((result) => {
     mmHomeRuntime.health = result;
-    /* 只有真的拿到線上資料才值得重畫一次；本來就是 demo 就別動畫面。 */
-    if (result.source === "live" && !mmHomeRuntime.healthNotified) {
+    /* 只有真的拿到線上資料才值得重畫一次；本來就是 demo 就別動畫面。
+       另外要確認自己在首頁：insights.html／settings.html 也載入這支 service，
+       在那裡跑 refreshHome() 是白做工，還會丟一個沒人聽的事件。 */
+    if (result.source === "live" && !mmHomeRuntime.healthNotified
+        && typeof document !== "undefined" && document.getElementById("home-modules")) {
       mmHomeRuntime.healthNotified = true;
       Promise.resolve()
         .then(() => MockMaiMateHomeService.refreshHome())
@@ -2031,6 +2042,25 @@ window.MM_HOME_SERVICES = Object.freeze({
   styles: Object.freeze(MM_HOME_STYLES.slice()),
   /** 目前該用哪一種版面（使用者選過→他的選擇；否則→問卷 Q6；再否則→guided） */
   currentStyle() { return mmHomeResolveStyle(mmHomeState()); },
+  /* 任何頁面在讀 adapters 之前先 await 這個，adapters 才拿得到真報告。
+   * home.html 走 refreshHome() 會自己觸發；insights.html／settings.html 只讀 adapters、
+   * 不經過 refreshHome，沒有人叫它就永遠是示範資料——而且畫面完全正常，看不出來。
+   * 記憶化＋2.5 秒逾時都在 mmHomeStartHealthLoad 裡，重複呼叫只會打一次 API。 */
+  ensureHealth() { return mmHomeStartHealthLoad(); },
+  /* 資料來源與時間，給畫面誠實標示用。 */
+  healthProvenance() {
+    const state = mmHomeRuntime.health;
+    if (!state) return { source: "pending", generatedAt: null, periodStart: null, periodEnd: null };
+    const report = state.report || {};
+    const period = report.period || {};
+    return {
+      source: state.source,
+      generatedAt: typeof report.generated_at === "string" ? report.generated_at : null,
+      periodStart: typeof period.start === "string" ? period.start : null,
+      periodEnd: typeof period.end === "string" ? period.end : null,
+      rowCount: Number.isFinite(Number(report.row_count)) ? Number(report.row_count) : null,
+    };
+  },
   home: activeHomeService,
   mock: MockMaiMateHomeService,
   formal: MaiMatePersonalizedHomeService,

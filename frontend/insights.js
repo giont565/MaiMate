@@ -549,6 +549,17 @@
 
   /* ── 初始化 ── */
   async function init() {
+    /* 這一頁的每個洞察都由 MM_HOME_SERVICES.adapters 現算（見 insights-service.js），
+       而 adapters 要拿到真報告得先有人去取 /health。home.html 走 refreshHome() 會自己
+       觸發，這頁只讀 adapters、不經過 refreshHome——沒有人叫它就永遠是示範資料，
+       而且畫面完全正常、主控台零錯誤，看不出來。
+       ensureHealth 記憶化＋2.5 秒逾時，取不到就照舊落回示範資料，不會卡住畫面。 */
+    /* 名字不能叫 services——模組層第 16 行已經有一個 services＝MM_INSIGHT_SERVICES，
+       在這裡重新宣告會把它遮蔽掉。 */
+    const homeServices = window.MM_HOME_SERVICES;
+    if (homeServices && typeof homeServices.ensureHealth === "function") {
+      try { await homeServices.ensureHealth(); } catch (_) { /* 取不到就用示範資料 */ }
+    }
     const envelope = navigation ? navigation.consumeContext("insight") : null;
     const restored = restoreView();
     if (restored) {
