@@ -16,10 +16,11 @@
                 "PingFang TC","Noto Sans TC",sans-serif;
     -webkit-font-smoothing:antialiased;
   }
-  #stage{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden}
+  #stage{position:absolute;inset:0;overflow:hidden}
 
   .slide{
-    width:1920px;height:1080px;position:relative;overflow:hidden;display:none;
+    width:1920px;height:1080px;overflow:hidden;display:none;
+    position:absolute;left:50%;top:50%;transform-origin:center center;
     background:#000;color:#F5F5F7;padding:120px 150px;flex-direction:column;
   }
   .slide.on{display:flex}
@@ -261,7 +262,8 @@
     @page{size:1920px 1080px;margin:0}
     *{animation:none!important;opacity:1!important;transform:none!important}
     #stage{position:static;display:block;overflow:visible}
-    .slide{display:flex!important;break-after:page;page-break-after:always}
+    .slide{display:flex!important;position:relative!important;left:auto!important;top:auto!important;
+           transform:none!important;break-after:page;page-break-after:always}
     .slide:last-child{break-after:auto;page-break-after:auto}
     .bar,#hud{display:none}
   }
@@ -760,7 +762,7 @@
 
   function fit(){
     const s = Math.min(innerWidth / 1920, innerHeight / 1080) * 0.97;
-    slides.forEach(el => el.style.transform = `scale(${s})`);
+    slides.forEach(el => el.style.transform = `translate(-50%,-50%) scale(${s})`);
   }
   slides.forEach(el => {
     const b = document.createElement('div');
