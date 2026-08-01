@@ -574,6 +574,38 @@ const MARKET_PATH = /\/market(\?|$)/;
       ok("15 insights 來源 OK：洞察內容跟著 /health 的 holdings_snapshot 走");
     }
 
+    /* ── 16. /health 一律 no-store ────────────────────────────────────────
+     * 後端的 /health 回 `Cache-Control: public, max-age=3600`，但
+     * `Access-Control-Allow-Origin` 只在請求帶 Origin 時才回，而且沒有 `Vary: Origin`。
+     * 只要有任何不帶 Origin 的請求（監控、CDN 回源、curl）把回應灌進共用快取，
+     * 之後瀏覽器的跨來源 fetch 就會拿到沒有 ACAO 的那一份，直接 Failed to fetch，
+     * 一路失敗到快取過期——最長一小時。
+     *
+     * 三個呼叫點（app.js／home-service.js／settings.js）的 catch 都會把它吃掉，
+     * 畫面靜靜換成示範資料：首頁、洞察、我的三頁同時說謊而主控台一片乾淨。
+     * 2026-08-02 在官方站 d1z0776b4u2tmf 實測重現：預設快取模式連 6 次都在 1–6ms
+     * 內失敗，改 no-store 立刻 200／184ms。
+     *
+     * 用靜態檢查而不是攔請求：cache mode 在 Playwright 的 route 裡看不到，而這條
+     * 規則要守的是「以後新增的呼叫點也不能漏」。根因修在後端（補 Vary: Origin）之後
+     * 這段可以拆，但在那之前拆掉會無聲地把三頁打回示範資料。 */
+    {
+      const files = fs.readdirSync(ROOT).filter((f) => f.endsWith(".js"));
+      const bad = [];
+      files.forEach((file) => {
+        const src = fs.readFileSync(path.join(ROOT, file), "utf8");
+        /* 抓 fetch(...) 這一整個呼叫裡有沒有出現 "/health" 與 no-store。
+           逐行掃：三個呼叫點都寫在同一行內，跨行的寫法會被抓成漏測而不是漏放行。 */
+        src.split("\n").forEach((line, i) => {
+          if (!/fetch\(/.test(line) || !/\/health/.test(line)) return;
+          if (!/no-store/.test(line)) bad.push(`${file}:${i + 1}`);
+        });
+      });
+      assert(bad.length === 0,
+        `這些 /health 的 fetch 沒有帶 cache:"no-store"，跨來源會被沒有 ACAO 的快取複本擋掉：${bad.join("、")}`);
+      ok("16 /health 快取 OK：所有呼叫點都帶 no-store，繞開缺 Vary: Origin 的共用快取");
+    }
+
     console.log("全部通過 ✅");
   } catch (error) {
     console.error("FAIL:", error.message);

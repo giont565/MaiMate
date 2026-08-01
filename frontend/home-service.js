@@ -1833,7 +1833,17 @@ async function mmHomeFetchHealth() {
   const abort = new AbortController();
   const timer = setTimeout(() => abort.abort(), 2500);
   try {
-    const report = await mmHomeFetchJson("/health", { signal: abort.signal });
+    /* cache:"no-store" 是必要的，不是保險。/health 回 `Cache-Control: public, max-age=3600`，
+       但 `Access-Control-Allow-Origin` 只在請求帶 Origin 時才回，而且**沒有 Vary: Origin**。
+       於是任何不帶 Origin 的請求（監控、CDN 回源、curl）一旦讓這份回應進了共用快取，
+       之後瀏覽器的跨來源 fetch 會拿到同一份「沒有 ACAO」的複本 → 直接 Failed to fetch，
+       而且一路失敗到快取過期，最長一小時。
+       實測（2026-08-02 官方站 d1z0776b4u2tmf）：預設快取模式連 6 次都在 1–6ms 內失敗，
+       改 no-store 立刻 200／184ms。失敗會被這裡的 catch 吃掉，畫面靜靜換成示範資料——
+       正是 CLAUDE.md 說的「不會報錯的失敗」。
+       根因在後端回應標頭（缺 Vary: Origin），已另開單；前端這行是不必等後端的止血。
+       報告只有 3.8KB，不快取的代價可以忽略。 */
+    const report = await mmHomeFetchJson("/health", { signal: abort.signal, cache: "no-store" });
     /* 至少要有一個 health-core 算得動的子項，否則當作沒拿到——
        回一個空物件進去只會畫出一張全是「—」的卡，比誠實地說示範資料更難懂。 */
     const usable = report && typeof report === "object"
