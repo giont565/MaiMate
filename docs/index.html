@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MaiMate 麥麥｜決賽簡報與上台稿</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:#000;color:#F5F5F7;min-height:100vh;
+    font-family:-apple-system,"SF Pro Display","Helvetica Neue","PingFang TC","Noto Sans TC",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:72px 24px 96px;
+  }
+  .wrap{max-width:880px;margin:0 auto}
+  .sig{display:flex;gap:8px;margin-bottom:34px}
+  .sig i{width:26px;height:8px;border-radius:4px;background:#E64A4D}
+  .sig i:last-child{background:#1E4DA7}
+  h1{font-size:clamp(38px,7vw,66px);font-weight:800;letter-spacing:-.035em;line-height:1.18}
+  h1 span{background:linear-gradient(96deg,#FF6B6B,#6C9BFF);
+          -webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:clamp(17px,2.4vw,21px);color:#A1A1A6;line-height:1.7;margin-top:22px;max-width:640px}
+  .meta{font-size:14px;color:#5A5A5F;margin-top:30px;letter-spacing:.06em}
+
+  .cards{display:grid;gap:16px;margin-top:54px}
+  a.card{
+    display:block;text-decoration:none;color:inherit;
+    border:1px solid #26262A;border-radius:18px;padding:26px 28px;
+    transition:border-color .18s ease,transform .18s ease,background .18s ease;
+  }
+  a.card:hover{border-color:#4A4A52;background:#0C0C0E;transform:translateY(-2px)}
+  a.card b{font-size:22px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:12px}
+  a.card b em{font-style:normal;font-size:13px;font-weight:700;color:#86868B;
+              border:1px solid #33333A;border-radius:999px;padding:4px 10px;letter-spacing:.08em}
+  a.card p{font-size:16px;color:#86868B;line-height:1.65;margin-top:10px}
+  a.card.primary{border-color:#3A3A42;background:#0A0A0C}
+  a.card.primary b{font-size:26px}
+
+  .note{margin-top:52px;padding-top:28px;border-top:1px solid #1C1C20;
+        font-size:15px;color:#6E6E73;line-height:1.85}
+  .note b{color:#A1A1A6;font-weight:700}
+  code{font-family:ui-monospace,Menlo,monospace;font-size:13.5px;
+       background:#141418;border:1px solid #26262A;border-radius:6px;padding:2px 7px;color:#C7C7CC}
+  @media (max-width:600px){body{padding:48px 18px 72px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="sig"><i></i><i></i></div>
+  <h1>MaiMate 麥麥<br><span>決賽簡報與上台稿</span></h1>
+  <p class="sub">
+    2026 雲湧智生黑客松 · MaiCoin 智慧理財命題 · 隊伍「第五名」<br>
+    展示 8 分鐘 ＋ 問答 6 分鐘。主線 15 頁，附錄 10 頁。
+  </p>
+  <p class="meta">這頁是給隊友對稿用的，不是給評審看的</p>
+
+  <div class="cards">
+    <a class="card primary" href="PITCH_DECK.html">
+      <b>簡報 <em>← → 換頁 · F 全螢幕</em></b>
+      <p>主線 15 頁＋附錄 10 頁。第 6–10 頁右側是真的螢幕錄影，會自動播放。
+         點畫面右半邊也可以往下一頁。</p>
+    </a>
+
+    <a class="card" href="PITCH_6MIN.md">
+      <b>上台逐字稿</b>
+      <p>每一頁一段口白，附字數與秒數、停頓位置、四個時間檢查點，
+         以及問答 13 題的備答與誠實清單。</p>
+    </a>
+
+    <a class="card" href="FEATURE_INVENTORY.md">
+      <b>功能總清單</b>
+      <p>從程式碼實際撈出來的功能，標了「線上實測過／只有單元驗證／沒做到」三級證據強度。
+         問答前先看這份。</p>
+    </a>
+
+    <a class="card" href="DESIGN_SYSTEM.md">
+      <b>設計系統</b>
+      <p>改簡報或前端 UI 之前先看：配色、字級、版型規則，以及明確禁止的做法。</p>
+    </a>
+  </div>
+
+  <div class="note">
+    <b>想改東西？</b><br>
+    改 <code>docs/PITCH_DECK.html</code>，然後跑 <code>node scripts/bundle_deck.js</code> 重出單檔版、
+    <code>node scripts/pdf_pitch.js</code> 重出 PDF。<br>
+    改完<b>逐頁確認沒有爆版</b>——overflow 是 hidden，螢幕上看不出來，印成 PDF 才會發現字被切掉。<br><br>
+    <b>上台用哪一份？</b><br>
+    用 <code>PITCH_DECK.standalone.html</code>（單檔版，素材全部內嵌，換一台電腦也不會破圖）。
+    那份不進版控，由 <code>bundle_deck.js</code> 產生。
+  </div>
+</div>
+</body>
+</html>
