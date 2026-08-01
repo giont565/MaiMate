@@ -62,17 +62,13 @@ const SEGMENTS = [
     },
   },
   {
-    name: '04_welcome', page: 'welcome.html', secs: 40,
-    desc: '開始認識彼此 → 六題問卷全部答完 → 麥麥的整理',
+    name: '04_welcome', page: 'onboarding.html#/profile', secs: 26,
+    desc: '六題問卷從第一題答到底 → 麥麥的整理',
+    // 授權那段 03 已經完整演過，這裡不重複：用 seedConsent 先把授權狀態灌好，
+    // 影片第一格就是問卷第 1 題。
+    seed: 'consent',
     act: async p => {
-      await p.waitForTimeout(2600);
-      await p.mouse.wheel(0, 260); await p.waitForTimeout(1200);   // 先讓「授權→對答→開始」露臉
-      await p.mouse.wheel(0, -260); await p.waitForTimeout(700);
-
-      await p.click('#btn-cta');                                    // 開始和麥麥認識彼此
-      await p.waitForTimeout(1800);
-      await p.click('#btn-consent');                                // 授權（03 已完整演過，這裡快速通過）
-      await p.waitForTimeout(1800);
+      await p.waitForTimeout(2000);
 
       // 六題：把每一題的選項按完再按下一題。挑的答案對應簡報裡那個
       // 「追高、短打、看到波動會反覆刷價格」的使用者，最後落在陪跑語氣。
@@ -98,17 +94,75 @@ const SEGMENTS = [
     },
   },
   {
-    name: '05_health', page: 'home.html', secs: 16,
-    desc: '投資健檢：健康分與四張行為卡',
+    name: '05_health', page: 'home.html', secs: 18,
+    desc: '分析結果：原本的我 vs 最近的我、變化歸因、相似情境、麥麥幫你注意到',
+    // home.html 沒有完成的 onboarding 狀態會被踢回 welcome.html——不會報錯，
+    // 只是安靜地錄到入口頁。要先把整套走完的狀態灌進去。
+    seed: 'completed',
     act: async p => {
-      await p.waitForTimeout(3200);
-      for (let i = 0; i < 5; i++) {
-        await p.mouse.wheel(0, 230);
-        await p.waitForTimeout(1500);
+      await p.waitForTimeout(3000);              // 先停在「今天，什麼和你有關？」
+      // 用標題定位而不是固定捲動距離：卡片高度會隨資料變，寫死 px 會捲到半張卡中間
+      for (const anchor of ['原本的我', '這個情況', '麥麥幫你注意到', '你的帳戶概況']) {
+        const found = await p.evaluate(t => {
+          const el = [...document.querySelectorAll('h2,h3,.card h2,.card h3,[class*=title]')]
+            .find(e => (e.innerText || '').includes(t));
+          if (!el) return false;
+          el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+          return true;
+        }, anchor);
+        if (!found) console.log(`   ⚠ 05_health 找不到「${anchor}」，該段沒錄到`);
+        await p.waitForTimeout(2600);
       }
     },
   },
 ];
+
+/**
+ * 有些段落要從流程中段開始錄（例如問卷第一題），前面的授權畫面已經是別段的內容，
+ * 重錄一次只會讓影片開頭多出五秒沒人要看的東西。
+ *
+ * 作法是先開一個「不錄影」的 context，真的把同意授權按下去，
+ * 把瀏覽器寫出來的狀態原封不動撈回來，再灌進要錄影的 context。
+ * 不自己手寫 consent 物件——那個結構（consentVersion／grantedScopes／revokedAt）
+ * 由 onboarding-core.js 決定，手寫的版本一改就會跟真實情況脫節，
+ * 而且路由檢查不過只會安靜地把畫面踢回授權頁。
+ */
+const ANSWERS = [
+  ['exploring'],                                       // 我有一些買賣經驗
+  ['behaviorReview', 'steadyHabit'],                   // 檢視交易行為＋建立穩定習慣（最多兩項）
+  ['short'],                                           // 幾天到一個月
+  ['anxiousChecking'],                                 // 容易焦慮，反覆查看價格
+  ['habitInsight', 'riskAlerts', 'newsToHoldings'],    // 最多三項
+  ['guided'],                                          // 陪我慢慢看懂
+];
+
+/** 走到指定進度，回傳當下的 mm_onboarding
+ *  @param {'consent'|'completed'} upTo */
+async function grabState(browser, upTo) {
+  const ctx = await browser.newContext({ viewport: VIEW });
+  const p = await ctx.newPage();
+  await p.goto(FE('onboarding.html#/consent'), { waitUntil: 'domcontentloaded' });
+  await p.waitForSelector('#btn-consent');
+  await p.click('#btn-consent');
+  await p.waitForTimeout(1200);                    // 等它寫進 localStorage 並換頁
+
+  if (upTo === 'completed') {
+    for (const picks of ANSWERS) {
+      for (const v of picks) await p.click(`#qopts .chip[data-v="${v}"]`);
+      await p.click('#btn-next');
+      await p.waitForTimeout(200);
+    }
+    await p.click('#btn-finish');                  // 完成，開始分析
+    // 等分析跑完真的走到結果頁；跑不完就讓後面的斷言去抓，不要靜靜地帶著半套狀態往下走
+    await p.waitForFunction(() => location.hash === '#/profile-result', null, { timeout: 25000 });
+    await p.waitForTimeout(800);
+  }
+
+  const state = await p.evaluate(() => localStorage.getItem('mm_onboarding'));
+  await ctx.close();
+  if (!state) throw new Error('沒撈到 mm_onboarding');
+  return state;
+}
 
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
@@ -119,11 +173,21 @@ const SEGMENTS = [
   const only = process.argv.slice(2);
   const todo = only.length ? SEGMENTS.filter(s => only.some(o => s.name.includes(o))) : SEGMENTS;
 
+  const seeds = {};
+  for (const kind of ['consent', 'completed']) {
+    if (todo.some(s => s.seed === kind)) seeds[kind] = await grabState(browser, kind);
+  }
+
   for (const seg of todo) {
     const ctx = await browser.newContext({
       viewport: VIEW, deviceScaleFactor: 2,
       recordVideo: { dir: path.join(TMP, seg.name), size: VIEW },
     });
+    // 在任何頁面腳本跑之前寫進去，否則 onboarding.js 的路由檢查會先跑一輪、
+    // 判定沒授權，把畫面 replace 回 #/consent
+    if (seg.seed) {
+      await ctx.addInitScript(s => localStorage.setItem('mm_onboarding', s), seeds[seg.seed]);
+    }
     const p = await ctx.newPage();
     try {
       await p.goto(FE(seg.page), { waitUntil: 'domcontentloaded' });
