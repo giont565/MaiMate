@@ -13,7 +13,11 @@ samconfig.toml
 /*.docx
 
 # 建置產物（docs 簡報產生器的暫用 npm 檔勿入 git；根目錄 package.json 是煙測用、要進版控）
-node_modules/
+# ⚠️ 不要加斜線：`node_modules/` 只擋目錄，擋不住同名的**符號連結**。
+# 2026-08-02 就是這樣被繞過的——worktree 裡為了跑 smoke 建的
+# `node_modules -> /Users/hao/Documents/MaiMate/node_modules` 被 commit 進 de66bd2(#53)，
+# 主目錄 checkout 後變成指向自己的死循環，playwright 報 ELOOP、前端測試全掛。
+node_modules
 docs/**/package.json
 docs/**/package-lock.json
 __pycache__/
