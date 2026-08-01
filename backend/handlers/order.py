@@ -54,6 +54,18 @@ def handler(event, context):
     audit.log("user_confirmed", confirm_token=token, market=order.get("market"),
               side=order.get("side"), volume_twd=order.get("volume_twd"))
     from ..integrations import max_private
+    if not max_private.has_keys():
+        # 示範帳戶模式（比賽環境沒有交易金鑰）。不攔的話 place_order 會拋 RuntimeError，
+        # 而下面只 catch ValueError → Lambda 500 → 畫面在 Golden Path 最後一步跳
+        # 「⚠️ Internal Server Error」。這裡回一句人話，並且**絕不偽造成交或單號**——
+        # 假的成交比原本的錯誤訊息嚴重得多。
+        audit.log("demo_no_order", confirm_token=token, market=order.get("market"),
+                  side=order.get("side"), volume_twd=order.get("volume_twd"))
+        return _resp(200, {
+            "ok": False, "demo_account": True, "code": "demo_account",
+            "message": ("示範帳戶模式：確認流程已完整跑完，"
+                        "但沒有送出任何真實訂單（本環境未連線 MAX 帳戶）。"),
+            "retryable": False})
     try:
         result = max_private.place_order(order)
     except ValueError as e:

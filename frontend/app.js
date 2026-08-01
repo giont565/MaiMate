@@ -326,6 +326,33 @@ function addTrail(trail) {
   log().insertAdjacentHTML("beforeend", `<div class="tools">${chips}</div>`);
 }
 
+/* 示範帳戶標示（後端沒有 MAX 金鑰時）。index.html 與 chat.html 是兩條各自獨立的
+ * 渲染路徑，只改一支就會出現「一頁有標示、另一頁沒有」——CLAUDE.md 踩坑 #5 的同類錯。
+ * 標示兩個來源都認：payload 頂層（chat.py 加的）與第一張卡（loop.py 只帶得出 scenarios）。 */
+function demoNoticeFrom(r) {
+  if (!r) return null;
+  const first = Array.isArray(r.scenarios) ? r.scenarios[0] : null;
+  const source = r.account_source || (first && first.account_source);
+  if (source !== "demo_dataset") return null;
+  return r.account_notice || (first && first.account_notice) ||
+    "🧪 示範帳戶 — 命題方提供的一年份帳戶資料，非真實 MAX 帳戶餘額";
+}
+
+function addDemoBanner(notice) {
+  log().insertAdjacentHTML("beforeend", `<div class="demo-banner">${esc(notice)}</div>`);
+  scrollBottom();
+}
+
+/* 標示分兩種：頂欄那顆膠囊是**常設**的（sticky，捲不走，之後每一輪都還在），
+ * 聊天流裡的金框橫幅只在第一次貼——每輪都貼會變成四五條一樣的金框，而常設膠囊
+ * 已經一直亮著，橫幅的工作只是第一次講清楚原委。 */
+function markDemoAccount(notice) {
+  const pill = document.getElementById("demo-pill");
+  const first = !pill || pill.style.display !== "inline-block";
+  if (pill) { pill.style.display = "inline-block"; pill.title = notice; }
+  if (first) addDemoBanner(notice);
+}
+
 // 三方案卡（README §3 scenarios，設計稿 screen2）
 const SCEN_META = { partial: ["🛡️", "麥麥陪跑建議看看"], full: ["📤", "你的原意圖"], pause: ["⏸️", "冷靜期"] };
 function addScenarios(list) {
@@ -391,7 +418,7 @@ function feeForConfirm(card, scenarios) {
 // 下單確認卡（設計稿 screen3：表格＋滑價警語＋大按鈕）
 // fee＝對應方案的真實 fee_twd（feeForConfirm 帶入）；數量照契約——市價單無價，標「依成交價定」，
 // 限價單才由 volume_twd/price 算（price 為契約內真值）。皆不憑空編數字。
-function addConfirmCard(card, token, fee) {
+function addConfirmCard(card, token, fee, demoNotice) {
   const id = "c" + Date.now();
   const coin = String(card.market).replace(/twd$/i, "").toUpperCase();
   const qtyCell = card.ord_type === "market"
@@ -407,6 +434,7 @@ function addConfirmCard(card, token, fee) {
         ${fee != null ? `<tr><td>預估手續費</td><td>NT$${fmt(fee)}</td></tr>` : ""}
         <tr><td>確認時效</td><td>60 秒內有效</td></tr>
       </table>
+      ${demoNotice ? `<div class="demo-line">🧪 示範帳戶模式：這張卡完整呈現流程，但不會送出到交易所。</div>` : ""}
       <div class="warn">⚠ 以當下價格估算，實際成交可能有滑價。麥麥不會替你按下這顆按鈕。</div>
       <div class="btns"><button class="ok">確認${card.side === "buy" ? "買入" : "賣出"}</button><button class="no">取消</button></div>
     </div>`);
@@ -435,6 +463,12 @@ function addConfirmCard(card, token, fee) {
         maiMood("bullish"); // 麥麥切 BULLISH 六秒
         loadHealth();
         showTrail(); // Golden Path 收尾：秀決策軌跡
+      } else if (r.demo_account) {
+        // 不是故障，是「本來就不會送出」：中性樣式，不偽造成交或單號，軌跡照樣展開
+        addDemoBanner("🧪 " + (r.message || "示範帳戶模式，未送出任何訂單。"));
+        const pill = document.getElementById("demo-pill");
+        if (pill) pill.style.display = "inline-block";
+        showTrail();
       } else addMsg("ai", `⚠️ ${r.message || "下單未成功"}`);
     } catch { addMsg("ai", "⚠️ 送單失敗，請再試一次。"); }
     el.remove();
@@ -479,9 +513,12 @@ document.getElementById("chatform").onsubmit = async (e) => {
     messages = r.messages;
     if (r.mode) setBadge(r.mode, !!modeOverride);
     addTrail(r.tool_trail);
+    // 標示在回覆與卡片之前：先看到「這是示範帳戶」，才看到數字
+    const demoNotice = demoNoticeFrom(r);
+    if (demoNotice) markDemoAccount(demoNotice);
     addMsg("ai", r.reply);
     addScenarios(r.scenarios);
-    if (r.confirm) addConfirmCard(r.confirm.confirmation_card, r.confirm.confirm_token, feeForConfirm(r.confirm.confirmation_card, r.scenarios));
+    if (r.confirm) addConfirmCard(r.confirm.confirmation_card, r.confirm.confirm_token, feeForConfirm(r.confirm.confirmation_card, r.scenarios), demoNotice);
   } catch { // 離線劇本接手：依意圖回展示回應，Golden Path 全鏈路照走
     /* 這則使用者訊息刻意留在歷史裡，理由同 chat.js：離線時 Golden Path 仍要往下走，
        使用者回答後端的反問（「賣一半就好」）時那句不含交易關鍵字，必須帶著前文

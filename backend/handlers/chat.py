@@ -5,7 +5,13 @@ mode 未傳則由 profile engine 從 health_report 推斷。
 """
 import json
 
-from ..agent import audit, guardrails, loop, profile
+from ..agent import audit, demo_account, guardrails, loop, profile
+
+# 用到帳戶資料的工具。示範帳戶標示只在這段對話真的碰過帳戶資料時才加——
+# 「什麼是手續費」這種與帳戶無關的問題被貼上示範帳戶前綴，反而是另一種不誠實。
+# prepare_order 一定要在名單裡：Golden Path 第二輪（點方案卡 → 出確認卡）本輪只跑這一支，
+# 漏了它，台上最關鍵的那張確認卡就會是「程式標示 0 道」的裸卡。
+_ACCOUNT_TOOLS = {"get_account_balance", "calculate_trade_scenarios", "prepare_order"}
 
 
 def handler(event, context):
@@ -33,6 +39,15 @@ def handler(event, context):
     if not ok:
         text = guardrails.SAFE_FALLBACK
     payload = {"reply": text, "messages": messages, "mode": prof["mode"]}
+    # 示範帳戶模式的第二道標示：由**程式**保證回覆講明，不靠模型自律
+    # （工具的 data_notes 是第一道、前端橫幅是第三道；任一道失效還有另外兩道）。
+    # 放在 check_output 之後，這句固定文案不參與護欄判定。
+    if demo_account.in_use() and _touched_account_data(messages, tool_trail):
+        as_of = demo_account.as_of()
+        payload["account_source"] = demo_account.ACCOUNT_SOURCE
+        payload["account_notice"] = demo_account.notice(as_of)
+        if "示範帳戶" not in text:
+            payload["reply"] = demo_account.reply_prefix(as_of) + text
     if confirm_data:
         payload["confirm"] = confirm_data
     if scenarios_data:
@@ -40,6 +55,29 @@ def handler(event, context):
     if tool_trail:
         payload["tool_trail"] = tool_trail
     return _resp(200, payload)
+
+
+def _touched_account_data(messages, tool_trail):
+    """這**段對話**碰過帳戶資料沒有——看整段歷史，不是只看這一輪。
+
+    只看本輪 tool_trail 會無聲地漏掉兩種最常出現的輪次，而且漏掉時三道標示同時歸零
+    （payload 沒有 account_source → 前端不出橫幅；也不加回覆前綴），只剩模型自律：
+      ① 追問輪：「我帳戶裡有哪些幣？」→「那 TWD 佔比多少？」第二題模型直接引用歷史裡
+         上一輪的工具結果作答，本輪 tool_trail 是空的。實測這種輪次會講出
+         「TWD 佔**你帳戶**的 98.6%」——把示範資料講成使用者的真帳戶，正是要防的紅線。
+      ② 確認卡那一輪：本輪只跑 prepare_order（已補進 _ACCOUNT_TOOLS）。
+    messages 是 Converse 歷史，loop.py 每一輪都把 toolUse 區塊原樣留在裡面，
+    所以掃它一次就同時涵蓋本輪與先前所有輪次。
+    """
+    for msg in messages or []:
+        if not isinstance(msg, dict):
+            continue
+        for block in msg.get("content") or []:
+            tool_use = block.get("toolUse") if isinstance(block, dict) else None
+            if isinstance(tool_use, dict) and tool_use.get("name") in _ACCOUNT_TOOLS:
+                return True
+    return any(item.get("tool") in _ACCOUNT_TOOLS
+               for item in (tool_trail or []) if isinstance(item, dict))
 
 
 def _resp(status, payload):

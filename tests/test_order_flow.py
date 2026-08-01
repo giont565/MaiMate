@@ -3,6 +3,7 @@
 全程不打真 API：place_order 一律 mock，確保跑測試永遠不會真的送單。
 """
 import json
+import os
 import time
 import unittest
 from unittest.mock import patch
@@ -21,6 +22,13 @@ class ConfirmTokenTests(unittest.TestCase):
         self.addCleanup(tools._pending_orders.clear)
         # TABLE 未設定 → 走記憶體 fallback，與 Lambda 的 DynamoDB 路徑行為必須一致
         self.assertIsNone(order_handler.TABLE, "測試環境不該連到真的 DynamoDB")
+        # 這一組驗的是**有金鑰**時的下單路徑（錄影環境 us-east-1）。沒金鑰時 order.py
+        # 會走示範帳戶分支、完全不送單（見 tests/test_demo_account.py::OrderHandlerTests）；
+        # 開發機通常沒設這兩個變數，不明講的話這裡會整組默默改成在測示範分支而沒人發現。
+        # 值是測試用的假字串，不是任何真實金鑰。
+        keys = patch.dict(os.environ, {"MAX_API_KEY": "test-key", "MAX_API_SECRET": "test-secret"})
+        keys.start()
+        self.addCleanup(keys.stop)
 
     def prepare(self, **kw):
         card = tools.prepare_order(market="btctwd", side="buy", volume_twd=300,
