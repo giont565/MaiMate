@@ -280,6 +280,58 @@ const MARKET_PATH = /\/market(\?|$)/;
       ok("9 SW 清單 OK：三支 core 都在快取名單內");
     }
 
+    /* ── 10. 年度報酬純函式（return-core）──────────────────────────────
+     * 模組還沒接上畫面——2026 的年初市值與 2025 的逐月淨流都要等 B 包（見 issue）。
+     * 但算法先測起來放：等資料一到就只剩接線，不必在決賽日現寫財務數學。 */
+    {
+      const core = require(path.join(ROOT, "return-core.js"));
+
+      /* 年初 100 萬、年中入金 50 萬、年末 170 萬。真正賺的是 20 萬，
+         天真 ROI 卻會報 +70%——差的 54% 全是「錢搬進來」不是「錢變多」。 */
+      const r = core.modifiedDietz({
+        start: "2026-01-01", end: "2026-12-31",
+        startValueTwd: 1000000, endValueTwd: 1700000,
+        flows: [{ date: "2026-07-01", amountTwd: 500000 }],
+      });
+      assert(r.ok && Math.abs(r.ratio - 0.1598) < 0.001, `Modified Dietz 算錯：${r.ratio}`);
+      assert(r.ratio < (1700000 - 1000000) / 1000000, "報酬率沒有把入金剔除");
+
+      /* 沒有出入金時應退化成單純的市值變化。 */
+      const plain = core.modifiedDietz({ start: "2026-01-01", end: "2026-12-31",
+        startValueTwd: 1000000, endValueTwd: 1200000, flows: [] });
+      assert(Math.abs(plain.ratio - 0.2) < 1e-9, `無流量時算錯：${plain.ratio}`);
+
+      /* 未滿一年不得年化——那是外推不是事實。 */
+      const ytd = core.summarize({ year: 2026, source: "live", complete: false,
+        start: "2026-01-01", end: "2026-08-01", startValueTwd: 1000000, endValueTwd: 1100000, flows: [] });
+      assert(ytd.ok && ytd.annualized === null, "未滿一年卻給了年化數字");
+      assert(ytd.label === "年初至今", `當年度標籤錯：${ytd.label}`);
+      assert(!core.annualize(0.1, 213).ok, "七個月的報酬被年化了");
+      assert(core.annualize(0.1, 730).ok, "滿兩年卻不給年化");
+
+      /* 分母 ≤ 0 不能硬給數字；期間外的流量要擋下來而不是默默丟掉。 */
+      assert(!core.modifiedDietz({ start: "2026-01-01", end: "2026-12-31",
+        startValueTwd: 0, endValueTwd: 100, flows: [{ date: "2026-06-01", amountTwd: -50 }] }).ok,
+      "分母 ≤ 0 仍給了報酬率");
+      assert(core.modifiedDietz({ start: "2026-01-01", end: "2026-06-30",
+        startValueTwd: 100, endValueTwd: 100, flows: [{ date: "2026-09-01", amountTwd: 10 }] }).reason
+        === "FLOW_OUT_OF_RANGE", "期間外的出入金沒被擋下");
+
+      /* 逐期串接：兩個各 +10% 的月份要得到 +21%，不是 +20%。 */
+      const twr = core.chain([
+        { start: "2026-01-01", end: "2026-02-01", startValueTwd: 100, endValueTwd: 110, flows: [] },
+        { start: "2026-02-01", end: "2026-03-01", startValueTwd: 110, endValueTwd: 121, flows: [] },
+      ]);
+      assert(twr.ok && Math.abs(twr.ratio - 0.21) < 1e-9, `TWR 串接錯：${twr.ratio}`);
+      /* 任一期算不出來就整條不給——少串一期不是近似，是算錯。 */
+      assert(!core.chain([{ start: "2026-01-01", end: "2026-02-01", endValueTwd: 110 }]).ok,
+        "缺期初市值仍串出了 TWR");
+
+      /* 缺什麼要講得出來，不能只說「資料不足」。 */
+      assert(core.reasonText("NO_START_VALUE") === "缺年初市值", "缺漏原因沒有具體說明");
+      ok("10 return-core OK：剔除入金／未滿一年不年化／分母≤0 不給數字／TWR 串接");
+    }
+
     console.log("全部通過 ✅");
   } catch (error) {
     console.error("FAIL:", error.message);

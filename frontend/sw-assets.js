@@ -1,7 +1,7 @@
 /* 自動生成——請勿手改。重生：npm run build:sw
  * 內容：service worker 的 precache 清單與版本（版本＝所有檔案內容的雜湊，
  * 改了任何檔就換版本，舊快取自動淘汰）。 */
-self.SW_VERSION = "23d70fd53a";
+self.SW_VERSION = "81f109daff";
 self.SW_ASSETS = [
   "app.js",
   "brand/maicoin.png",
@@ -41,6 +41,7 @@ self.SW_ASSETS = [
   "onboarding-core.js",
   "onboarding.html",
   "onboarding.js",
+  "return-core.js",
   "settings.html",
   "settings.js",
   "welcome.html",

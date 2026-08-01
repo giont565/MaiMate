@@ -164,7 +164,13 @@ const server = http.createServer((req, res) => {
     throw new Error(`底部分頁入口應開 ${ENTRY_TAB}，實際：${tabSrc}`
       + "（index.html 是舊的主程式，Screen 6 首頁才是現在的產品畫面）");
   }
-  // 麥麥要真的在 iframe 裡渲染出來，不是空白框
+  // 麥麥要真的在 iframe 裡渲染出來，不是空白框。
+  // 這裡原本 click 完就直接找 frame，是個競態——iframe 還沒掛上就查會偶發紅字
+  // （home.html 多載幾支 script 就更容易輸）。改成等它出現，超時才算真的失敗。
+  await page.waitForFunction(
+    () => [...document.querySelectorAll("iframe")].some((f) => (f.src || "").includes("home.html")),
+    { timeout: 8000 }
+  );
   const fr = page.frames().find((f) => f.url().includes("home.html"));
   if (!fr) throw new Error("WebView 內找不到 home.html 的 frame");
   await fr.waitForSelector("#home-greeting-title", { timeout: 8000 });
