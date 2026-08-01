@@ -92,29 +92,33 @@
   .tick .v.up{color:var(--green)}
   .tick .v.down{color:var(--red)}
 
-  /* ── K 線（點行情列展開；資料來自 /market kind=kline） ── */
-  .mrow{margin-bottom:8px}
+  /* ── K 線（點行情列展開；資料來自 /market kind=kline） ──
+     顏色一律走變數，不寫死 hex：這段是後於視覺改版寫的，rebase 時 git 不會報衝突
+     （兩邊改的是不同行），寫死的色碼會安靜地留在舊語言裡。 */
+  .mrow{margin-bottom:7px}
   .mrow .tick{margin-bottom:0;width:100%;border:0;text-align:left;font:inherit;font-size:12.5px;
     align-items:center;min-height:44px;cursor:pointer;box-sizing:border-box}
   .mrow .tick .rt{display:flex;align-items:center;gap:8px}
-  .mrow .tick .caret{color:#9AA6C2;font-size:10px;transition:transform .2s;display:inline-block}
-  .mrow.open .tick{border-radius:12px 12px 0 0;box-shadow:0 1px 5px rgba(22,34,77,.05)}
+  .mrow .tick .caret{color:var(--mut);font-size:10px;transition:transform .2s;display:inline-block}
+  /* 展開時上下要接成一張卡：行情列收下緣圓角，K 線面板收上緣，圓角值與 .tick 同步 */
+  .mrow.open .tick{border-radius:11px 11px 0 0}
   .mrow.open .tick .caret{transform:rotate(180deg)}
-  .kl{display:none;background:#fff;border-radius:0 0 12px 12px;padding:2px 10px 10px;
-    box-shadow:0 1px 5px rgba(22,34,77,.05)}
+  .kl{display:none;background:var(--card);border:1px solid var(--line);border-top:0;
+    border-radius:0 0 11px 11px;padding:8px 12px 11px}
   .mrow.open .kl{display:block}
-  .kl .pd{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px}
-  .kl .pd button{flex:1 1 auto;min-height:44px;min-width:44px;border:1px solid #E3E9F5;background:#fff;
-    color:var(--navy);border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;padding:0 4px}
-  .kl .pd button[aria-pressed="true"]{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .kl .pd{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 9px}
+  .kl .pd button{flex:1 1 auto;min-height:44px;min-width:44px;border:1px solid var(--line);
+    background:var(--card);color:var(--sub);border-radius:9px;font-size:12px;font-weight:700;
+    cursor:pointer;padding:0 4px;font-family:inherit}
+  .kl .pd button[aria-pressed="true"]{background:var(--tint);color:var(--blue);border-color:var(--blue)}
   .kl .sm{display:flex;justify-content:space-between;align-items:baseline;font-size:11.5px;
-    color:#6B7794;margin-bottom:4px;gap:8px}
-  .kl .sm .ch{font-weight:700;font-variant-numeric:tabular-nums}
+    color:var(--sub);margin-bottom:5px;gap:8px}
+  .kl .sm .ch{font-weight:800;font-variant-numeric:tabular-nums}
   .kl .sm .ch.up{color:var(--green)} .kl .sm .ch.down{color:var(--red)}
   .kl svg{display:block;width:100%;height:118px}
-  .kl .ax{display:flex;justify-content:space-between;font-size:10.5px;color:#9AA6C2;
-    font-variant-numeric:tabular-nums;margin-top:3px}
-  .kl .na{font-size:12px;color:#6B7794;padding:26px 0;text-align:center}
+  .kl .ax{display:flex;justify-content:space-between;font-size:10.5px;color:var(--mut);
+    font-variant-numeric:tabular-nums;margin-top:4px}
+  .kl .na{font-size:12px;color:var(--sub);padding:26px 0;text-align:center}
 
   /* ── 對話 ── */
   #chatlog{display:flex;flex-direction:column;gap:2px;margin-top:6px}
