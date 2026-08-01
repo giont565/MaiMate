@@ -22,8 +22,8 @@ const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; cha
   ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" };
 
 // 麥麥的兩個入口該進哪一頁——寫在這裡當單一事實來源，改入口就要改這裡
-const ENTRY_GRID = "welcome.html";                      // 九宮格 icon：新用戶完整動線
-const ENTRY_TAB = "home.html?demo=STEADY_PLANNER";      // 底部分頁：Screen 6 新首頁（不是舊的 index.html）
+const ENTRY_GRID = "index.html";                        // 九宮格 icon：一鍵進麥麥主畫面（健檢卡＋行情＋對話）
+const ENTRY_TAB = "home.html?demo=STEADY_PLANNER";      // 底部分頁：Screen 6 新首頁
 
 const server = http.createServer((req, res) => {
   const file = path.join(ROOT, req.url === "/" ? "index.html" : req.url.split("?")[0]);
