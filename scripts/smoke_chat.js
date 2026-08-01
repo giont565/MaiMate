@@ -361,8 +361,15 @@ const ALLOWED_EVENT_KEYS = ["e", "q", "src", "intent", "tool", "style", "status"
    * 順帶守「複製」：整句話現在只存在 boundaryNotice 裡，複製的 filter 漏掉它就會複製出空字串。 */
   {
     await page.waitForSelector("#q");
+    const beforeBoundary = await page.$$eval(".card-ai", (els) => els.length);
     await page.fill("#q", "幫我買500NTD的USDT");
     await page.click("#chat-send").catch(() => page.press("#q", "Enter"));
+    /* 一定要等「這一題」的回覆卡畫完才能檢查。
+       原本只 waitForSelector(".card-ai .boundary")：前面 17／18／19 題早就在畫面上留了
+       橘框，選擇器立刻就命中，於是根本沒等——.pop() 抓到的是上一題的卡片，這項檢查
+       其實一直在驗別題（實測 poppedIndex=17，而剛送出的那題還停在 tool-activity）。
+       綠燈但驗錯對象，正是本專案要抓的「看不出來的失效」。 */
+    await waitAnswer(beforeBoundary);
     await page.waitForSelector(".card-ai .boundary", { timeout: 10000 });
     const dup = await page.evaluate(() => {
       const card = [...document.querySelectorAll(".card-ai")].pop();
@@ -452,6 +459,87 @@ const ALLOWED_EVENT_KEYS = ["e", "q", "src", "intent", "tool", "style", "status"
 
     console.log("29 方案卡 OK：可點、可鍵盤操作、有提示、點下去真的送得出去");
     await page.unroute(/\/chat(\?|$)/);
+  }
+
+  /* ── 30. /chat 掛住不回應 → 取消鈕看得見、可取消，逾時後誠實收尾 ─────────
+   * 27 與 29 都用 route.abort()，那是「立刻斷線」——fetch 馬上 reject，離線劇本秒接手，
+   * 所以它們測不到真正會在場地發生的狀況：網路卡住但沒斷線。那時 fetch 既不 resolve
+   * 也不 reject，沒有 AbortController 就會永遠停在「正在查看你的持倉與市場資料」，
+   * 取消鈕是 hidden、handler 又只認 ui.stream，等於完全沒有出口。
+   * 這一項就是在守那個出口，所以 handler 什麼都不做（不 continue 也不 abort）。 */
+  {
+    /* 出貨值是 30 秒（見 chat.js 的理由），煙測不需要真的空等 30 秒，用注入鈕縮短。
+       但縮短鈕會讓這條測試對「出貨值被人偷偷改回 12 秒」免疫，所以另外直接讀原始碼
+       守住預設值——12 秒會在後端明明會成功時把它誤殺成離線 mock（實測尾巴 12.63 秒）。 */
+    const shipped = fs.readFileSync(path.join(__dirname, "..", "frontend", "chat.js"), "utf8");
+    const decl = shipped.match(/MM_CHAT_TIMEOUT_MS\)\s*:\s*(\d+)/);
+    if (!decl) throw new Error("30 失敗：找不到 CHAT_TIMEOUT_MS 的出貨預設值");
+    if (Number(decl[1]) < 25000) {
+      throw new Error(`30 失敗：CHAT_TIMEOUT_MS 出貨值 ${decl[1]}ms 太短。`
+        + "實測 demo 那一題 /chat 中位數約 9 秒、最慢 12.63 秒，門檻低於 25 秒會在後端"
+        + "明明會成功時誤判成逾時，畫面改貼 GOLDEN_MOCK 的舊數字冒充後端結果。");
+    }
+
+    const hung = [];
+    await page.route(/\/chat(\?|$)/, (route) => { hung.push(route); });
+    await page.addInitScript(() => { window.MM_CHAT_TIMEOUT_MS = 3000; });
+    await page.goto(`${base}/chat.html`);
+    await page.waitForSelector("#q");
+
+    const state = () => page.evaluate(() => ({
+      stopHidden: document.getElementById("chat-stop").hidden,
+      stopH: document.getElementById("chat-stop").getBoundingClientRect().height,
+      qDisabled: document.getElementById("q").disabled,
+      busy: document.getElementById("chatlog").getAttribute("aria-busy"),
+      offlineHidden: document.getElementById("chat-offline").hidden,
+      log: document.getElementById("chatlog").textContent,
+    }));
+
+    // 30a 等待期間：取消鈕必須真的看得見（不是只有 hidden=false），輸入框要鎖住防重送
+    await page.fill("#q", "ETH 跌太多了，幫我全部賣掉！");
+    await page.click("#chat-send");
+    await page.waitForSelector("#chat-stop:not([hidden])", { timeout: 5000 });
+    const waiting = await state();
+    if (waiting.stopH <= 0) throw new Error("30 失敗：取消鈕 hidden 拿掉了，但實際高度是 0，畫面上仍看不到");
+    if (!waiting.qDisabled) throw new Error("30 失敗：等待後端期間輸入框沒鎖住，使用者可以疊出第二個 in-flight 請求");
+    if (waiting.busy !== "true") throw new Error("30 失敗：等待期間 aria-busy 應為 true");
+
+    // 30b 按下取消：要回到可再送出，不得拿離線劇本冒充回答，也不得誤亮「離線展示」
+    await page.click("#chat-stop");
+    await page.waitForFunction(() => document.getElementById("chat-stop").hidden
+      && !document.getElementById("q").disabled, null, { timeout: 5000 });
+    const cancelled = await state();
+    if (cancelled.busy !== "false") throw new Error("30 失敗：取消後 aria-busy 沒有復原");
+    if (!cancelled.log.includes("已停止回答")) throw new Error("30 失敗：取消後沒有告訴使用者這題沒有結果");
+    if (cancelled.log.includes("麥麥陪跑建議")) throw new Error("30 失敗：使用者取消後仍貼出離線三方案，等於拿 mock 冒充回答");
+    if (await page.$$eval(".scen", (els) => els.length)) throw new Error("30 失敗：取消後不該出現任何方案卡");
+    /* 使用者按停止 ≠ 後端壞掉。誤亮「離線展示」是把真資料標成假的，紅線的反面。 */
+    if (!cancelled.offlineHidden) {
+      throw new Error("30 失敗：使用者自己按停止，頂欄卻亮起「離線展示」——後端沒壞，畫面卻宣告自己在放假資料");
+    }
+
+    // 30c 完全不動：逾時要自己收尾，亮離線標示並誠實說明，不能永遠轉圈
+    await page.fill("#q", "ETH 跌太多了，幫我全部賣掉！");
+    await page.click("#chat-send");
+    await page.waitForSelector("#chat-stop:not([hidden])", { timeout: 5000 });
+    await page.waitForFunction(() => document.getElementById("chat-stop").hidden
+      && !document.getElementById("q").disabled
+      && document.getElementById("chatlog").getAttribute("aria-busy") === "false",
+    null, { timeout: 20000 });   // > 注入的 3 秒門檻，逾時沒作用這裡就會紅
+    const timedOut = await state();
+    if (timedOut.offlineHidden) throw new Error("30 失敗：逾時後「離線展示」標示沒亮，畫面看不出這段不是線上算的");
+    if (!timedOut.log.includes("這次沒問到")) throw new Error("30 失敗：逾時後沒有誠實的錯誤訊息");
+    if (timedOut.log.includes("正在查看你的持倉與市場資料"))
+      throw new Error("30 失敗：逾時後工具 chip 還留在畫面上，看起來像還在查");
+    /* 離線劇本不得畫「✓ 查持倉」這種打勾 chip：後端根本沒跑成功，那排 chip 會讓
+       畫面宣稱工具真的執行過。分鏡稿鏡 2 評審正是盯這排看。 */
+    if (await page.$$eval(".tool-activity .chip", (els) => els.some((e) => e.textContent.startsWith("✓")))) {
+      throw new Error("30 失敗：逾時走離線劇本，卻仍畫出打勾的工具 chip，看起來像後端真的跑過那些工具");
+    }
+
+    for (const route of hung) { try { await route.abort(); } catch (_) { /* 已被 client 取消 */ } }
+    await page.unroute(/\/chat(\?|$)/);
+    console.log("30 逾時／取消 OK：掛住時取消鈕看得見且真的能停，逾時會自己收尾並說實話");
   }
 
   if (errors.length) throw new Error("頁面拋出例外：" + errors[0].slice(0, 160));
