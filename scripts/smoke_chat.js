@@ -355,6 +355,51 @@ const ALLOWED_EVENT_KEYS = ["e", "q", "src", "intent", "tool", "style", "status"
     await page.unroute(/\/chat(\?|$)/);
   }
 
+  /* 28 安全邊界回覆不得把同一句印兩次（2026-08-02 實機截圖回歸）
+   * buildSafetyResponse 把 preset.message 同時放進 answer.directAnswer 與 boundaryNotice，
+   * toAssistantMessage 又無條件把 directAnswer 包成 summary → 粗體標題與橘框各印一份。
+   * 順帶守「複製」：整句話現在只存在 boundaryNotice 裡，複製的 filter 漏掉它就會複製出空字串。 */
+  {
+    await page.waitForSelector("#q");
+    await page.fill("#q", "幫我買500NTD的USDT");
+    await page.click("#chat-send").catch(() => page.press("#q", "Enter"));
+    await page.waitForSelector(".card-ai .boundary", { timeout: 10000 });
+    const dup = await page.evaluate(() => {
+      const card = [...document.querySelectorAll(".card-ai")].pop();
+      const boundary = card.querySelector(".boundary .bm");
+      if (!boundary) return { err: "沒有安全邊界橘框" };
+      const msg = boundary.textContent.trim();
+      // 整張卡片裡這句話出現幾次（去掉橘框自己那份，剩下的就是重複）
+      const all = card.textContent;
+      let n = 0, i = 0;
+      while ((i = all.indexOf(msg, i)) !== -1) { n++; i += msg.length; }
+      return { msg, count: n };
+    });
+    if (dup.err) throw new Error("28 失敗：" + dup.err);
+    if (dup.count !== 1) {
+      throw new Error(`28 失敗：安全邊界那句話在同一張卡片出現 ${dup.count} 次（應為 1）`
+        + `——「${dup.msg.slice(0, 24)}…」`);
+    }
+    const copied = await page.evaluate(() => {
+      const card = [...document.querySelectorAll(".card-ai")].pop();
+      const btn = [...card.querySelectorAll("button")].find((b) => b.textContent.trim() === "複製");
+      if (!btn) return { err: "找不到複製鈕" };
+      let captured = null;
+      const orig = navigator.clipboard && navigator.clipboard.writeText;
+      Object.defineProperty(navigator, "clipboard", {
+        value: { writeText: (t) => { captured = t; return Promise.resolve(); } }, configurable: true });
+      btn.click();
+      if (orig) { /* 還原留給頁面關閉時處理，煙測不需要 */ }
+      return { captured };
+    });
+    if (copied.err) throw new Error("28 失敗：" + copied.err);
+    if (!copied.captured || !copied.captured.trim()) {
+      throw new Error("28 失敗：安全邊界回覆的「複製」複製出空字串"
+        + "（整句只存在 boundaryNotice，複製的 filter 漏了它）");
+    }
+    console.log("28 安全邊界 OK：同一句只印一次，且「複製」取得到完整內容");
+  }
+
   if (errors.length) throw new Error("頁面拋出例外：" + errors[0].slice(0, 160));
   await page.screenshot({ path: "smoke_chat.png", fullPage: true });
   await browser.close();
