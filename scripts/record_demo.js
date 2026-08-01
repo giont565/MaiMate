@@ -21,12 +21,20 @@ const LINE = process.env.DEMO_LINE || "ETH 跌太多了，幫我全部賣掉！"
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** 慢速捲動：拆成多次小步，看起來像手指滑，不是瞬移 */
-async function creep(page, total, steps, ms) {
-  for (let i = 0; i < steps; i++) {
-    await page.mouse.wheel(0, total / steps);
-    await sleep(ms);
+/** 跳位＋定格：瞬間捲到定位，停住讓人看。
+ *
+ * 原本是慢速捲動（拆成 20 小步模擬手指滑），但捲動過程在影片裡是純粹的浪費——
+ * 字在動的時候沒人讀得下去，剪輯也只能整段丟掉。改成瞬移之後每一秒都是可看的定格畫面。
+ * DEMO_SCROLL=creep 可切回舊行為。
+ */
+async function jump(page, total, holdMs) {
+  if (process.env.DEMO_SCROLL === "creep") {
+    for (let i = 0; i < 20; i++) { await page.mouse.wheel(0, total / 20); await sleep(130); }
+    await sleep(holdMs);
+    return;
   }
+  await page.mouse.wheel(0, total);
+  await sleep(holdMs);
 }
 
 (async () => {
@@ -46,11 +54,9 @@ async function creep(page, total, steps, ms) {
   await sleep(1500);
 
   mark("鏡1 健檢首屏");
-  await sleep(2500);
-  await creep(page, 380, 19, 130);
-  await sleep(1800);
-  await creep(page, 420, 21, 130);
-  await sleep(1800);
+  await sleep(3200);          // 定格一：健康分卡
+  await jump(page, 380, 3200); // 定格二：健檢 2×2 四卡
+  await jump(page, 420, 3000); // 定格三：麥麥幫你看到的事
 
   mark("鏡2 輸入");
   const input = page.locator("#q");
@@ -66,15 +72,12 @@ async function creep(page, total, steps, ms) {
     .catch(() => { throw new Error("三方案卡沒出現——場地網路掉包，重跑一次"); });
   mark("鏡3 方案卡已出現");
 
-  await sleep(3000);
-  await creep(page, 300, 15, 160);
-  await sleep(2500);
+  await sleep(3500);          // 定格：AI 回覆氣泡
+  await jump(page, 300, 3500); // 定格：反問那段
 
   mark("鏡4 三方案卡");
-  await creep(page, 420, 21, 150);
-  await sleep(2200);
-  await creep(page, 380, 19, 150);
-  await sleep(3000); // 停在卡片底部小字（1/8 賣 DOGE 少賺 NT$312,924）
+  await jump(page, 420, 3600); // 定格：金框「先賣 25%」
+  await jump(page, 380, 3600); // 定格：全賣與暫停兩張，含底部小字（1/8 賣 DOGE 少賺 31 萬）
 
   mark("鏡5 點金框卡");
   const partial = page.locator(".scen").first(); // .pick 金框永遠是第一張（保守方案）

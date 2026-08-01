@@ -43,13 +43,22 @@ gh repo edit giont565/MaiMate --visibility public --accept-visibility-change-con
 
 ## Q6 Demo 影片連結
 
-⬜ 未完成。分鏡稿見 `docs/DEMO_SCRIPT.md`（八鏡、92 秒，已對線上站逐鏡實跑）。
-檔名格式：`F_MaiCoin：智慧理財_第五名`，上傳雲端設公開、留存至 2026/12/31。
+🟡 **成片已剪好，只差旁白／字幕**：`~/Documents/MaiMate_決賽交付/主片_v2_真單版_無旁白_88秒.mp4`
+（780×1688、88.1 秒）。結構與時間軸見 `docs/DEMO_SCRIPT.md` 文末〈v2 真單版成片〉。
+含 15:40 那筆 USDT NT$500 真單全程（確認 → 已成交 #20727214652 → 軌跡自動展開）。
+
+燒合成旁白：`bash scripts/narrate_master.sh <無旁白.mp4> <輸出.mp4>`；人聲配音則照
+`docs/DEMO_SUBTITLES.srt` 的時間念。輸出後檔名改成 `F_MaiCoin：智慧理財_第五名.mp4`，
+上傳雲端設公開、留存至 2026/12/31。
 
 ## Q8 提案簡報 PDF
 
-⬜ 未產出。現有 `docs/MaiMate_提案簡報_20260731.pptx`（449KB）與同源 HTML。
-用 Keynote／PowerPoint 開 pptx → 匯出 PDF，檔名同上格式，限 10MB。
+✅ **已產出**：`~/Documents/MaiMate_決賽交付/F_MaiCoin：智慧理財_第五名.pdf`
+（20 頁、2.7MB、1280×720pt，與 `MaiMate_提案簡報_20260731.pptx` 同 20 頁同源）。
+
+這台 Mac **沒有 Keynote／PowerPoint／LibreOffice**，pptx 匯不出 PDF；改用同源的
+`docs/MaiMate_提案簡報.html` 走 Chromium 列印：`node scripts/build_deck_pdf.js <輸出.pdf>`。
+簡報改版後重跑 `build_deck.js` 再重跑這支即可。送出前自己開來翻一遍確認沒有跑版。
 ⚠️ 題目明訂**禁止在 PDF 內加 Canva／Google 等共編連結**——本專案自產，無此問題。
 
 ## Q9 MAX Lv.2 帳號 Email（加分項）
