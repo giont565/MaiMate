@@ -310,10 +310,15 @@ function render(k) {
       </div>
       ${k === "mc" ? `<div class="duo"><button class="b" data-noop="買入">買入</button><button class="s" data-noop="賣出">賣出</button></div>` : ""}
       <div class="qg">${quick}
-        <!-- 走入口動畫 intro.html，播完（或被跳過）由 ?from= 指定轉到 index.html——
-             #45 已把九宮格入口改為直接進 index.html，動畫只是插在前面，落點不變。
+        <!-- 走入口動畫 intro.html，播完（或被跳過）由 ?from= 指定落點。
+             落點是 welcome.html 而不是 index.html：welcome.html 是**風險問卷的唯一守門頁**
+             （welcome.js:155 依 entryState 分流——新用戶／設定到一半 → onboarding.html#/consent
+             的五屏問卷；已完成 → home.html）。#53 合併時為了保住 #45「九宮格直接進主畫面」
+             而寫成 ?from=index.html，副作用是**問卷從進場流程整個消失**，只剩直接打網址進得去。
+             2026-08-02 決賽日使用者要求改回：評審點進來要看到完整的
+             「動畫 → 資料授權 → 五屏風險問卷 → 首頁」。
              第二次之後只播三幕短版；?full=1 可強制完整版。 -->
-        <button class="qi mm" data-mm="intro.html?from=index.html"><span class="nw">NEW</span>
+        <button class="qi mm" data-mm="intro.html?from=welcome.html"><span class="nw">NEW</span>
           <span class="ib"><img src="icons/icon-192.png" alt="" onerror="mmMarkFallback(this)"></span>
           <span class="lb">麥麥</span></button>
       </div>
