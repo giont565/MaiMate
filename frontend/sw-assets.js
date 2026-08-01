@@ -1,7 +1,7 @@
 /* 自動生成——請勿手改。重生：npm run build:sw
  * 內容：service worker 的 precache 清單與版本（版本＝所有檔案內容的雜湊，
  * 改了任何檔就換版本，舊快取自動淘汰）。 */
-self.SW_VERSION = "1affd5f73f";
+self.SW_VERSION = "a2d88d78f1";
 self.SW_ASSETS = [
   "app.js",
   "brand/intro-shot1-3.mp4",
@@ -13,6 +13,7 @@ self.SW_ASSETS = [
   "chat-service.js",
   "chat.html",
   "chat.js",
+  "health-core.js",
   "home-core.js",
   "home-service.js",
   "home.html",
@@ -28,10 +29,12 @@ self.SW_ASSETS = [
   "insights.js",
   "intro.html",
   "investment-analysis.js",
+  "kline-core.js",
   "maimate_bot_small_bullish.png",
   "maimate_bot_small.png",
   "maimate_hero.png",
   "manifest.webmanifest",
+  "market-core.js",
   "mocks/account.js",
   "mocks/chat.js",
   "mocks/home.js",
@@ -41,6 +44,7 @@ self.SW_ASSETS = [
   "onboarding-core.js",
   "onboarding.html",
   "onboarding.js",
+  "return-core.js",
   "settings.html",
   "settings.js",
   "welcome.html",

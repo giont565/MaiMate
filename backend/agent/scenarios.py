@@ -40,9 +40,12 @@ def calculate_trade_scenarios(market, side, fraction=1.0, amount_twd=None,
 
     qty = float(balances.get(currency, 0))
     twd = float(balances.get("twd", 0))
-    total_value = twd + sum(float(b) * (price if c == currency else _price_of(c, balances, price))
+    # 全部持倉都換算成 TWD 才算得出「佔總資產比例」。少算任何一個幣，分母就偏小、
+    # 佔比偏大——08-01 錄影抓到：USDT 買入 NT$500 顯示 8.6%，真值 0.106%，
+    # 因為帳戶裡的 BTC/DOGE/GRT/ADA 全被當成 0 元。
+    prices = _price_table(currency, price)
+    total_value = twd + sum(float(b) * prices.get(c, 0.0)
                             for c, b in balances.items() if c != "twd")
-    # 簡化：僅該幣以現價計值，其他幣別在 demo 資料中占比極低；總值以該幣＋TWD 為主
     cur_value = qty * price
     total_value = max(total_value, cur_value + twd, 1)
 
@@ -120,8 +123,19 @@ def _min_order_twd(market, price):
     return max(float(rules["min_quote_amount"]), float(rules["min_base_amount"]) * price)
 
 
-def _price_of(currency, balances, default_price):
-    return 0  # 其他幣別不計值（demo 資料集中於單一幣＋TWD；避免多次行情查詢）
+def _price_table(currency, price):
+    """{幣別: TWD 現價}。當下操作的幣一律用已取得的 price，其餘查全市場報價表。
+
+    全市場報價是一次 HTTP、30 秒快取（max_public.twd_prices），不是逐幣往返。
+    拿不到就退回「只認得當下這個幣」的舊行為——佔比會偏高，但三方案不會整組掛掉。
+    """
+    try:
+        from ..integrations import max_public
+        prices = dict(max_public.twd_prices())
+    except Exception:  # noqa: BLE001 — 行情不可用不該讓試算失敗
+        prices = {}
+    prices[currency] = price  # 已經查過的現價優先，避免同一次試算裡兩個來源不一致
+    return prices
 
 
 def _scenario(key, label, amount_twd, post_pct, note):

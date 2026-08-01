@@ -103,7 +103,9 @@ const QUESTIONS = [
   { id: "helpPriorities", type: "multi", max: 3, title: "你最希望麥麥先幫你做什麼？", desc: "最多選三項。",
     opts: [{ v: "newsToHoldings", l: "把市場消息和我的持倉連在一起" }, { v: "habitInsight", l: "看懂自己的投資習慣" }, { v: "riskAlerts", l: "提醒集中、追高或頻繁交易等風險" }, { v: "termExplain", l: "解釋看不懂的名詞與數據" }, { v: "planReview", l: "回顧原本設定的投資計畫" }, { v: "dailyDigest", l: "用簡短方式整理每天的重要變化" }] },
   { id: "communicationStyle", type: "single", title: "麥麥怎麼跟你說，會比較舒服？", desc: "這是內容呈現偏好，不是投資人格分類。",
-    opts: [{ v: "guided", l: "陪我慢慢看懂", d: "少一點術語，多一點解釋與例子。" }, { v: "concise", l: "先告訴我重點", d: "先給結論摘要，需要時再展開。" }, { v: "analytical", l: "給我更多數據與脈絡", d: "保留更多數字、依據與深入分析。" }] },
+    // 選項名與 app.js 的 MODE_LABELS、home.html 的版面切換同名同序。原本的第一人稱
+    // 說法（「陪我慢慢看懂」等）移到 d，語意沒有掉，但三個畫面終於叫同一個名字。
+    opts: [{ v: "guided", l: "安心白話", d: "陪我慢慢看懂：少一點術語，多一點解釋與例子。" }, { v: "concise", l: "成長陪跑", d: "先告訴我重點：先給結論摘要，需要時再展開。" }, { v: "analytical", l: "專業效率", d: "給我更多數據與脈絡：保留更多數字、依據與深入分析。" }] },
 ];
 
 /* 摘要標籤對照（呈現偏好，不是人格/能力標籤） */

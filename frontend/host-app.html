@@ -310,9 +310,10 @@ function render(k) {
       </div>
       ${k === "mc" ? `<div class="duo"><button class="b" data-noop="買入">買入</button><button class="s" data-noop="賣出">賣出</button></div>` : ""}
       <div class="qg">${quick}
-        <!-- 走入口動畫 intro.html，它播完（或被跳過）自己會轉到 welcome.html。
+        <!-- 走入口動畫 intro.html，播完（或被跳過）由 ?from= 指定轉到 index.html——
+             #45 已把九宮格入口改為直接進 index.html，動畫只是插在前面，落點不變。
              第二次之後只播三幕短版；?full=1 可強制完整版。 -->
-        <button class="qi mm" data-mm="intro.html"><span class="nw">NEW</span>
+        <button class="qi mm" data-mm="intro.html?from=index.html"><span class="nw">NEW</span>
           <span class="ib"><img src="icons/icon-192.png" alt="" onerror="mmMarkFallback(this)"></span>
           <span class="lb">麥麥</span></button>
       </div>

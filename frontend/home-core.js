@@ -42,6 +42,10 @@
 const MM_HOME_CACHE_VERSION = "maimate-home-cache-v1";
 const MM_HOME_CACHE_TTL_MS = 30 * 60 * 1000;
 const MM_HOME_MODULE_TYPES = Object.freeze([
+  /* healthScore／marketWatch 是新線上第一批吃真後端的模組（/health、/market）。
+     其餘型別打的 /api/v1/maimate/* 後端還沒有，永遠落回 mocks/home.js。 */
+  "healthScore",
+  "marketWatch",
   "todayRelevant",
   "planAlignment",
   "accountAttribution",
@@ -243,6 +247,20 @@ function mmHomeValidateModulePayload(module) {
   const payload = module.payload;
   mmHomeAssert(mmHomeIsPlainObject(payload), "INVALID_HOME_MODULE_PAYLOAD");
   if (payload.error) return;
+  /* healthScore 的 payload 只帶「資料從哪來」與報告本身，分數不預先算好放進來——
+     算在 health-core.js，兩頁共用同一顆，避免快取裡躺一個跟畫面不一致的舊分數。 */
+  if (module.type === "healthScore") {
+    mmHomeAssert(["live", "demo"].includes(payload.source), "INVALID_HEALTH_SOURCE");
+    mmHomeAssert(mmHomeIsPlainObject(payload.report), "INVALID_HEALTH_REPORT");
+  }
+  if (module.type === "marketWatch") {
+    mmHomeAssert(
+      typeof window !== "undefined" && window.MM_MARKET_CORE
+        ? window.MM_MARKET_CORE.validate(payload)
+        : Array.isArray(payload.markets) && payload.markets.length > 0,
+      "INVALID_MARKET_WATCH"
+    );
+  }
   if (module.type === "todayRelevant") {
     mmHomeAssert(typeof payload.headline === "string" && typeof payload.explanation === "string", "INVALID_TODAY_RELEVANT");
     mmHomeAssert(Array.isArray(payload.relatedAssets), "INVALID_TODAY_RELEVANT");

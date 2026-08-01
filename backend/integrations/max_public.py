@@ -13,8 +13,10 @@ from decimal import Decimal, InvalidOperation
 BASE = "https://max-api.maicoin.com"
 CACHE_TTL = 5.0
 MARKETS_TTL = 3600.0  # 下單限制幾乎不變，不需要跟行情一樣每 5 秒重抓
+TICKERS_TTL = 30.0    # 全市場報價只拿來算「佔總資產比例」，30 秒的價差不影響百分比
 _cache = {}
 _markets_cache = {}
+_tickers_cache = {}
 
 ENDPOINTS = {
     "ticker": "/api/v3/ticker?market={market}",
@@ -149,6 +151,37 @@ def market_rules(market):
         "min_quote_amount": float(rules["min_quote_amount"]),
         "status": rules.get("status"),
     }
+
+
+def twd_prices():
+    """回傳 {幣別小寫: TWD 現價}，一次 HTTP 拿完全部 TWD 市場（/api/v2/tickers，35 個市場）。
+
+    用途是把多幣持倉換算成 TWD 以計算「執行後佔總資產比例」。原本 scenarios 只認得
+    當下操作的那一個幣，其餘一律當 0 元，分母被低估、佔比就被高估——實測 USDT 買入
+    NT$500 那張卡顯示 8.6%，真值 0.106%（帳戶還有 BTC/DOGE/GRT/ADA 沒被計入）。
+
+    逐幣打 /api/v3/ticker 也做得到，但持倉幾個幣就幾次往返；這個端點一次拿完，
+    30 秒快取，對三方案試算來說綽綽有餘。取不到就回空 dict，呼叫端自行降級。
+    """
+    now = time.time()
+    hit = _tickers_cache.get("twd")
+    if hit and hit[0] > now:
+        return hit[1]
+    try:
+        rows = _get(BASE + "/api/v2/tickers")
+    except Exception:  # noqa: BLE001 — 行情拿不到不該讓整個三方案掛掉
+        return {}
+    prices = {}
+    for market, row in (rows or {}).items():
+        if not market.endswith("twd"):
+            continue
+        try:
+            prices[market[:-3]] = float(row["last"])
+        except (KeyError, TypeError, ValueError):
+            continue
+    prices["twd"] = 1.0
+    _tickers_cache["twd"] = (now + TICKERS_TTL, prices)
+    return prices
 
 
 def fetch(market, kind, period=None):

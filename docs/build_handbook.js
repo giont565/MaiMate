@@ -420,6 +420,49 @@ function statusTable(s, rows, y, colW, rowH) {
     x: M, y: 6.6, w: W - 2 * M, h: 0.45, fontFace: FONT, fontSize: 12, color: MUT, margin: 0 });
 }
 
+// ============ 10b #8 錄影工作分配（A～D 平均分配，每項對應評分）============
+{
+  const s = pres.addSlide();
+  s.background = { color: WHITE };
+  bigTitle(s, "#8 錄影工作分配：A～D 各三項，每項都對得到分數",
+    "評分表：創意25／可行20／商業20／AI設計15／切合10／完成10＋Lv2 Private API 5＋Kiro 5");
+  const header = [
+    { text: "包", options: { bold: true, color: WHITE, fill: { color: NAVY } } },
+    { text: "工作", options: { bold: true, color: WHITE, fill: { color: NAVY } } },
+    { text: "產出與驗收", options: { bold: true, color: WHITE, fill: { color: NAVY } } },
+    { text: "對應評分", options: { bold: true, color: WHITE, fill: { color: NAVY } } },
+  ];
+  const rows = [
+    ["A", "鏡 7 稽核軌跡素材", "07-31 真實成交 session 回放截圖（13 列含兩筆 executed）", "可行 20 ＋ 完成 10"],
+    ["A", "字幕稿 SRT", "8 段旁白＋時間碼，剪輯直接匯入", "完成 10"],
+    ["A", "每一 take 開錄前健康檢查", "verify_live 22 項＋前端 13 項；確認沒亮「離線展示」", "完成 10"],
+    ["B", "加拍：RAG 防詐附出處", "問「這是不是詐騙話術」→ 回答帶 source_url（15 秒）", "AI設計 15 ＋ 切合 10"],
+    ["B", "加拍：虧損 vs 少賺", "「去年虧最多哪一筆」→ 真實虧損 963 vs 少賺 2,660 萬（15 秒）", "創意 25"],
+    ["B", "行情面板空鏡", "四幣即時、10 秒刷新只變數字不閃爍（10 秒）", "可行 20"],
+    ["C", "加拍：三模式切換", "安心白話／專業效率各重問一次全賣（各 15 秒）", "創意 25 ＋ 切合 10"],
+    ["C", "剪輯與上字幕", "吃 A 的 SRT；順序 鏡1–5→6→7→8", "完成 10"],
+    ["C", "收尾字卡", "logo＋slogan＋商業模式一句話（補影片講不到的商業分）", "商業 20"],
+    ["D", "主片鏡 1–5 一鏡到底", "錄三遍取最順；停在確認卡不按（真錢 NT$46,197）", "創意 25 ＋ AI設計 15 ＋ 可行 20"],
+    ["D", "鏡 6 真實成交插卡", "MAX App 推播＋單號 #20720919534／#20721028463", "Lv2 Private API +5"],
+    ["D", "交付：影片存 Drive＋Kiro 證據", "「LIVE DEMO」資料夾＋連結入 #15；.kiro/specs 截圖", "Kiro +5 ＋ 完成 10"],
+  ];
+  const packColor = { A: BLUE, B: GREEN, C: GOLD, D: RED };
+  s.addTable([header, ...rows.map(r => [
+    { text: r[0], options: { bold: true, color: WHITE, fill: { color: packColor[r[0]] }, align: "center" } },
+    { text: r[1], options: { bold: true, color: NAVY } },
+    { text: r[2], options: { color: INK } },
+    { text: r[3], options: { bold: true, color: GOLD } },
+  ])], {
+    x: M, y: 1.6, w: W - 2 * M, colW: [0.6, 3.2, 5.3, 3.03],
+    fontFace: FONT, fontSize: 9.5, valign: "middle",
+    border: { type: "solid", color: "D5DEF0", pt: 0.75 }, rowH: 0.4, margin: 0.05,
+  });
+  s.addText(
+    "兩個影片蓋不到的分數：商業 20 只能靠 C 的收尾字卡與簡報；Kiro +5 完全在影片之外，是「有交就給」的分，別漏交。\n" +
+    "鏡 7 只能在舊環境（us-east-1）拍——那筆真實成交的軌跡在舊帳號的 DynamoDB，官方環境查不到。",
+    { x: M, y: 6.75, w: W - 2 * M, h: 0.7, fontFace: FONT, fontSize: 11, color: MUT, margin: 0 });
+}
+
 // ============ 11 系統架構成本明細 ============
 {
   const s = pres.addSlide();

@@ -122,61 +122,44 @@ function maiMood(state) {
 function renderHero(r) {
   const el = document.getElementById("hero");
   if (!el) return;
-  const rp = r.realized_pnl;
-  const winRate = rp && rp.profit_trades + rp.loss_trades > 0
-    ? (rp.profit_trades / (rp.profit_trades + rp.loss_trades)) * 100 : null;
-  const factors = [
-    { k: "追高控制", v: 100 - r.chase_index.buy_above_ma_pct, w: 0.4 },
-    ...(winRate != null ? [{ k: "勝率", v: winRate, w: 0.3 }] : []),
-    { k: "出金紀律", v: 100 - r.cash_flow_behavior.withdrawals_after_7d_btc_drop_pct, w: 0.3 },
-  ];
-  const wsum = factors.reduce((a, f) => a + f.w, 0);
-  const score = Math.round(factors.reduce((a, f) => a + f.v * f.w, 0) / wsum);
-  const worst = factors.reduce((a, f) => (f.v < a.v ? f : a));
-  const pnl = rp ? rp.total_realized_twd : null;
-  const pnlLine = rp
-    ? `2025 已實現損益 <span class="${pnl >= 0 ? "pos" : "neg"}">${pnl >= 0 ? "+" : "−"}NT$${fmt(Math.abs(pnl))}</span>`
-      + (winRate != null ? ` · 勝率 <b>${winRate.toFixed(1)}%</b>（${fmt(rp.profit_trades)}勝/${fmt(rp.loss_trades)}負）` : "")
+  const core = window.MM_HEALTH_CORE;
+  const result = core.score(r);
+  if (!result.ok) { el.innerHTML = ""; return; }
+
+  const pnl = core.realized(r);
+  const pnlLine = pnl.ok
+    ? `2025 已實現損益 <span class="${pnl.positive ? "pos" : "neg"}">`
+      + `${pnl.positive ? "+" : "−"}NT$${esc(core.fmt(Math.abs(pnl.totalTwd)))}</span>`
+      + (pnl.winRatePct != null
+        ? ` · 勝率 <b>${pnl.winRatePct.toFixed(1)}%</b>（${esc(core.fmt(pnl.profitTrades))}勝/${esc(core.fmt(pnl.lossTrades))}負）`
+        : "")
     : "";
-  const formula = "＝" + factors.map((f) => `${f.k}${Math.round(f.w / wsum * 100)}%`).join("＋") + "，皆依你 2025 真實紀錄";
   el.innerHTML = `
-    <div class="ring" style="background:conic-gradient(var(--gold) 0 ${score}%, #E8EDF7 ${score}% 100%)">
-      <i><b>${score}</b><s>健康分</s></i>
+    <div class="ring" style="background:conic-gradient(var(--gold) 0 ${result.score}%, #E8EDF7 ${result.score}% 100%)">
+      <i><b>${result.score}</b><s>健檢分</s></i>
     </div>
     <div class="htxt">
-      <div class="n">投資健康分</div>
-      <div class="l">${esc(worst.k)}扣最多分，最該練；其餘大致健康。</div>
+      <div class="n">行為健檢</div>
+      <div class="l">${esc(result.worst.k)}扣最多分，最該練；其餘大致健康。</div>
       ${pnlLine ? `<div class="pnl">${pnlLine}</div>` : ""}
-      <div class="formula">${esc(formula)}</div>
+      <div class="formula">${esc(result.formula)}</div>
+      ${result.partial ? `<div class="formula">（有子項資料不足，權重已攤到其餘項目）</div>` : ""}
     </div>`;
 }
 
 // ---------- 健檢面板（2×2 卡＋麥麥 insight，照 mockup screen1） ----------
 function renderHealth(r) {
   renderHero(r);
-  // 後端若回傳非數字字串，一律先轉數字／esc，避免注入 DOM（見 smoke_frontend 的 XSS 邊界斷言）
-  const chasePct = Number(r.chase_index.buy_above_ma_pct);
-  const missedValue = Number(r.opportunity_cost.total_missed_twd);
-  const topPct = Number(r.concentration.peak_concentration.top_pct);
-  const withdrawalPct = Number(r.cash_flow_behavior.withdrawals_after_7d_btc_drop_pct);
-  const missedWan = Number.isFinite(missedValue) ? Math.round(missedValue / 1e4) : NaN;
-  // 集中度卡：top_currency=twd 代表「資金多在現金」（保守，非風險）。明確標幣別，
-  // 免得評審把 98.6% 誤讀成危險的加密資產過度集中（實際意思相反）。
-  const pc = r.concentration.peak_concentration;
-  const month = esc(String(pc.month || "").slice(0, 20));
-  const isCash = String(pc.top_currency || "").toLowerCase() === "twd";
-  const concLabel = isCash
-    ? `峰值現金佔比（TWD）<br>（${month}，資金多在觀望）`
-    : `峰值持倉集中度 ${esc(String(pc.top_currency || "").toUpperCase().slice(0, 10))}<br>（${month}）`;
-  document.getElementById("health").innerHTML = [
-    { n: fmt(chasePct) + "%", l: "追高指數<br>買在近7筆均價上方", c: "var(--red)" },
-    { n: fmt(missedWan) + "萬", l: "年度賣出機會成本（少賺）<br>（NT$）", c: "var(--gold)" },
-    { n: fmt(topPct) + "%", l: concLabel, c: "var(--navy)" },
-    { n: fmt(withdrawalPct) + "%", l: "下跌後出金比例<br>習慣健康", c: "var(--green)" },
-  ].map((c) => `<div class="card"><div class="n" style="color:${c.c}">${c.n}</div><div class="l">${c.l}</div></div>`).join("");
-  document.getElementById("insights").innerHTML = `
-    <div class="insight">你 ${fmt(r.chase_index.buy_total)} 筆買入中有 <b>${fmt(chasePct)}% 買在高點</b>——這是典型的 FOMO 模式，麥麥會在你追高前提醒你。</div>
-    <div class="insight g">你的出金習慣很健康：${fmt(r.cash_flow_behavior.twd_withdrawal_count)} 筆提領只有 <b>${fmt(withdrawalPct)}%</b> 發生在下跌後——不是恐慌型。</div>`;
+  const core = window.MM_HEALTH_CORE;
+  // 四格與兩句 insight 全部由 health-core 產生，與 home.html 是同一個來源。
+  // 這裡是 innerHTML 而 home 是 textContent，所以 core 的輸出在這一頁要再 esc()
+  //（見 smoke_frontend 的 XSS 邊界斷言：後端可能回非數字字串）。
+  const TONE = { risk: "var(--red)", warn: "var(--gold)", neutral: "var(--navy)", good: "var(--green)" };
+  document.getElementById("health").innerHTML = core.cards(r)
+    .map((c) => `<div class="card"><div class="n" style="color:${TONE[c.tone] || "var(--navy)"}">`
+      + `${esc(c.value)}</div><div class="l">${esc(c.label)}</div></div>`).join("");
+  document.getElementById("insights").innerHTML = core.insights(r)
+    .map((i) => `<div class="insight${i.tone === "good" ? " g" : ""}">${esc(i.text)}</div>`).join("");
 }
 
 async function loadHealth() {
@@ -194,9 +177,19 @@ function initMarket() {
   el.innerHTML = "";
   for (const m of MOCK.markets) {
     const name = m.replace("twd", "").toUpperCase() + "/TWD";
-    el.insertAdjacentHTML("beforeend", `<div class="tick"><b>${name}</b><span class="v">—</span></div>`);
+    // 每列是 <button>：鍵盤可達、有 aria-expanded；K 線面板同層綁在下面，
+    // 展開不影響上方數值節點，行情輪詢照樣就地更新不重建。
+    el.insertAdjacentHTML("beforeend",
+      `<div class="mrow" data-m="${esc(m)}">
+         <button type="button" class="tick" aria-expanded="false">
+           <b>${esc(name)}</b>
+           <span class="rt"><span class="v">—</span><span class="caret" aria-hidden="true">▼</span></span>
+         </button>
+         <div class="kl"></div>
+       </div>`);
     tickEls[m] = el.lastElementChild.querySelector(".v");
   }
+  el.addEventListener("click", onTickClick);
 }
 
 async function loadMarket() {
@@ -217,6 +210,92 @@ async function loadMarket() {
     el.dataset.last = res.value.last;
   }
   if (!anyOk) offline();
+}
+
+// ---------- K 線（#18 的 kline 契約，前端消費端） ----------
+// 一次只展開一列：手機上同時開四張圖要一直捲，而且四路輪詢沒有意義。
+const KL = window.MM_KLINE_CORE;
+const klState = {}; // market -> 目前選的 period
+
+function onTickClick(e) {
+  const btn = e.target.closest(".tick");
+  if (!btn) return;
+  const row = btn.closest(".mrow");
+  if (!row) return;
+  const opening = !row.classList.contains("open");
+  for (const other of document.querySelectorAll("#market .mrow.open")) {
+    other.classList.remove("open");
+    other.querySelector(".tick").setAttribute("aria-expanded", "false");
+  }
+  if (!opening) return;
+  row.classList.add("open");
+  btn.setAttribute("aria-expanded", "true");
+  const m = row.dataset.m;
+  loadKline(m, klState[m] || KL.DEFAULT_PERIOD);
+}
+
+function klBox(m) {
+  const row = document.querySelector(`#market .mrow[data-m="${CSS.escape(m)}"]`);
+  return row ? row.querySelector(".kl") : null;
+}
+
+function klChips(m, period) {
+  return `<div class="pd" role="group" aria-label="K 線週期">` +
+    KL.PERIODS.map((p) =>
+      `<button type="button" data-p="${p.minutes}" aria-pressed="${p.minutes === period}">${esc(p.label)}</button>`
+    ).join("") + `</div>`;
+}
+
+async function loadKline(m, period) {
+  klState[m] = period;
+  const box = klBox(m);
+  if (!box) return;
+  box.innerHTML = klChips(m, period) + `<div class="na ld">載入中…</div>`;
+  bindKlChips(box, m);
+  let parsed;
+  try {
+    const r = await (await fetch(`${API}/market?market=${m}&kind=kline&period=${period}`)).json();
+    parsed = KL.parse(r);
+  } catch {
+    parsed = { ok: false, reason: "FETCH_FAILED" };
+  }
+  // 離線／壞資料一律明說，不畫假 K 線——與行情「維持舊值、不假造」是同一條原則
+  if (!parsed.ok) {
+    offline();
+    box.innerHTML = klChips(m, period) + `<div class="na">目前取不到 K 線資料</div>`;
+    bindKlChips(box, m);
+    return;
+  }
+  box.innerHTML = klChips(m, period) + renderKline(parsed);
+  bindKlChips(box, m);
+}
+
+function bindKlChips(box, m) {
+  for (const b of box.querySelectorAll(".pd button")) {
+    b.addEventListener("click", () => loadKline(m, Number(b.dataset.p)));
+  }
+}
+
+function renderKline(parsed) {
+  const s = KL.summarize(parsed.bars);
+  const W = 320, H = 118;
+  const g = KL.geometry(parsed.bars, W, H);
+  if (!g.ok) return `<div class="na">資料不足，無法繪製</div>`;
+  const dir = s.up === null ? "" : s.up ? " up" : " down";
+  const body = g.candles.map((c) => {
+    const col = c.up ? "var(--green)" : "var(--red)";
+    return `<line x1="${c.cx.toFixed(2)}" y1="${c.wickTop.toFixed(2)}" x2="${c.cx.toFixed(2)}" y2="${c.wickBottom.toFixed(2)}" stroke="${col}" stroke-width="1"/>` +
+      `<rect x="${c.x.toFixed(2)}" y="${c.y.toFixed(2)}" width="${c.w.toFixed(2)}" height="${c.h.toFixed(2)}" fill="${col}"/>`;
+  }).join("");
+  return `<div class="sm">
+      <span>${esc(KL.periodLabel(parsed.periodMinutes))}・${s.count} 根</span>
+      <span class="ch${dir}">${esc(KL.fmtPct(s.changePct))}</span>
+    </div>
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
+         aria-label="${esc(KL.periodLabel(parsed.periodMinutes))} K 線，期間漲跌 ${esc(KL.fmtPct(s.changePct))}">${body}</svg>
+    <div class="ax"><span>${esc(KL.fmtTime(s.from))}</span>
+      <span>高 ${esc(KL.fmtPrice(s.high))}・低 ${esc(KL.fmtPrice(s.low))}</span>
+      <span>${esc(KL.fmtTime(s.to))}</span></div>`;
 }
 
 // ---------- 對話 ----------

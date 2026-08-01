@@ -7,6 +7,9 @@
   const service = window.MM_HOME_SERVICES && window.MM_HOME_SERVICES.home;
   const navigation = window.MM_NAVIGATION || {};
   const moduleRenderers = Object.create(null);
+  /* 行情輪詢的 handle。renderModules() 每次都 replaceChildren()，舊列會整批消失，
+     所以每次重畫都要把上一輪的 interval 收掉，否則會疊出多條各自打 API 的計時器。 */
+  let marketTimer = null;
   const uiState = {
     response: null,
     loading: false,
@@ -582,6 +585,259 @@
     return renderStatusModule(module);
   }
 
+  /* ── 健康分（消費 /health，計算在 health-core.js）────────────────────────── */
+  function renderHealthScore(module) {
+    const payload = module.payload || {};
+    const core = window.MM_HEALTH_CORE;
+    if (payload.error || !core) return renderModuleError(module);
+
+    const result = core.score(payload.report);
+    if (!result.ok) return renderModuleError(module);
+
+    const section = moduleCard(module, "health-card");
+    appendHeading(section, payload.title || "行為健檢");
+
+    const head = create("div", "health-head");
+    const ring = create("div", "health-ring");
+    /* conic-gradient 的百分比來自 core 夾過的 0–100，不是直接吃後端數字。 */
+    ring.style.background =
+      "conic-gradient(var(--mm-gold, #E8A13A) 0 " + result.score + "%, #E8EDF7 " + result.score + "% 100%)";
+    const inner = create("div", "health-ring-inner");
+    inner.append(create("b", "", String(result.score)));
+    inner.append(create("span", "", "健檢分"));
+    ring.append(inner);
+    head.append(ring);
+
+    const text = create("div", "health-text");
+    text.append(create("p", "health-worst", result.worst.k + "扣最多分，最該練；其餘大致健康。"));
+
+    const pnl = core.realized(payload.report);
+    if (pnl.ok) {
+      const line = create("p", "health-pnl");
+      line.append(create("span", "", "2025 已實現損益 "));
+      line.append(create(
+        "b",
+        pnl.positive ? "pos" : "neg",
+        (pnl.positive ? "+" : "−") + "NT$" + core.fmt(Math.abs(pnl.totalTwd))
+      ));
+      if (pnl.winRatePct != null) {
+        line.append(create("span", "", " · 勝率 " + pnl.winRatePct.toFixed(1) + "%（"
+          + core.fmt(pnl.profitTrades) + "勝/" + core.fmt(pnl.lossTrades) + "負）"));
+      }
+      text.append(line);
+    }
+
+    /* 公式印在卡上是這張卡的核心主張：分數是透明加權，不是黑箱評等。 */
+    text.append(create("p", "health-formula", result.formula));
+    if (result.partial) {
+      text.append(create("p", "health-formula", "（有子項資料不足，權重已攤到其餘項目）"));
+    }
+    head.append(text);
+    section.append(head);
+
+    const grid = create("div", "health-grid");
+    core.cards(payload.report).forEach((card) => {
+      const cell = create("div", "health-cell tone-" + card.tone);
+      cell.dataset.cellId = card.id;
+      cell.append(create("b", "", card.value));
+      cell.append(create("span", "", card.label));
+      grid.append(cell);
+    });
+    section.append(grid);
+
+    core.insights(payload.report).forEach((item) => {
+      section.append(create("p", "health-insight tone-" + item.tone, item.text));
+    });
+
+    /* 資料是真是假必須寫在卡上。這條線的起點就是「畫面全都正常但資料是假的」。 */
+    section.append(create(
+      "p",
+      "health-source",
+      payload.source === "live" ? "資料來源：你的帳戶分析報告（/health）" : "示範資料（未連線後端）"
+    ));
+
+    const action = getAction(module, (item) => item.type === "openChat");
+    if (action) section.append(makeActionButton(action, "module-action"));
+    return section;
+  }
+
+  /* ── 即時行情＋K 線（消費 /market，解析與幾何在 kline-core.js）───────────── */
+  function renderMarketWatch(module) {
+    const payload = module.payload || {};
+    const marketCore = window.MM_MARKET_CORE;
+    const klineCore = window.MM_KLINE_CORE;
+    if (payload.error || !marketCore || !klineCore) return renderModuleError(module);
+
+    const section = moduleCard(module, "market-card");
+    appendHeading(section, payload.title || "即時行情");
+    section.append(create("p", "market-note", payload.note || "點一列展開 K 線"));
+
+    const list = create("div", "market-list");
+    payload.markets.forEach((entry) => {
+      const row = create("div", "market-row");
+      row.dataset.market = entry.market;
+
+      const tick = create("button", "market-tick");
+      tick.type = "button";
+      tick.setAttribute("aria-expanded", "false");
+      tick.append(create("b", "", entry.label));
+      const price = create("span", "market-price", "—");
+      tick.append(price);
+      tick.append(create("span", "market-caret", "▾"));
+      row.append(tick);
+
+      const panel = create("div", "market-panel");
+      panel.hidden = true;
+      row.append(panel);
+
+      tick.addEventListener("click", () => toggleMarketRow(row, entry, payload));
+      list.append(row);
+    });
+    section.append(list);
+
+    if (!payload.live) {
+      section.append(create("p", "market-offline", "目前未連線，行情與 K 線都不顯示——麥麥不會給你猜的價格。"));
+      return section;
+    }
+    /* 卡片還沒進 DOM 就開始輪詢會抓不到節點，交給 renderModules 之後的 tick。 */
+    queueMarketPolling(list, payload);
+    return section;
+  }
+
+  /* 輪詢：就地更新既有節點，不清空重建；失敗保留舊值（開發紀律③）。 */
+  function queueMarketPolling(list, payload) {
+    if (marketTimer) clearInterval(marketTimer);
+    const run = () => {
+      if (!list.isConnected) { clearInterval(marketTimer); marketTimer = null; return; }
+      payload.markets.forEach((entry) => refreshTicker(list, entry));
+    };
+    Promise.resolve().then(run);
+    marketTimer = setInterval(run, 15000);
+  }
+
+  async function refreshTicker(list, entry) {
+    const row = list.querySelector('.market-row[data-market="' + CSS.escape(entry.market) + '"]');
+    if (!row) return;
+    const cell = row.querySelector(".market-price");
+    try {
+      const res = await fetch((window.API_BASE || "") + "/market?market="
+        + encodeURIComponent(entry.market) + "&kind=ticker");
+      const parsed = window.MM_MARKET_CORE.parseTicker(await res.json());
+      /* 取不到就原地不動——保留上一個真實價格，不要退回「—」把好資料擦掉。 */
+      if (!parsed.ok) return;
+      const dir = window.MM_MARKET_CORE.direction(cell.dataset.last, parsed.price);
+      cell.dataset.last = String(parsed.price);
+      cell.textContent = window.MM_KLINE_CORE.fmtPrice(parsed.price);
+      cell.classList.remove("up", "down");
+      if (dir !== "flat") cell.classList.add(dir);
+    } catch (_) { /* 保留舊值 */ }
+  }
+
+  function toggleMarketRow(row, entry, payload) {
+    const tick = row.querySelector(".market-tick");
+    const panel = row.querySelector(".market-panel");
+    const open = tick.getAttribute("aria-expanded") === "true";
+
+    /* 一次只開一列：K 線很高，兩張以上會把其他模組推出視窗外。 */
+    row.parentElement.querySelectorAll(".market-row").forEach((other) => {
+      other.querySelector(".market-tick").setAttribute("aria-expanded", "false");
+      other.querySelector(".market-panel").hidden = true;
+    });
+    if (open) return;
+
+    tick.setAttribute("aria-expanded", "true");
+    panel.hidden = false;
+    if (!payload.live) {
+      panel.replaceChildren(create("p", "market-empty", "目前取不到 K 線資料"));
+      return;
+    }
+    if (!panel.dataset.ready) {
+      panel.dataset.ready = "1";
+      panel.append(buildPeriodChips(panel, entry, payload.defaultPeriod));
+      panel.append(create("div", "market-chart"));
+    }
+    loadKline(panel, entry, Number(panel.dataset.period || payload.defaultPeriod));
+  }
+
+  function buildPeriodChips(panel, entry, defaultPeriod) {
+    const bar = create("div", "market-periods");
+    window.MM_KLINE_CORE.PERIODS.forEach((period) => {
+      const chip = create("button", "market-period", period.label);
+      chip.type = "button";
+      chip.dataset.period = String(period.minutes);
+      if (period.minutes === defaultPeriod) chip.classList.add("active");
+      chip.addEventListener("click", () => {
+        bar.querySelectorAll(".market-period").forEach((b) => b.classList.remove("active"));
+        chip.classList.add("active");
+        loadKline(panel, entry, period.minutes);
+      });
+      bar.append(chip);
+    });
+    panel.dataset.period = String(defaultPeriod);
+    return bar;
+  }
+
+  async function loadKline(panel, entry, period) {
+    panel.dataset.period = String(period);
+    const chart = panel.querySelector(".market-chart");
+    chart.replaceChildren(create("p", "market-empty loading", "載入中…"));
+    try {
+      const res = await fetch((window.API_BASE || "") + "/market?market="
+        + encodeURIComponent(entry.market) + "&kind=kline&period=" + encodeURIComponent(period));
+      const parsed = window.MM_KLINE_CORE.parse(await res.json());
+      /* 任一根壞掉 core 就整批不畫——畫錯位置的 K 棒比不畫更危險。 */
+      if (!parsed.ok) throw new Error(parsed.reason);
+      chart.replaceChildren(drawKline(parsed));
+    } catch (_) {
+      chart.replaceChildren(create("p", "market-empty", "目前取不到 K 線資料"));
+    }
+  }
+
+  function drawKline(parsed) {
+    const core = window.MM_KLINE_CORE;
+    const width = 320;
+    const height = 132;
+    const geo = core.geometry(parsed.bars, width, height);
+    const summary = core.summarize(parsed.bars);
+    /* geometry 也會回 ok:false（viewport 壞掉）。丟回去讓 loadKline 走誠實的空狀態。 */
+    if (!geo.ok || !summary) throw new Error(geo.reason || "NO_SUMMARY");
+
+    const NS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", "0 0 " + width + " " + height);
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label",
+      (parsed.market || "").toUpperCase() + " K 線，" + parsed.bars.length + " 根，期間 "
+      + core.fmtPct(summary.changePct) + "，高 " + core.fmtPrice(summary.high)
+      + "、低 " + core.fmtPrice(summary.low));
+
+    geo.candles.forEach((candle) => {
+      const colour = candle.up ? "var(--mm-green, #1F9D66)" : "var(--mm-red, #D64550)";
+      const wick = document.createElementNS(NS, "line");
+      wick.setAttribute("x1", candle.cx); wick.setAttribute("x2", candle.cx);
+      wick.setAttribute("y1", candle.wickTop); wick.setAttribute("y2", candle.wickBottom);
+      wick.setAttribute("stroke", colour);
+      svg.append(wick);
+      const body = document.createElementNS(NS, "rect");
+      body.setAttribute("x", candle.x); body.setAttribute("y", candle.y);
+      body.setAttribute("width", candle.w); body.setAttribute("height", candle.h);
+      body.setAttribute("fill", colour);
+      svg.append(body);
+    });
+
+    const wrap = create("div", "market-chart-wrap");
+    wrap.append(svg);
+    const axis = create("div", "market-axis");
+    axis.append(create("span", "", core.fmtTime(summary.from)));
+    axis.append(create("span", "", "高 " + core.fmtPrice(summary.high)
+      + "　低 " + core.fmtPrice(summary.low) + "　" + core.fmtPct(summary.changePct)));
+    axis.append(create("span", "", core.fmtTime(summary.to)));
+    wrap.append(axis);
+    return wrap;
+  }
+
+  moduleRenderers.healthScore = renderHealthScore;
+  moduleRenderers.marketWatch = renderMarketWatch;
   moduleRenderers.todayRelevant = renderTodayRelevant;
   moduleRenderers.planAlignment = renderPlanAlignment;
   moduleRenderers.accountAttribution = renderAccountAttribution;
@@ -686,6 +942,9 @@
     byId("home-error").hidden = true;
     byId("home-content").hidden = false;
     byId("home-content").setAttribute("aria-busy", "false");
+    /* 版面橫幅在頂欄下、內容區之外，要跟著內容一起開關——骨架畫面上放一個
+       切了也沒東西可切的控制列只會讓人困惑。 */
+    byId("home-style-badge").hidden = false;
     if (!options || !options.background) {
       analytics("maimate_home_viewed");
       window.scrollTo({ top: 0, behavior: "auto" });
@@ -697,12 +956,14 @@
     byId("home-loading").hidden = false;
     byId("home-error").hidden = true;
     byId("home-content").hidden = true;
+    byId("home-style-badge").hidden = true;
   }
 
   function showError(error) {
     uiState.loading = false;
     byId("home-loading").hidden = true;
     byId("home-content").hidden = true;
+    byId("home-style-badge").hidden = true;
     const errorState = byId("home-error");
     errorState.hidden = false;
     if (error && error.userMessage) setText("home-error-copy", error.userMessage);
@@ -913,28 +1174,54 @@
     default: "可以選一種你看起來最舒服的呈現方式。",
   };
 
+  /* 標籤與順序跟 app.js 的 MODE_LABELS／MODE_ORDER 一致——同一個「麥麥怎麼跟你說話」
+     在 index、home、問卷 Q6 三處必須同名同序（smoke:home:integration 第 12 段逐字比對）。 */
+  const STYLE_LABELS = { guided: "安心白話", concise: "成長陪跑", analytical: "專業效率" };
+  const STYLE_ORDER = ["guided", "concise", "analytical"];
+  const STYLE_ONCE_KEY = "mm_home_style_hinted";
+
   function applyStyle() {
     const services = window.MM_HOME_SERVICES;
     if (!services || typeof services.currentStyle !== "function") return;
     const { style, source } = services.currentStyle();
     document.body.dataset.homeStyle = style;
-    document.querySelectorAll("[data-style]").forEach((button) => {
-      button.setAttribute("aria-pressed", String(button.dataset.style === style));
-    });
-    const hint = byId("home-style-hint");
-    if (hint) hint.textContent = STYLE_HINTS[source] || STYLE_HINTS.default;
+    const badge = byId("home-style-badge");
+    if (!badge) return;
+    badge.dataset.style = style;
+    badge.textContent = STYLE_LABELS[style] || STYLE_LABELS.guided;
+    /* 徽章只顯示目前模式，看不出點下去會發生什麼。aria-label 補上「點一下換成 X」，
+       讀屏使用者才知道這是循環切換而不是一個狀態標示。 */
+    const next = STYLE_ORDER[(STYLE_ORDER.indexOf(style) + 1) % STYLE_ORDER.length];
+    badge.setAttribute("aria-label",
+      "版面：" + STYLE_LABELS[style] + "。點一下換成 " + STYLE_LABELS[next] + "。");
+    badge.title = STYLE_HINTS[source] || STYLE_HINTS.default;
+
+    /* 「為什麼現在是這個版面」原本是橫幅裡一行常駐小字。徽章塞不下那行字，
+       改成每個 session 提示一次就好——問卷幫你選了版面卻不說一聲會很莫名其妙，
+       但講第二次以後就只是雜訊。自己選過的人不需要被告知。 */
+    if (source === "userChoice") return;
+    try {
+      if (sessionStorage.getItem(STYLE_ONCE_KEY)) return;
+      sessionStorage.setItem(STYLE_ONCE_KEY, "1");
+    } catch (_) { return; }
+    showToast(STYLE_HINTS[source] || STYLE_HINTS.default);
   }
 
   function bindStyleSwitch() {
-    document.querySelectorAll("[data-style]").forEach((button) => {
-      button.addEventListener("click", async () => {
-        analytics("maimate_home_style_changed");
-        const svc = window.MM_HOME_SERVICES && window.MM_HOME_SERVICES.home;
-        if (svc && typeof svc.updatePresentationStyle === "function") {
-          try { await svc.updatePresentationStyle(button.dataset.style); } catch (_) {}
-        }
-        applyStyle();
-      });
+    const badge = byId("home-style-badge");
+    if (!badge) return;
+    badge.addEventListener("click", async () => {
+      analytics("maimate_home_style_changed");
+      const current = badge.dataset.style || STYLE_ORDER[0];
+      const next = STYLE_ORDER[(STYLE_ORDER.indexOf(current) + 1) % STYLE_ORDER.length];
+      const svc = window.MM_HOME_SERVICES && window.MM_HOME_SERVICES.home;
+      if (svc && typeof svc.updatePresentationStyle === "function") {
+        try { await svc.updatePresentationStyle(next); } catch (_) {}
+      }
+      applyStyle();
+      /* 徽章很小、字也小，切換後畫面密度的變化又在捲軸下方看不到，
+         不給回饋使用者會不確定自己按到了沒。 */
+      showToast("版面：" + STYLE_LABELS[next]);
     });
   }
 

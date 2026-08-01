@@ -48,17 +48,18 @@ flowchart TB
         PICK["pick_model<br/>Haiku 日常 / Sonnet 深度"]
         LLM["Bedrock Converse"]
         PROF["profile：注入 system prompt<br/>（改語氣，不改數字，非工具）"]
-        GR["護欄 check_output<br/>＋Bedrock Guardrails"]
+        GR["護欄 check_output<br/>（＋Bedrock Guardrails，線上刻意停用）"]
         T1["query_user_history"]
         T2["get_market_data"]
         T3["get_account_balance（唯讀）"]
         T4["calculate_trade_scenarios"]
-        T5["prepare_order（只產確認卡）"]
-        T6["query_knowledge（RAG，設了 KB_ID 才載入）"]
+        T5["compare_entry_strategies<br/>（一次買完／分批／網格回測）"]
+        T6["prepare_order（只產確認卡）"]
+        T7["query_knowledge（RAG，設了 KB_ID 才載入）"]
     end
     L1 --> SCRUB --> PICK --> LLM
     PROF -.注入.-> LLM
-    LLM --> T1 & T2 & T3 & T4 & T5 & T6
+    LLM --> T1 & T2 & T3 & T4 & T5 & T6 & T7
     LLM --> GR
 
     subgraph DATA["資料層"]
@@ -70,8 +71,8 @@ flowchart TB
     end
     T1 --> HR
     L2 --> HR
-    T6 --> KB
-    T2 --> MAXP
+    T7 --> KB
+    T2 & T5 --> MAXP
     L3 --> MAXP
     T3 --> MAXV
     L1 & L4 & L5 --> DDB
@@ -124,7 +125,12 @@ flowchart TB
 | 常數 | 值 | 何時用 |
 |---|---|---|
 | `MODEL_HAIKU` | `us.anthropic.claude-haiku-4-5-20251001-v1:0` | 預設（`loop.py:9`） |
-| `MODEL_SONNET` | `us.anthropic.claude-sonnet-4-5-v1:0` | 命中深度意圖時（`loop.py:10`） |
+| `MODEL_SONNET` | `us.anthropic.claude-sonnet-4-5-20250929-v1:0`（**日期不可省**） | 命中深度意圖時（`loop.py:14`） |
+
+> ⚠️ **Sonnet 的 ID 必須帶日期。** 短別名 `us.anthropic.claude-sonnet-4-5-v1:0` 在 us-east-1
+> 與 us-west-2 都是 ValidationException（`list-inference-profiles` 查無此 ID），結果是所有
+> 深度意圖問題（為什麼／分析／歸因…）走到這裡 `/chat` 直接 500。08-01 決賽當天才抓到
+> （commit `24f41e4`）——`verify_live.py` 的 22 項沒有一句會觸發深度意圖，所以一直是綠的。
 
 路由邏輯 `pick_model()` 在 `loop.py:60-67`：看**最後一則使用者訊息**是否命中
 `_DEEP_INTENT` 正則（`loop.py:12`）。`us.` 開頭是 cross-region inference profile，
@@ -134,16 +140,17 @@ Prompt caching：開關 `ENABLE_PROMPT_CACHE`（`loop.py:14`），開啟後在 `
 
 ### 工具清單（LLM 實際能呼叫的全部）
 
-定義在 `backend/agent/tools.py:21-105`，執行分派表在 `tools.py:250-259`：
+定義在 `backend/agent/tools.py:23-129`，執行分派表在 `tools.py:399`：
 
 | 工具 | 行號 | 做什麼 |
 |---|---|---|
-| `query_user_history` | 23 | 查行為健檢報告（使用者自己的交易史） |
-| `get_market_data` | 45 | 查 MAX 即時行情 |
-| `get_account_balance` | 66 | 查帳戶餘額（Private API，**只讀**） |
-| `calculate_trade_scenarios` | 71 | 算三方案（金額／手續費／賣後集中度） |
-| `prepare_order` | 91 | 產生**確認卡**（不下單） |
-| `query_knowledge` | 109-121 | RAG 查防詐語料——**只有設了 `KB_ID` 才動態加入清單** |
+| `query_user_history` | 25 | 查行為健檢報告（使用者自己的交易史） |
+| `get_market_data` | 47 | 查 MAX 即時行情 |
+| `get_account_balance` | 68 | 查帳戶餘額（Private API，**只讀**） |
+| `calculate_trade_scenarios` | 73 | 算三方案（金額／手續費／賣後集中度） |
+| `compare_entry_strategies` | 93 | 一次全買／分批買入／網格三種進場方式，用 MAX 公開日線回測上漲、下跌、橫盤三種市況的報酬與最大回撤。**三種對等呈現，不得推薦其中一種** |
+| `prepare_order` | 115 | 產生**確認卡**（不下單） |
+| `query_knowledge` | 134 | RAG 查防詐語料——**只有設了 `KB_ID` 才動態加入清單** |
 
 **清單裡沒有下單函式。這是整個系統最重要的一行「不存在」。** 詳見 §5。
 
@@ -313,7 +320,7 @@ precache 清單由 `npm run build:sw` 產出（`sw-assets.js`，版本＝所有�
 
 | # | 落差 | 影響 | 歸屬 |
 |---|---|---|---|
-| 1 | `infra/template.yaml` **未宣告** `GUARDRAIL_ID`、`ENABLE_PROMPT_CACHE`，但 `loop.py:14, 109-115` 依賴它們 | 每次 `sam deploy` 都會把主控台手動設的值清掉（同 `DEPLOY.md` §2 對 MAX 金鑰的警告）。症狀是 Guardrails 悄悄失效 | D／infra |
+| 1 | ~~`template.yaml` 未宣告 `GUARDRAIL_ID`~~ 已補（`template.yaml:53`，`KB_ID` 在 L51）。**`ENABLE_PROMPT_CACHE` 仍未宣告**，但 `loop.py:18` 讀它 | prompt caching 目前等於永遠關著——主控台手動設了也會被下一次 `sam deploy` 清掉。不影響正確性，只影響成本與延遲 | D／infra（issue #43 內容已過期） |
 | 2 | ~~README §3 的 API 範例寫 `"tool":"get_portfolio"`，實際工具叫 `get_account_balance`~~ | ✅ 已修（2026-07-31）。§3 是套件間交接的唯一依據，照著接會接錯 | 已修 |
 | 3 | 根目錄 `profile_engine.py` 未被 `backend/` 任何檔案 import | 疑似棄用或示範檔。**不要拿它當「上線中的合規邏輯」的證據** | 待確認 |
 

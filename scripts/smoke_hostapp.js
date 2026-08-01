@@ -22,8 +22,8 @@ const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; cha
   ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" };
 
 // 麥麥的兩個入口該進哪一頁——寫在這裡當單一事實來源，改入口就要改這裡
-const ENTRY_GRID = "intro.html";                        // 九宮格 icon：先播入口動畫，播完/跳過自己轉 welcome.html
-const ENTRY_TAB = "home.html?demo=STEADY_PLANNER";      // 底部分頁：Screen 6 新首頁（不是舊的 index.html）
+const ENTRY_GRID = "intro.html?from=index.html";        // 九宮格 icon：先播入口動畫，播完/跳過轉 index.html（#45 的落點）
+const ENTRY_TAB = "home.html?demo=STEADY_PLANNER";      // 底部分頁：Screen 6 新首頁
 
 const server = http.createServer((req, res) => {
   const file = path.join(ROOT, req.url === "/" ? "index.html" : req.url.split("?")[0]);
@@ -164,7 +164,13 @@ const server = http.createServer((req, res) => {
     throw new Error(`底部分頁入口應開 ${ENTRY_TAB}，實際：${tabSrc}`
       + "（index.html 是舊的主程式，Screen 6 首頁才是現在的產品畫面）");
   }
-  // 麥麥要真的在 iframe 裡渲染出來，不是空白框
+  // 麥麥要真的在 iframe 裡渲染出來，不是空白框。
+  // 這裡原本 click 完就直接找 frame，是個競態——iframe 還沒掛上就查會偶發紅字
+  // （home.html 多載幾支 script 就更容易輸）。改成等它出現，超時才算真的失敗。
+  await page.waitForFunction(
+    () => [...document.querySelectorAll("iframe")].some((f) => (f.src || "").includes("home.html")),
+    { timeout: 8000 }
+  );
   const fr = page.frames().find((f) => f.url().includes("home.html"));
   if (!fr) throw new Error("WebView 內找不到 home.html 的 frame");
   await fr.waitForSelector("#home-greeting-title", { timeout: 8000 });

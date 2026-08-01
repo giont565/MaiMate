@@ -70,7 +70,7 @@ mockup HTML 在 `docs/mockups/`＝C 包前端起點，畫面中所有數字皆�
 - 🔨 #12 audit.py＋GET /audit endpoint（A 埋點、C 面板）
 - 🧪 #2 max_public 三 endpoint 實測（ticker/kline/depth 對官方文件核對）
 - 🧪 max_private 簽章實作對照 max-mcp-server 源碼核對（真下單 E2E 歸 D）
-- 🧪 thirdparty CMC 冒煙（無金鑰自動略過路徑）
+- ✅ thirdparty CMC 冒煙（07/29 無金鑰略過＋BTC/TWD 真實 API 驗證；重跑見 `scripts/verify_cmc_smoke.py`）
 
 **C｜前端與品牌**（地盤 `frontend/` `docs/mockups/` `docs/brand/`，估 4 天）
 - 🔨 #13 手機版 RWD 改版（照 mockups 三畫面實作）
@@ -234,6 +234,18 @@ Response：
 ### GET /health?section=all|chase_index|...
 Response＝`data/health_report.json` 對應區塊（欄位定義：`.kiro/steering/data-schema.md`）。
 
+### LLM 工具 `compare_entry_strategies`（無獨立 HTTP 端點，經 /chat 觸發）
+
+Input：`{ "market": "btctwd", "amount_twd": 50000, "risk_mode": "cautious|growth|pro" }`
+Output：三種進場方式（`lump_sum` / `dca` / `grid`）在 `uptrend`／`downtrend`／`sideways`
+三情境的 `return_pct`、`max_drawdown_pct`、`end_cash_pct`，加上按 `amount_twd` 換算的 TWD 金額、
+`full_period_grid_vs_hold`、`feasibility`（每份是否高於交易所單筆下限）、`key_findings`、`data_notes`。
+
+資料源＝`analysis/strategy_compare.py` → `data/strategy_report.json`（**MAX 公開日線，非命題 CSV**——
+命題 CSV 的價格路徑全年最大回撤僅 0.6%~3.6%，跑策略回測會得到假結論）。
+`risk_mode` 只決定 `risk_tier.primary_metric`（先看哪個數字），**不決定推薦誰**；
+三種方式一律對等呈現，違反即踩紅線 1（`tests/test_strategy_compare.py` 守這條）。
+
 ### GET /market?market=btctwd&kind=ticker|kline|depth
 Response：`{ "kind","market","fetched_at_utc","fetched_at_taipei","data":{...} }`（2026-07-21 改版）
 ticker 的 `data` 為 MAX 原始回應；kline 的 `data` 已由程式正規化為具名 OHLCV（由舊到新）：
@@ -267,6 +279,15 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 - [ ] execute_order 不在 LLM 工具清單（架構已隔離，待 E2E 驗證）
 - [ ] 輸入 PII 先清洗；輸出命中明牌句式走安全回覆；迴圈 ≤8 輪
 - [ ] Haiku/Sonnet 意圖路由＋prompt caching（#5）
+
+### 4.2b 進場方式比較（compare_entry_strategies）｜主責 A — 🧪 已實作＋單元驗證（08/01，7 項），對話實測待部署
+- [x] 三種方式在三情境下對等呈現，輸出不含推薦字樣（紅線 1）
+- [x] 金額切 10 份後低於交易所單筆下限時擋下並給最低總額（同 4.3 的 min order 事故防線）
+- [x] 行情取不到時 `feasibility` 回 `unknown`，不猜門檻
+- [x] 不得推薦進場方式：SYSTEM 規則 10 ＋ guardrails `_ADVICE_PATTERNS`／`_REDLINE_INDEXES`（08/01 補）
+- [x] 私人環境已部署並驗證（08/01 23:xx）；官方環境待部署（金鑰已撤，S5 會自動跳過）
+- [x] 對話劇本實測：`npm run verify:strategy` **S1–S5 各 3 次共 15/15 全過**（08/01 私人環境）
+- [ ] `risk_mode` 未帶時由 profile engine 推斷值填入（目前預設 growth）
 
 ### 4.3 三方案引擎（trade-scenarios，#11）｜主責 A（卡片渲染：C）— 🧪 已實作＋單元驗證（07/21），整合測試待部署
 - [ ] 交易意圖 → 三方案（保守/原意圖/暫停），數字全由程式計算
@@ -343,8 +364,9 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 ```bash
 bash scripts/setup.sh                 # 環境檢查（缺什麼它會說）
 python3 -m http.server 8791 --directory frontend   # 前端零建置，開 /welcome.html 即可玩
-npm i && npm test                     # 後端單元＋Python 35 項＋前端主煙測（全離線可跑）
+npm i && npm test                     # 後端單元＋Python 64 項＋前端主煙測（全離線可跑）
 python3 analysis/precompute.py        # CSV → health_report.json（需官方 CSV）
+python3 analysis/strategy_compare.py  # MAX 公開日線 → strategy_report.json（免金鑰；--offline 用快取）
 cd infra && sam build && sam deploy --guided       # 部署見 docs/DEPLOY.md
 ```
 

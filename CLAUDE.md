@@ -82,6 +82,16 @@ cd docs/brand && python3 render_pixel_bot.py   # 重出麥麥像素吉祥物
 存成 `--profile hackathon` 使用。部署與驗收指令、金鑰補回步驟全在 `docs/DEPLOY.md`；
 RAG 重建用 `scripts/setup_rag_kb.py`。
 
+🎬 **錄影前必讀**：`DEMO_SCRIPT.md` 鏡 7 用的決策軌跡（`d3e6e6f9-…`，13 列含兩筆成交）
+**只存在於 us-east-1 的 DynamoDB**；官方環境查同一個 session_id 回 0 列。要在官方環境重現
+得再下一次真單。**所以錄影用舊環境（線上站目前就是），錄完再切官方。**
+
+⚠️ 連帶影響：`verify_live_ui.js` 的 **L2.1 會報「線上檔案與本地不一致」**，因為 git 裡的
+`API_BASE` 指官方環境、線上站還是舊的。它的提示會叫你清 CloudFront 快取——**那是誤導**，
+差異不是快取而是 API 指向。錄影期間這條紅字可以忽略；真要切環境時再 sync＋invalidate。
+
+決賽表單的現成答案（提案大綱 297 字、模型清單、Lv.2 Email、repo 公開指令）在 `docs/SUBMISSION.md`。
+
 ### 已完成（都有線上實測證據）
 
 - **#4 全線打通**：真實成交兩筆 `#20720919534`、`#20721028463`，MAX App 推播確認，
@@ -103,6 +113,14 @@ RAG 重建用 `scripts/setup_rag_kb.py`。
 
 ### 待辦
 
+- [x] **進場方式比較（`compare_entry_strategies`）已上線並驗證**（08/01，私人環境 15/15 全過）：
+      SYSTEM 規則 10 與 `guardrails._ADVICE_PATTERNS` 的「不得推薦進場方式」補丁只在 repo，
+      規則 10 需寫明「**立刻**呼叫」＋涵蓋「為什麼…」「那 X 呢」句型，否則模型會改用 query_knowledge 硬答。風險盤點與評審 Q&A：`docs/_internal/RISK_STRATEGY_COMPARE.md`（**隊內文件，已 gitignore**——
+      repo 是公開的，那份寫法不適合對外；另存 Drive）。
+      **未重部署前不要在 Demo 主線示範這個功能**（走該文件的路 B）。
+      注意這次**有**走 `guardrails.py`，與上面第 2 點的決定相反——差別在 pattern 強制帶「你／您」，
+      只攔祈使句、放行中性比較與教育敘述，`tests/test_guardrails.py::EntryMethodAdviceTests`
+      有一半的案例就在守「不誤攔」。誤攔的代價仍然是整段被換成 `SAFE_FALLBACK`，改 pattern 前先看那些測試。
 - [ ] **#8 Demo 錄影**（最重要，環境目前是好的；提詞卡 `docs/DEMO_SCRIPT.md` 已對線上實況改寫）
 - [ ] 場地網路每 5 次連線掉 1 次（實測 API Gateway、CloudFront、github 都一樣，`ping` 不掉但
       TLS 被 reset）。**`verify_live.py` 紅字要先懷疑網路**：失敗率與該項要打幾次 API 成正比，

@@ -26,6 +26,11 @@ const mmHomeRuntime = {
   failRequests: false,
   failedModuleTypes: new Set(),
   cache: null,
+  /* /health 的結果。這是整條新線上唯一真的會連到後端的資料——其餘模組打的
+     /api/v1/maimate/* 後端沒有實作，一律落回 mocks/home.js。 */
+  health: null,
+  healthPromise: null,
+  healthNotified: false,
 };
 const MM_HOME_SESSION_CACHE_KEY = "mm_home_cache";
 const MM_HOME_SAFE_EVENT_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$/;
@@ -85,9 +90,11 @@ function mmHomeState() {
 }
 
 /* 三種版面＝問卷 Q6 的三種溝通風格（呈現偏好，不是投資人格分類）：
- *   guided     陪我慢慢看懂——保留解釋段落，少一點數字
- *   concise    先告訴我重點——只留結論與摘要
- *   analytical 給我更多數據與脈絡——解釋與證據數字全展開 */
+ *   guided     安心白話——保留解釋段落，少一點數字
+ *   concise    成長陪跑——只留結論與摘要
+ *   analytical 專業效率——解釋與證據數字全展開
+ *
+ * 三個標籤與 app.js 的 MODE_LABELS 同名同序，改一邊 smoke:home:integration 會紅。 */
 const MM_HOME_STYLES = ["guided", "concise", "analytical"];
 
 /** 目前套用的版面：使用者在首頁選過就以他的選擇為準，否則跟著問卷 Q6 的答案 */
@@ -162,6 +169,22 @@ function mmHomeTrack(name, metadata) {
   if (typeof track === "function") track(name, safe);
 }
 
+/* 拿得到真報告就回它，否則 null。所有 Adapter 共用同一個判斷——
+ * 有的接了有的沒接，畫面會半真半假而且完全看不出來，那比全假更難查。 */
+function mmHomeLiveReport() {
+  return mmHomeRuntime.health && mmHomeRuntime.health.source === "live"
+    ? mmHomeRuntime.health.report
+    : null;
+}
+
+/* 歸因的類別對應。上游 health_report 用 marketPrice／netDeposit／realizedPnl，
+ * 前端契約用 marketPrice／funding／recentTrades——與 mocks/home.js 的對應表一致。 */
+const MM_HOME_ATTRIBUTION_MAP = Object.freeze({
+  marketPrice: { category: "marketPrice", label: "市價波動" },
+  netDeposit: { category: "funding", label: "出入金淨額" },
+  realizedPnl: { category: "recentTrades", label: "近期交易" },
+});
+
 const PortfolioAdapter = Object.freeze({
   /** @param {Object} state */
   read(state) {
@@ -177,7 +200,24 @@ const PortfolioAdapter = Object.freeze({
         topTwoAssetsRatio: null,
       };
     }
-    const source = window.MM_ONBOARDING_MOCK && window.MM_ONBOARDING_MOCK.demoPortfolio;
+    /* 資料源：拿得到真報告就用 /health 的 holdings_snapshot，否則落回示範資料。
+     * 這一層換掉，上面所有吃 PortfolioAdapter 的東西一起變真——首頁模組、
+     * chat.html 的結構化回答（chat-service.js 的工具全部呼叫這些 Adapter）、
+     * 歸因與集中度敘事。回傳形狀刻意與 demoPortfolio 相同，下游一行都不用改。 */
+    const report = mmHomeLiveReport();
+    const live = report ? window.MM_HEALTH_CORE.holdings(report) : null;
+    const source = live && live.ok
+      ? {
+        assets: live.assets,
+        breakdownAvailable: live.breakdownAvailable,
+        asOfMonth: live.asOfMonth,
+        snapshotAsOf: live.snapshotAsOf,
+        snapshotMethod: live.snapshotMethod,
+        /* 報告沒有前期快照，前端不得自行推估（Screen 8 的期間對照寧可留白）。 */
+        previousAsOfMonth: null,
+        previousTopWeight: null,
+      }
+      : (window.MM_ONBOARDING_MOCK && window.MM_ONBOARDING_MOCK.demoPortfolio);
     const assets = source && Array.isArray(source.assets)
       ? source.assets.map((asset) => ({
         symbol: String(asset.symbol),
@@ -243,7 +283,12 @@ const TransactionAdapter = Object.freeze({
     }
     /* 真實帳戶報告只有「每月交易次數」，沒有逐筆明細（官方 CSV 不進 git）。
      * 因此比較單位是「月」而不是滾動 30 天，欄位語意見 periodLabel。 */
-    const activity = window.MM_ONBOARDING_MOCK && window.MM_ONBOARDING_MOCK.tradeActivity;
+    /* 同 PortfolioAdapter：真報告優先，形狀與 tradeActivity 相同，下游不分支。 */
+    const report = mmHomeLiveReport();
+    const fresh = report ? window.MM_HEALTH_CORE.activity(report) : null;
+    const activity = fresh && fresh.ok
+      ? fresh
+      : (window.MM_ONBOARDING_MOCK && window.MM_ONBOARDING_MOCK.tradeActivity);
     if (!activity || !Number.isFinite(Number(activity.total))) {
       return {
         available: true,
@@ -435,7 +480,35 @@ const EffectiveProfileAdapter = Object.freeze({
 const AttributionAdapter = Object.freeze({
   read(portfolio, market) {
     if (!portfolio.available || !market) return null;
-    const source = window.MM_HOME_MOCK && window.MM_HOME_MOCK.attributionInput;
+    /* 真報告優先。effectUnits 取絕對值：歸因看的是「誰造成多少變化」，
+       出金是負的但它的影響力不是負的，帶號進來會把比重算成負數。 */
+    const report = mmHomeLiveReport();
+    const fresh = report ? window.MM_HEALTH_CORE.attribution(report) : null;
+    const live = fresh && fresh.ok && /^\d{4}-\d{2}$/.test(String(fresh.period))
+      ? {
+        id: "attribution_health_report_" + fresh.period,
+        period: fresh.period,
+        /* 報告的 period 是月份（2026-06），驗證層要的是 ISO 日期，換算成該月起訖。 */
+        periodStart: fresh.period + "-01T00:00:00+08:00",
+        periodEnd: new Date(Date.UTC(
+          Number(fresh.period.slice(0, 4)), Number(fresh.period.slice(5, 7)), 0
+        )).toISOString().slice(0, 10) + "T23:59:59+08:00",
+        type: fresh.estimated ? "estimated" : "calculated",
+        note: fresh.note,
+        components: fresh.contributors
+          .filter((item) => MM_HOME_ATTRIBUTION_MAP[item.category] && item.valueTwd != null)
+          .map((item) => Object.assign({ id: "attr_" + item.category }, MM_HOME_ATTRIBUTION_MAP[item.category], {
+            effectUnits: Math.abs(item.valueTwd),
+          }))
+          /* 由大到小排序：下游一律拿 contributors[0] 當「主要來源」，順序錯了文案會說反。
+             真報告是 marketPrice 36,394 排在 netDeposit 12,213,519 之前，不排就會把
+             0.3% 的市價波動講成帳戶變化的主因。 */
+          .sort((a, b) => b.effectUnits - a.effectUnits),
+      }
+      : null;
+    const source = live && live.components.length
+      ? live
+      : (window.MM_HOME_MOCK && window.MM_HOME_MOCK.attributionInput);
     if (!source || !Array.isArray(source.components) || !source.components.length) return null;
     const categories = new Set();
     const components = source.components.map((item) => {
@@ -533,7 +606,13 @@ const SimilarMomentAdapter = Object.freeze({
    * 相似時刻一律以它為準，不再依賴逐筆交易明細（報告沒有）。 */
   read(transactionMetrics) {
     const source = window.MM_HOME_MOCK && window.MM_HOME_MOCK.similarMomentInput;
-    const sell = window.MM_ONBOARDING_MOCK && window.MM_ONBOARDING_MOCK.notableSell;
+    /* notableSell 就是報告的 opportunity_cost.worst_single_sell，形狀完全相同，
+       所以真報告在手時直接取用，不需要轉換。 */
+    const report = mmHomeLiveReport();
+    const liveSell = report && report.opportunity_cost && report.opportunity_cost.worst_single_sell;
+    const sell = (liveSell && liveSell.date)
+      ? liveSell
+      : (window.MM_ONBOARDING_MOCK && window.MM_ONBOARDING_MOCK.notableSell);
     if (!source || !transactionMetrics.available || !sell || !sell.date) return null;
     const symbol = String(sell.currency || "").toUpperCase();
     const periodLabel = mmHomeDateRangeLabel([sell.date]);
@@ -678,8 +757,35 @@ function mmHomeValidateStructuredOutput(source, facts) {
 
 /* 帳戶變化來源：報告補上 change_attribution（issue #29）後才講得出來源比重。
  * 報告標 type=estimated（殘差法），所以一律說「估算」，不得寫成會計歸因。 */
+/* 相似時刻的摘要句與對應的追問。兩者都會提到幣種與月份，必須跟 Adapter 用同一筆
+ * worst_single_sell，否則畫面會自己跟自己說不同的事。拿不到真報告回 null，
+ * 由呼叫端沿用敘事層的既有文案。 */
+function mmHomeNotableSell() {
+  const report = mmHomeLiveReport();
+  const sell = report && report.opportunity_cost && report.opportunity_cost.worst_single_sell;
+  if (!sell || typeof sell.date !== "string" || !sell.currency) return null;
+  const month = Number(sell.date.slice(5, 7));
+  return {
+    symbol: String(sell.currency).toUpperCase(),
+    year: sell.date.slice(0, 4),
+    month: Number.isFinite(month) && month > 0 ? month : null,
+  };
+}
+
+function mmHomeSimilarMomentSummary() {
+  const sell = mmHomeNotableSell();
+  if (!sell || sell.month == null) return null;
+  return sell.year + " 年 " + sell.month + " 月那筆 " + sell.symbol
+    + " 賣出是報告裡唯一有明細的事件，可以拿來回顧當時的決定。";
+}
+
 function mmHomeAttributionSummary() {
-  const attribution = window.MM_ACCOUNT && window.MM_ACCOUNT.changeAttribution;
+  /* 真報告優先。這句話原本直接讀 window.MM_ACCOUNT 的靜態快照，繞過 Adapter——
+     結果同一張卡的比重列已經是新資料、上面這句摘要還是舊的，畫面自己跟自己矛盾。
+     凡是講得出數字的地方都得走同一個來源。 */
+  const report = mmHomeLiveReport();
+  const attribution = (report && report.change_attribution)
+    || (window.MM_ACCOUNT && window.MM_ACCOUNT.changeAttribution);
   if (!attribution || !Array.isArray(attribution.contributors) || !attribution.contributors.length) {
     return "這份報告沒有各幣種持倉明細，因此不拆解帳戶變化來源。";
   }
@@ -1207,7 +1313,11 @@ function mmHomeBuildResponse(state) {
       ],
     }));
   } else if (similarMoment) {
-    similarMoment.summary = narrative.value.similarMomentSummary;
+    /* 敘事的 similarMomentSummary 把幣種與月份寫死在 mocks/home.js（「2025 年 1 月那筆
+       DOGE 賣出…」）。Adapter 已經改吃報告的 worst_single_sell，這句沒跟上就會出現
+       模組講 SOL、它自己的摘要講 DOGE 的矛盾——與 mmHomeAttributionSummary 同一種問題。
+       拿得到真報告就照它現組，拿不到才用敘事層那句。 */
+    similarMoment.summary = mmHomeSimilarMomentSummary() || narrative.value.similarMomentSummary;
     add(mmHomeModule({
       id: "module_similar_moment",
       type: "similarMoment",
@@ -1382,7 +1492,17 @@ function mmHomeBuildResponse(state) {
     actions: insightActions,
   }));
 
-  const contextualQuestions = narrative.value.contextualQuestions.slice(0, 5).map((question) => ({
+  /* 追問清單裡「1 月那筆 DOGE 賣出，當時發生什麼？」把幣種與月份寫死在 mocks/home.js。
+     相似時刻已經改吃報告的 worst_single_sell，這句沒跟上，使用者就會被引導去問一筆
+     畫面上根本不存在的交易。用同一筆資料改寫，拿不到真報告就維持原文。 */
+  const notableSell = mmHomeNotableSell();
+  const contextualQuestions = narrative.value.contextualQuestions.slice(0, 5).map((question) => (
+    question.id === "question_similar" && notableSell && notableSell.month != null
+      ? Object.assign({}, question, {
+        text: notableSell.month + " 月那筆 " + notableSell.symbol + " 賣出，當時發生什麼？",
+      })
+      : question
+  )).map((question) => ({
     id: String(question.id),
     text: String(question.text),
     contextType: question.contextType,
@@ -1520,6 +1640,56 @@ function mmHomeBuildResponse(state) {
     }));
   }
 
+  /* ── 新線第一批吃真後端的模組：健康分（/health）與行情（/market）──
+   *
+   * 健檢排最前面：這是 index.html 一路以來的敘事順序，也是簡報鏡 1 的內容。
+   * 行情排最後面：它是參考資料不是個人化敘事，而且 Screen 6 規格要求第一屏必須
+   * 看得到 Plan Alignment 的開頭（smoke_home 有斷言）——兩張大卡都塞在最上面會把它
+   * 擠出視窗。index.html 的順序同樣是「健檢 → 洞察 → 行情」，這裡保持一致。
+   *
+   * 既有 position 1–9 寫死在十七處，逐一改號碼容易漏一個造成撞號，所以統一位移，
+   * 相對順序完全不變。 */
+  const health = mmHomeRuntime.health
+    || { source: "demo", report: window.MM_HOME_HEALTH_MOCK || null };
+  const leadModules = [];
+
+  if (health.report) {
+    leadModules.push(mmHomeModule({
+      id: "module_health_score",
+      type: "healthScore",
+      priority: "high",
+      position: 1,
+      /* 只帶原始報告與來源，分數不預先算好——算在 health-core.js，
+         否則快取裡會躺一個跟畫面不一致的舊分數。 */
+      /* 標題不用「投資健康分」——那是 MM_HOME_PROHIBITED_NARRATIVE 明文擋掉的詞
+         （不替使用者評等）。index.html 用的是舊措辭，兩頁用語目前刻意不同。 */
+      payload: { title: "行為健檢", source: health.source, report: health.report },
+      actions: [{
+        id: "health_score_ask",
+        type: "openChat",
+        label: "問麥麥這些數字怎麼來的",
+        question: "這張行為健檢的數字是怎麼算出來的？",
+        context: mmHomeContext("module_health_score", profile),
+      }],
+    }));
+  }
+
+  modules.forEach((module) => { module.position += leadModules.length; });
+  modules.unshift(...leadModules);
+
+  const lastPosition = modules.reduce((max, m) => Math.max(max, m.position), 0);
+  modules.push(mmHomeModule({
+    id: "module_market_watch",
+    type: "marketWatch",
+    priority: "normal",
+    position: lastPosition + 1,
+    payload: window.MM_MARKET_CORE.buildPayload({
+      /* 沒有 API_BASE 就直接進誠實的空狀態，不要送出註定失敗的請求再閃一次錯誤。 */
+      live: Boolean(window.API_BASE),
+    }),
+    actions: [],
+  }));
+
   const response = {
     user: {
       userId: source.user.userId,
@@ -1561,6 +1731,9 @@ function mmHomeDataVersion(state, access) {
     state.effectiveProfile && state.effectiveProfile.updatedAt,
     state.consent && state.consent.revokedAt ? "revoked" : "authorized",
     access.status,
+    /* 健康分來源要進版本字串：demo→live 切換時快取必須失效，
+       否則後端恢復了畫面還一直掛著「示範資料」。 */
+    mmHomeRuntime.health ? mmHomeRuntime.health.source : "pending",
     storage.preferences.amountsHidden ? "hidden" : "visible",
     JSON.stringify(storage.moduleState),
   ].join("|");
@@ -1640,6 +1813,54 @@ async function mmHomeBootstrapDirectDemo() {
   await bootstrap("STEADY_PLANNER");
 }
 
+/* 取 /health。失敗（沒設 API_BASE、斷網、後端掛）就回 demo 並標記來源，
+ * 由畫面明說是示範資料。這裡刻意不 throw：健康分取不到不該讓整個首頁進錯誤頁，
+ * 其餘八個模組跟 /health 沒有關係。 */
+async function mmHomeFetchHealth() {
+  const fallback = { source: "demo", report: window.MM_HOME_HEALTH_MOCK || null };
+  if (!window.API_BASE) return fallback;
+  /* 一定要有逾時。整個首頁的渲染排在這個 await 後面，而場地網路每 5 次連線掉 1 次
+     （CLAUDE.md 待辦：TLS 被 reset，ping 不掉）。沒有逾時就會卡在骨架畫面出不來——
+     那比顯示示範資料嚴重得多。2.5 秒取不到就先走 demo，重新整理還有機會拿到。 */
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), 2500);
+  try {
+    const report = await mmHomeFetchJson("/health", { signal: abort.signal });
+    /* 至少要有一個 health-core 算得動的子項，否則當作沒拿到——
+       回一個空物件進去只會畫出一張全是「—」的卡，比誠實地說示範資料更難懂。 */
+    const usable = report && typeof report === "object"
+      && (report.chase_index || report.realized_pnl || report.cash_flow_behavior);
+    return usable ? { source: "live", report } : fallback;
+  } catch (_) {
+    return fallback;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/* 首次渲染絕對不能排在 /health 後面。整個首頁只有健康分那一張卡跟 /health 有關，
+ * 讓另外八個模組陪著等一趟網路往返是錯的——場地網路不穩時使用者會盯著骨架畫面。
+ * 所以：先用示範資料把畫面畫出來，真資料回來了再走既有的背景更新路徑換上去
+ * （和 getHome() 拿快取後回頭 refresh 的作法同一套）。 */
+function mmHomeStartHealthLoad() {
+  if (mmHomeRuntime.healthPromise) return mmHomeRuntime.healthPromise;
+  mmHomeRuntime.healthPromise = mmHomeFetchHealth().then((result) => {
+    mmHomeRuntime.health = result;
+    /* 只有真的拿到線上資料才值得重畫一次；本來就是 demo 就別動畫面。 */
+    if (result.source === "live" && !mmHomeRuntime.healthNotified) {
+      mmHomeRuntime.healthNotified = true;
+      Promise.resolve()
+        .then(() => MockMaiMateHomeService.refreshHome())
+        .then((response) => {
+          window.dispatchEvent(new CustomEvent("maimate:home-updated", { detail: response }));
+        })
+        .catch(() => {});
+    }
+    return result;
+  });
+  return mmHomeRuntime.healthPromise;
+}
+
 async function mmHomeEvaluatePreparedAccess() {
   await mmHomeBootstrapDirectDemo();
   const state = mmHomeState();
@@ -1669,6 +1890,7 @@ const MockMaiMateHomeService = {
   async refreshHome() {
     if (mmHomeRuntime.failRequests) throw mmHomeError("HOME_LOAD_FAILED");
     const prepared = await mmHomeEvaluatePreparedAccess();
+    mmHomeStartHealthLoad();   // 不 await：首次用示範資料先畫，真資料回來再背景換上
     let response;
     try {
       response = prepared.access.status === "limited"

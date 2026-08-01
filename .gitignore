@@ -28,3 +28,15 @@ smoke_*.png
 docs/MaiMate_review-bundle.zip
 docs/review-bundle/03_PITCH_DECK.pdf
 docs/PITCH_DECK.standalone.html
+
+# 影片素材：Demo 錄影產出（mp4/webm/frames）不進 git——單支就好幾 MB，且每次重錄都變。
+# 放 Drive「黑客松/MaiMate_決賽影片」，repo 只留產生它們的腳本（scripts/record_demo.js 等）。
+*.mp4
+*.webm
+*_frames/
+*.mov
+
+# 隊內文件不進公開 repo（repo 依題目要求已 PUBLIC，主辦與評審點得進來）：
+# 評審攻防教戰、風險盤點、資料檢定圖表——這些是給自己人看的，寫法不適合對外。
+# 放 Drive「黑客松/MaiMate_隊內」，repo 只留產生它們的程式。
+docs/_internal/
