@@ -39,6 +39,10 @@ docs/PITCH_DECK.standalone.html
 *.webm
 *_frames/
 *.mov
+# 例外：入口動畫 01–03 幕的實拍是產品素材，不是錄影產出——播放器要載、Service Worker
+# 要 precache，缺了動畫會靜悄悄退回 CSS 版前三幕（不報錯，所以很難發現）。它已經在
+# 版控裡，這行是把「刻意留著」寫清楚，免得後人當成漏擋的順手刪掉。
+!frontend/brand/intro-shot1-3.mp4
 
 # 隊內文件不進公開 repo（repo 依題目要求已 PUBLIC，主辦與評審點得進來）：
 # 評審攻防教戰、風險盤點、資料檢定圖表——這些是給自己人看的，寫法不適合對外。
