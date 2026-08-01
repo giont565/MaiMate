@@ -22,7 +22,7 @@ const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; cha
   ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" };
 
 // 麥麥的兩個入口該進哪一頁——寫在這裡當單一事實來源，改入口就要改這裡
-const ENTRY_GRID = "welcome.html";                      // 九宮格 icon：新用戶完整動線
+const ENTRY_GRID = "intro.html";                        // 九宮格 icon：先播入口動畫，播完/跳過自己轉 welcome.html
 const ENTRY_TAB = "home.html?demo=STEADY_PLANNER";      // 底部分頁：Screen 6 新首頁（不是舊的 index.html）
 
 const server = http.createServer((req, res) => {
@@ -214,7 +214,9 @@ const server = http.createServer((req, res) => {
     if (!fs.existsSync(swAssetsPath)) throw new Error("frontend/sw-assets.js 不存在 → 跑 npm run build:sw");
     const listed = new Set(JSON.parse(/self\.SW_ASSETS = (\[[\s\S]*?\]);/.exec(fs.readFileSync(swAssetsPath, "utf8"))[1]));
     const SKIP = new Set(["sw.js", "sw-assets.js", "brand/README.md"]);
-    const EXT = new Set([".html", ".js", ".css", ".png", ".svg", ".webmanifest", ".jpg", ".webp"]);
+    // 這份清單必須與 scripts/build_sw_manifest.js 的 EXT 一致，兩邊是各自寫死的。
+    // .mp4 是入口動畫 01–03 幕的素材（brand/intro-shot1-3.mp4）。
+    const EXT = new Set([".html", ".js", ".css", ".png", ".svg", ".webmanifest", ".jpg", ".webp", ".mp4"]);
     const actual = [];
     (function walk(d) {
       for (const e of fs.readdirSync(d, { withFileTypes: true })) {
