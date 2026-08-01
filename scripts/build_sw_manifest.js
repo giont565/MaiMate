@@ -17,7 +17,9 @@ const OUT = path.join(ROOT, "sw-assets.js");
 
 // 這些不進快取：sw 自己（會造成更新不了）、產出的清單本身、說明文件
 const SKIP = new Set(["sw.js", "sw-assets.js", "brand/README.md"]);
-const EXT = new Set([".html", ".js", ".css", ".png", ".svg", ".webmanifest", ".jpg", ".webp"]);
+// .mp4 是入口動畫 01–03 幕的素材（brand/intro-shot1-3.mp4，約 1 MB）。不收的話斷網時
+// intro.html 會退回 CSS 版前三幕——不會壞，但離線 demo 就看不到實拍那段。
+const EXT = new Set([".html", ".js", ".css", ".png", ".svg", ".webmanifest", ".jpg", ".webp", ".mp4"]);
 
 function walk(dir, out = []) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {

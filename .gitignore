@@ -24,6 +24,11 @@ docs/slide-*.jpg
 .DS_Store
 smoke_*.png
 
+# 評估用打包（內容都在 docs/ 裡，不需要版控壓縮檔）
+docs/MaiMate_review-bundle.zip
+docs/review-bundle/03_PITCH_DECK.pdf
+docs/PITCH_DECK.standalone.html
+
 # 影片素材：Demo 錄影產出（mp4/webm/frames）不進 git——單支就好幾 MB，且每次重錄都變。
 # 放 Drive「黑客松/MaiMate_決賽影片」，repo 只留產生它們的腳本（scripts/record_demo.js 等）。
 *.mp4

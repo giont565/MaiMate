@@ -310,7 +310,10 @@ function render(k) {
       </div>
       ${k === "mc" ? `<div class="duo"><button class="b" data-noop="買入">買入</button><button class="s" data-noop="賣出">賣出</button></div>` : ""}
       <div class="qg">${quick}
-        <button class="qi mm" data-mm="index.html"><span class="nw">NEW</span>
+        <!-- 走入口動畫 intro.html，播完（或被跳過）由 ?from= 指定轉到 index.html——
+             #45 已把九宮格入口改為直接進 index.html，動畫只是插在前面，落點不變。
+             第二次之後只播三幕短版；?full=1 可強制完整版。 -->
+        <button class="qi mm" data-mm="intro.html?from=index.html"><span class="nw">NEW</span>
           <span class="ib"><img src="icons/icon-192.png" alt="" onerror="mmMarkFallback(this)"></span>
           <span class="lb">麥麥</span></button>
       </div>
@@ -352,8 +355,15 @@ async function loadMarket() {
 // ── WebView ──
 const wv = document.getElementById("wv"), frame = document.getElementById("frame");
 function open_(page) {
-  const ov = new URLSearchParams(location.search).get("entry");
-  frame.src = ov && /^[\w.-]+\.html(\?[\w=&.-]*)?$/.test(ov) ? ov : page;
+  const q = new URLSearchParams(location.search);
+  const ov = q.get("entry");
+  let target = ov && /^[\w.-]+\.html(\?[\w=&.-]*)?$/.test(ov) ? ov : page;
+  // host-app.html?reset=1 → 把 reset 帶進 WebView。入口動畫的「看過了／今天不再顯示」
+  // 是 intro.html 自己那層寫的 localStorage，只有在 iframe 裡跑 reset 才清得到。
+  if (q.get("reset") === "1" && target.indexOf("intro.html") === 0) {
+    target += (target.indexOf("?") > -1 ? "&" : "?") + "reset=1";
+  }
+  frame.src = target;
   wv.classList.add("on");
 }
 function close_() { wv.classList.remove("on"); setTimeout(() => { frame.src = "about:blank"; }, 320); }
