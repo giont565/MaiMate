@@ -2,7 +2,7 @@
 import os
 import re
 
-from . import audit, tools
+from . import audit, demo_account, tools
 
 # 以主控台實際顯示的 us. 開頭 inference profile ID 為準（見 tech.md）
 # 模型分工路由（#5）：日常對話與工具調度走 Haiku；深度歸因/分析意圖升級 Sonnet
@@ -86,6 +86,29 @@ SYSTEM = [{"text": """你是 MaiMate，使用者的個人投資特助。
    工具回 error（未回測的幣）時如實說明，不得拿其他幣的數字套用。
 """}]
 
+# 只在示範帳戶模式（這台環境沒有 MAX 金鑰）追加的規則。
+# **有金鑰時完全不追加，SYSTEM 逐字不變**，prompt cache 的 cache key 也就不受影響——
+# 錄影環境（us-east-1）走的是與改動前一模一樣的 prompt。
+#
+# 為什麼非要有這一條：工具回傳的 data_notes 已經寫了「不得說『你的帳戶』」，但實測
+# 4 個對話裡有 3 個的第一輪仍然講出「你的帳戶總資產約 NT$118,168,978」。data_notes 只在
+# 那一輪的工具結果裡，追問輪早就被推到上下文深處；SYSTEM 每一輪都在，是唯一守得住追問輪
+# 措辭的位置。它與另外三道（工具 data_notes／handler 強制前綴／前端常設標示）互為備援。
+DEMO_SYSTEM_RULE = {"text": """11. **本環境沒有連上使用者的 MAX 帳戶。**所有帳戶數字（餘額、持倉、
+   資產總值、佔比、三方案金額）都來自**示範帳戶**——命題方提供的一年份帳戶資料。
+   只要回答裡出現帳戶金額、持倉或佔比：
+   - **第一句話先講明這是示範帳戶**，一律用「示範帳戶」四個字，並帶到資產估值日。
+   - **禁止**「你的帳戶」「你的資金」「你目前持有」「你的餘額」「你現在有」這類第二人稱
+     所有格寫法，一律改成「示範帳戶」。**這條在第二、三輪追問時同樣適用**——接著講同一份
+     數字時最容易破功，例如被問「那 TWD 佔比多少」時回「TWD 佔你帳戶的 98.6%」就是違規，
+     要說「示範帳戶裡 TWD 佔 98.6%」。
+   - **不得說出任何幣的持有數量（顆數／個數）**：示範資料只有台幣市值，數量還原不回來，
+     講出來的量級會錯一個數量級。只講金額與百分比。
+   - 行情、手續費、交易所單筆下限走公開 API，是現在的真實數字，可正常引用；
+     金額與佔比是照示範帳戶市值精確算出來的，不是估的也不是編的。
+   - 使用者按下確認**不會**送出真實訂單，要主動講明。
+"""}
+
 # 工具鏈 chips 用的中文標籤（前端「決策軌跡」與 tool_trail 欄位）
 _TOOL_LABELS = {
     "query_user_history": "查交易史",
@@ -141,6 +164,9 @@ def run_agent(messages, profile=None):
     system = list(SYSTEM)
     if profile:
         system.append({"text": profile["prompt_addon"]})
+    # 只有「沒金鑰＋示範資料讀得到」才追加；有金鑰時這一行不會改變 system 的任何一個位元組
+    if demo_account.in_use():
+        system.append(DEMO_SYSTEM_RULE)
     tool_list = list(tools.TOOLS)
     if _CACHE_ON:  # system＋工具定義掛 cache 點（真環境驗證後啟用）
         system.append({"cachePoint": {"type": "default"}})

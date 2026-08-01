@@ -367,6 +367,33 @@
     return card;
   }
 
+  /* ── 示範帳戶標示（後端沒有 MAX 金鑰時）──
+   * 這是三道標示裡**唯一不依賴模型**的一道：橫幅由資料欄位決定、程式渲染，
+   * 模型漏講了畫面照樣看得出來這不是真帳戶。
+   * 兩個來源都認：payload 頂層（chat.py 加的）與第一張卡（loop.py 只帶得出 scenarios
+   * 這個陣列，所以標示也蓋在卡上）。任一個在就算數。 */
+  function demoNoticeFrom(payload) {
+    if (!payload) return null;
+    const first = Array.isArray(payload.scenarios) ? payload.scenarios[0] : null;
+    const source = payload.account_source || (first && first.account_source);
+    if (source !== "demo_dataset") return null;
+    return payload.account_notice || (first && first.account_notice) ||
+      "🧪 示範帳戶 — 命題方提供的一年份帳戶資料，非真實 MAX 帳戶餘額";
+  }
+
+  /* 副標題是**常設**標示：它在 position:sticky 的 chat-header 裡，捲不走，
+   * 之後每一輪（含只出確認卡、看不到橫幅的那一輪）都還在畫面上。
+   * 聊天流裡的金框橫幅只在第一次貼——每輪都貼會疊出四五條一樣的金框。 */
+  function markDemoAccount(notice) {
+    const subtitle = byId("chat-subtitle");
+    const first = !subtitle || subtitle.dataset.demo !== "1";
+    if (subtitle) {
+      subtitle.textContent = "🧪 示範帳戶模式（命題方資料）";
+      subtitle.dataset.demo = "1";
+    }
+    if (first) byId("chatlog").append(el("div", "demo-banner", notice));
+  }
+
   /* 卡片本身就是選項，使用者（與評審）第一直覺是直接點它。
    * 這份原本只組 DOM 不掛任何事件——三張卡點下去毫無反應，Golden Path
    * （三方案 → 選一個 → 確認卡）在這一頁整條斷掉。
@@ -412,7 +439,7 @@
     return found && found.fee_twd != null ? found.fee_twd : null;
   }
 
-  function addConfirmCard(card, token, fee) {
+  function addConfirmCard(card, token, fee, demoNotice) {
     const wrap = el("div", "confirm");
     wrap.append(el("div", "h", "📋 下單確認 — 最後一步由你決定"));
     const table = el("table");
@@ -433,6 +460,9 @@
     if (fee != null) table.append(row("預估手續費", "NT$" + fmt(fee)));
     table.append(row("確認時效", "60 秒內有效"));
     wrap.append(table);
+    /* 示範帳戶模式仍然把確認流程完整跑完（送出 → 後端驗憑證 → 寫稽核），
+     * 但後端不會送出真實訂單。先在卡片上講明，不要等使用者按下去才知道。 */
+    if (demoNotice) wrap.append(el("div", "demo-line", "🧪 示範帳戶模式：這張卡完整呈現流程，但不會送出到交易所。"));
     wrap.append(el("div", "warn", "⚠ 以當下價格估算，實際成交可能有滑價。麥麥不會替你按下這顆按鈕。"));
     const btns = el("div", "btns");
     const ok = el("button", "ok", "確認" + (card.side === "buy" ? "買入" : "賣出"));
@@ -458,6 +488,13 @@
         if (response.ok) {
           const oid = (response.exchange_response && response.exchange_response.id) || (response.order && response.order.id) || "";
           byId("chatlog").append(el("div", "done", "✅ 已成交" + (oid ? "（單號 #" + oid + "）" : "") + " — 持倉與健檢已更新"));
+          showTrail();
+        } else if (response.demo_account) {
+          /* 這不是故障，是「本來就不會送出」——用中性樣式，不要在評審面前跳紅字。
+             也不偽造成交或單號；決策軌跡照樣展開，證明流程真的走完了。 */
+          byId("chatlog").append(el("div", "demo-banner", "🧪 " + (response.message || "示範帳戶模式，未送出任何訂單。")));
+          const subtitle = byId("chat-subtitle");
+          if (subtitle) { subtitle.textContent = "🧪 示範帳戶模式（命題方資料）"; subtitle.dataset.demo = "1"; }
           showTrail();
         } else addPlainAssistant("⚠️ " + (response.message || "下單未成功"));
       } catch (_) { addPlainAssistant("⚠️ 送單失敗，請再試一次。"); }
@@ -601,11 +638,16 @@
        離線劇本不畫：那排打勾的「✓ 查持倉」「✓ 方案試算」是在宣稱後端真的跑過這些
        工具，但它根本沒跑成功，chip 本身又沒有任何離線記號。 */
     if (!usedMock) renderToolChips(payload.tool_trail);
+    /* 橫幅放在回覆與卡片**之前**：使用者先看到「這是示範帳戶」，才看到數字。
+       放在 addScenarios 裡面不夠——只查餘額沒有出卡的那一輪就會漏標。
+       離線劇本（usedMock）不進這裡：那條路的標示是上面那句「不是你帳戶的即時資料」。 */
+    const demoNotice = usedMock ? null : demoNoticeFrom(payload);
+    if (demoNotice) markDemoAccount(demoNotice);
     addPlainAssistant(payload.reply || GOLDEN_MOCK.reply);
     addScenarios(payload.scenarios);
     if (payload.confirm) {
       addConfirmCard(payload.confirm.confirmation_card, payload.confirm.confirm_token,
-        feeForConfirm(payload.confirm.confirmation_card, payload.scenarios));
+        feeForConfirm(payload.confirm.confirmation_card, payload.scenarios), demoNotice);
     }
     track("maimate_response_completed", { intent: "allowedPersonalAnalysis", status: "completed" });
     scrollBottom();

@@ -35,6 +35,19 @@ def _keys():
     return key, secret
 
 
+def has_keys():
+    """這個環境有沒有配置帳戶金鑰。**只讀存在性，不讀值、不印值、不打任何 API。**
+
+    判斷與 _keys() 同一套（空字串＝沒有：模板 Environment 區塊變動時金鑰會被清成空）。
+    唯一的用途是讓上層決定要不要改用示範帳戶（backend/agent/demo_account.py）——
+    降級的條件只能是「金鑰不存在」這個部署時就決定、整個 Lambda 生命週期不會變的靜態事實。
+    **絕不可以用 try/except balances() 來偵測**：場地網路每 5 次掉 1 次 TLS，
+    把呼叫失敗也當成沒金鑰，有金鑰的錄影環境就會在一段對話中間靜默換成示範資料，
+    而畫面完全正常——那正是本專案最忌諱的「看不出來的失效」。
+    """
+    return bool(os.environ.get("MAX_API_KEY")) and bool(os.environ.get("MAX_API_SECRET"))
+
+
 def _build_request(method, path, params=None, nonce=None):
     """組出 (target, body_bytes, headers)。抽出來是為了能在沒有金鑰的環境下驗證
     payload 與 body 的位元組一致性（tests/test_max_private.py）。"""

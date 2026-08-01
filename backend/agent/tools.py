@@ -234,13 +234,41 @@ def get_market_data(market, kind, period=None):
 
 
 def get_account_balance():
+    """有金鑰＝查真帳戶；沒金鑰＝示範帳戶（backend/agent/demo_account.py）。
+
+    這一支必須跟著降級。SYSTEM 規則 4 雖然叫模型直接呼叫 calculate_trade_scenarios，
+    但實務上它常先查餘額（前端 GOLDEN_MOCK 的軌跡就是「查持倉 → 方案試算」）；
+    這支一拋例外，模型看到 tool error 就直接吐「無法連線到 MAX 帳戶」而根本走不到三方案，
+    正好就是要修的症狀。
+    """
+    from . import demo_account
+    if demo_account.active():
+        demo = demo_account.holdings_view()
+        if demo is not None:
+            return demo
     from ..integrations import max_private
     return max_private.balances()
 
 
 def calculate_trade_scenarios(market, side, fraction=1.0, amount_twd=None):
-    from . import scenarios
-    return scenarios.calculate_trade_scenarios(market, side, fraction=fraction, amount_twd=amount_twd)
+    """三方案試算。有金鑰時 balances 一律不注入，讓 scenarios.py 自己抓真帳戶——
+    那條路（錄影環境正在用）與修改前逐字相同。
+
+    沒金鑰時改注入示範帳戶：用的是 scenarios.py 本來就有的注入孔，所以那個檔案的
+    算術一行都不用改；回來之後再把標示蓋到每一張卡上。
+    """
+    from . import demo_account, scenarios
+    if not demo_account.active():
+        return scenarios.calculate_trade_scenarios(market, side, fraction=fraction,
+                                                   amount_twd=amount_twd)
+    demo = demo_account.resolve(market)
+    if demo is None:  # 示範資料也不可用 → 退回原本的錯誤路徑，不臨時編數字
+        return scenarios.calculate_trade_scenarios(market, side, fraction=fraction,
+                                                   amount_twd=amount_twd)
+    result = scenarios.calculate_trade_scenarios(
+        market, side, fraction=fraction, amount_twd=amount_twd,
+        balances=demo["balances"], ticker=demo["ticker"])
+    return demo_account.mark(result, demo)
 
 
 def compare_entry_strategies(market, amount_twd, risk_mode=None):

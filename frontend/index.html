@@ -44,6 +44,12 @@
   .badge{position:relative}
   .badge::after{content:"";position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:44px}
   .offline{font-size:10px;color:var(--red);font-weight:700;display:none;margin-left:8px}
+  /* 示範帳戶「常設」標示：掛在 sticky 頂欄裡，捲不走。
+     聊天流裡那條金框橫幅只是一則 log——確認卡出現時它早就捲出視窗了，
+     那一刻畫面上唯一的標示會變成模型自己那句話，等於沒有任何程式保證。
+     chat.html 的對等物是 #chat-subtitle（同樣在 sticky header 裡）。 */
+  .demo-pill{font-size:10px;color:#7A4E00;background:var(--warm);border:1px solid var(--gold);
+    font-weight:800;display:none;margin-left:8px;padding:3px 8px;border-radius:999px;white-space:nowrap}
 
   /* ── 版面：手機單欄，桌機（≥900px）雙欄 ── */
   main{max-width:480px;margin:0 auto;padding:14px 18px 100px}
@@ -145,6 +151,12 @@
   .scen .row>div{flex:1}
   .scen .note{font-size:10.5px;color:var(--sub);margin-top:8px;line-height:1.55}
 
+  /* 示範帳戶標示：沒有 MAX 金鑰時，帳戶數字來自命題方提供的一年份資料。
+     刻意不用錯誤紅——這不是故障；但要夠顯眼，評審一眼看得出不是真帳戶。
+     樣式與 chat.html 同一套（兩條渲染路徑要長得一樣）。 */
+  .demo-banner{background:var(--warm);border:1.5px solid var(--gold);border-radius:12px;
+    padding:10px 12px;margin-bottom:10px;font-size:12px;font-weight:800;color:var(--txt);line-height:1.65}
+  .confirm .demo-line{margin-top:9px;font-size:11.5px;font-weight:800;color:var(--txt);line-height:1.6}
   /* 下單確認卡 */
   .confirm{background:var(--warm);border:1.5px solid var(--gold);border-radius:16px;padding:16px;margin-bottom:12px}
   .confirm .h{font-size:14.5px;font-weight:800;color:var(--txt);margin-bottom:11px}
@@ -192,6 +204,7 @@
   <div class="logo"><img src="maimate_bot_small.png" alt="麥麥"></div>
   <div><h1>MaiMate 麥麥</h1><div class="sub">市場一直在變，麥麥一直陪你</div></div>
   <span class="offline" id="offline">離線展示</span>
+  <span class="demo-pill" id="demo-pill">🧪 示範帳戶</span>
   <span class="badge" id="mode-badge" role="button" tabindex="0" aria-label="切換 AI 回應模式（Demo）" style="cursor:pointer" title="點擊切換使用者模式（Demo）">成長陪跑</span>
 </header>
 <main>
