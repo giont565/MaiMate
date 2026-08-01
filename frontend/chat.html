@@ -201,12 +201,15 @@
 
   :focus-visible{outline:2px solid var(--red);outline-offset:2px}
   @media (max-width:374px){.empty h2{font-size:20px}.card-ai .direct{font-size:15px}}
+  .chat-offline{margin-left:8px;font-size:10.5px;font-weight:800;color:#D64550;white-space:nowrap}
 </style>
 </head>
 <body>
 
 <header class="chat-header">
   <button class="icon-button" id="chat-back" aria-label="返回">‹</button>
+      <!-- 離線標示：取不到後端時這段回覆來自離線劇本，畫面必須看得出來 -->
+      <span class="chat-offline" id="chat-offline" hidden>離線展示</span>
   <div class="who">
     <img src="maimate_hero.png" alt="">
     <div><b>問麥麥</b><span id="chat-subtitle">依你的資料與目前市場整理</span></div>

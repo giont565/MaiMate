@@ -48,12 +48,28 @@ const ALLOWED_EVENT_KEYS = ["e", "q", "src", "intent", "tool", "style", "status"
   await page.route("**/*", (route) =>
     route.request().url().startsWith(base) ? route.continue() : route.abort());
 
+  /* 等待條件要比對送出前的卡片數，不能只看「有沒有卡片」——第二次以後本來就有，
+     那樣會立刻通過而卡片還沒畫出來。
+     也不能只等 chat-stop 收起：submitQuestion 現在會先 await 一次真 /chat，
+     在那之前 chat-stop 仍是隱藏的，同樣會誤判。 */
   const ask = async (text) => {
+    const before = await page.$$eval(".card-ai", (els) => els.length);
     await page.fill("#q", text);
     await page.click("#chat-send");
+    await page.waitForFunction((n) => document.querySelectorAll(".card-ai").length > n,
+      before, { timeout: 15000 });
     await page.waitForFunction(() => document.getElementById("chat-stop").hidden, null, { timeout: 15000 });
   };
   const lastCard = () => page.$eval(".card-ai:last-of-type", (e) => e.textContent);
+  /* 等待條件：先等回覆卡數量增加，再等 chat-stop 收起。
+     只等 chat-stop 會誤判——submitQuestion 現在會先 await 一次真 /chat，在那之前
+     chat-stop 還是隱藏的，waitForFunction 會立刻通過，而卡片根本還沒畫。 */
+  const waitAnswer = async (before) => {
+    await page.waitForFunction((n) => document.querySelectorAll(".card-ai").length > n,
+      before, { timeout: 15000 });
+    await page.waitForFunction(() => document.querySelectorAll(".card-ai").length > 0, null, { timeout: 15000 });
+    await page.waitForFunction(() => document.getElementById("chat-stop").hidden, null, { timeout: 15000 });
+  };
 
   // ── 1. 無 Session → 導回 Screen 1
   await page.goto(`${base}/chat.html`);
@@ -108,7 +124,7 @@ const ALLOWED_EVENT_KEYS = ["e", "q", "src", "intent", "tool", "style", "status"
 
   // ── 7/8/11/13. 送出 → 結構化區塊、數字與 mock 一致、不出現工具原名
   await page.click("#chat-send");
-  await page.waitForFunction(() => document.getElementById("chat-stop").hidden, null, { timeout: 15000 });
+  await waitAnswer(0);
   const answer = await lastCard();
   // 現金帳戶：每個占比都必須是工具算出來的，缺料時明說「報告未提供」，兩種情況都不得補假明細
   for (const need of BREAKDOWN_NEEDS)
@@ -289,44 +305,53 @@ const ALLOWED_EVENT_KEYS = ["e", "q", "src", "intent", "tool", "style", "status"
   }
   console.log("26 版面 OK：375／390px 無水平捲動，Composer 不遮內容");
 
-  /* ── 27. Golden Path 有狀態：進去之後不能中途掉回 mock ──────────────────
-   * 後端遇到講不清楚的交易意圖會先反問（「你想保留多少比例？」——刻意設計，
-   * AI 不替使用者決定），而回答「賣一半就好」時那句話不含任何交易關鍵字。
-   * 閘門若逐則比對正則，這一句就會掉回 mock，畫面接上一段完全不相干的分析——
-   * 對話斷在半路，看起來像功能壞掉，而且不會有任何錯誤訊息。
+  /* ── 27. 每一句都走真後端；下單流程結束後不得把歷史帶進下一題 ──────────
+   * 現在的契約與 index.html 一致：所有訊息都送 /chat，同一個後端、同一組工具。
+   * 所以「有沒有打 /chat」不再能分辨流程有沒有結束——改看送出去的 messages。
    *
-   * 用「有沒有再打 /chat」判斷，因為那是兩條路唯一可靠的分界。 */
+   * 後端遇到講不清楚的交易意圖會先反問（刻意設計，AI 不替使用者決定），使用者
+   * 回答「賣一半就好」時那句話不含任何交易關鍵字，必須仍帶著前文一起送出去，
+   * 否則後端會失去脈絡、把它當成全新的問題。
+   * 反過來，取消之後再問一般問題卻還拖著整段下單對話，同樣是錯的。 */
   {
-    let calls = 0;
-    await page.route(/\/chat(\?|$)/, (route) => { calls += 1; route.abort(); });
+    const sent = [];
+    await page.route(/\/chat(\?|$)/, (route) => {
+      try { sent.push(JSON.parse(route.request().postData() || "{}")); } catch (_) { sent.push({}); }
+      route.abort();   // 逼走離線劇本，行為可重現
+    });
     await page.goto(`${base}/chat.html`);
     await page.waitForSelector("#q");
     const send = async (text) => {
       await page.fill("#q", text);
       await page.click("#chat-send").catch(() => page.press("#q", "Enter"));
-      await page.waitForTimeout(1600);
+      await page.waitForTimeout(1500);
     };
 
-    await send("ETH 跌太多了，幫我全部賣掉！");
-    const afterFirst = calls;
-    if (afterFirst === 0) throw new Error("交易意圖沒有走 /chat（Golden Path 沒進去）");
+    await send("什麼是手續費？");
+    if (!sent.length) throw new Error("一般問題沒有送到 /chat——問麥麥應與 index.html 走同一條路");
 
+    sent.length = 0;
+    await send("ETH 跌太多了，幫我全部賣掉！");
     await send("賣一半就好");
-    if (calls === afterFirst) {
-      throw new Error("回答反問的那一句掉回 mock——Golden Path 中途斷線"
-        + "（使用者會看到一段和下單無關的回覆）");
+    if (sent.length < 2) throw new Error("下單對話的第二句沒有送出");
+    const followUp = sent[sent.length - 1].messages || [];
+    if (followUp.length < 2) {
+      throw new Error("回答反問時沒有帶上前文，後端會失去脈絡"
+        + `（messages 只有 ${followUp.length} 則）`);
     }
 
-    /* 也要出得來：流程結束後每一句都繼續送 /chat 同樣是錯的，
-       使用者問「什麼是手續費」不該被當成還在下單對話裡。 */
     await page.click(".scen").catch(() => {});
     await page.waitForSelector(".confirm", { timeout: 6000 }).catch(() => {});
     await page.click(".btns .no").catch(() => {});
-    await page.waitForTimeout(400);
-    const afterCancel = calls;
+    await page.waitForTimeout(300);
+    sent.length = 0;
     await send("什麼是手續費？");
-    if (calls !== afterCancel) throw new Error("取消後仍黏在 Golden Path，一般問題也送去 /chat");
-    console.log("27 Golden Path 狀態 OK：反問的回答留在流程內、取消後回到一般對話");
+    const afterCancel = (sent[0] && sent[0].messages) || [];
+    if (afterCancel.length !== 1) {
+      throw new Error("取消後仍拖著下單對話的歷史"
+        + `（messages 有 ${afterCancel.length} 則，應該只有這一句）`);
+    }
+    console.log("27 對話路徑 OK：每句都走真後端、反問的回答帶著前文、取消後歷史已清空");
     await page.unroute(/\/chat(\?|$)/);
   }
 

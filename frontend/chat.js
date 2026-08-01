@@ -459,25 +459,52 @@
     } catch (_) { /* 軌跡載入失敗不影響主流程 */ }
   }
 
-  async function runGoldenPath(text) {
+  /* 每一句都送真 /chat，與 index.html 的對話同一條路：同一個後端、同一個 LLM、
+   * 同一組工具（查餘額／查行情／查交易史／試算三方案）。工具鏈 chip 也照後端回傳的
+   * tool_trail 顯示，不再用前端猜的標籤。
+   *
+   * 取不到後端時才走離線劇本，而且要依意圖分流——交易意圖回三方案（GOLDEN_MOCK），
+   * 一般問題交還給既有的結構化服務。全部套 GOLDEN_MOCK 會讓「什麼是手續費」跳出
+   * 三張賣出方案卡，那比沒有回覆嚴重得多。
+   *
+   * 回傳 true＝已處理；false＝請呼叫端改走離線的結構化回覆。 */
+  async function askBackend(text, opts) {
+    const tradeIntent = (opts && opts.tradeIntent) || ui.goldenMessages.length > 0;
     const toolNode = el("div", "tool-activity");
     toolNode.append(el("span", "chip", "正在查看你的持倉與市場資料"));
     byId("chatlog").append(toolNode);
+    byId("chatlog").setAttribute("aria-busy", "true");
     scrollBottom();
+
     ui.goldenMessages.push({ role: "user", content: [{ text }] });
-    let payload;
+    let payload = null;
     try {
       const body = { messages: ui.goldenMessages, session_id: SESSION_ID };
       const navigationContext = ui.context && ui.context.requestContext;
       if (navigationContext) body.navigation_context = navigationContext;
-      payload = await (await fetch(API + "/chat", {
+      const response = await fetch(API + "/chat", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
-      })).json();
+      });
+      if (!response.ok) throw new Error("CHAT_HTTP_" + response.status);
+      payload = await response.json();
       if (Array.isArray(payload.messages)) ui.goldenMessages = payload.messages;
+      setOffline(false);
     } catch (_) {
-      payload = GOLDEN_MOCK; // 離線保險：Golden Path 全鏈路照走
+      payload = null;
+      setOffline(true);
     }
     toolNode.remove();
+    byId("chatlog").setAttribute("aria-busy", "false");
+
+    if (!payload) {
+      /* 這一句本來就不是交易意圖 → 把送出的那則從歷史移除，交還給結構化服務。
+         留著會讓下一次請求帶著一則沒有回覆的訊息，也會讓流程誤判成還在下單對話裡。 */
+      if (!tradeIntent) { ui.goldenMessages.pop(); return false; }
+      payload = GOLDEN_MOCK;
+    }
+
+    /* chip 用後端實際跑過的工具，不用前端猜的——分鏡稿鏡 2 就是在看這排。 */
+    renderToolChips(payload.tool_trail);
     addPlainAssistant(payload.reply || GOLDEN_MOCK.reply);
     addScenarios(payload.scenarios);
     if (payload.confirm) {
@@ -486,6 +513,23 @@
     }
     track("maimate_response_completed", { intent: "allowedPersonalAnalysis", status: "completed" });
     scrollBottom();
+    return true;
+  }
+
+  /* 後端回的 tool_trail → 工具鏈 chip（與 index.html 的 addTrail 同語意）。 */
+  function renderToolChips(trail) {
+    if (!Array.isArray(trail) || !trail.length) return;
+    const wrap = el("div", "tool-activity");
+    trail.forEach((step) => {
+      wrap.append(el("span", "chip", "✓ " + (step.summary || step.tool || "查詢")));
+    });
+    byId("chatlog").append(wrap);
+  }
+
+  /* 離線標示：畫面上必須看得出這段回覆不是線上算的（同 index.html 的頂欄標示）。 */
+  function setOffline(on) {
+    const badge = byId("chat-offline");
+    if (badge) badge.hidden = !on;
   }
 
   /* ── 送出問題 ── */
@@ -515,9 +559,12 @@
      * 所以：一旦進了 Golden Path（goldenMessages 有東西）就待在裡面，直到這段流程
      * 結束（成交／取消／開新對話會清空）。AUTO_EXEC 的安全邊界仍然優先於一切。 */
     const inGoldenPath = ui.goldenMessages.length > 0;
-    if (!AUTO_EXEC.test(text) && (inGoldenPath || TRADE_INTENT.test(text))) {
+    const tradeIntent = inGoldenPath || TRADE_INTENT.test(text);
+    if (!AUTO_EXEC.test(text)) {
       hideComposerContext();
-      return runGoldenPath(text);
+      /* 線上一律走真後端；只有取不到後端而且這句不是交易意圖時才回傳 false，
+         由下面既有的結構化服務接手當離線劇本。 */
+      if (await askBackend(text, { tradeIntent })) return;
     }
 
     const toolNode = el("div", "tool-activity");
