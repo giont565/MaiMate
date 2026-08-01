@@ -164,7 +164,10 @@ function renderHealth(r) {
 
 async function loadHealth() {
   try {
-    const r = await (await fetch(`${API}/health`)).json();
+    /* no-store：/health 是 `public, max-age=3600`，但 ACAO 只在請求帶 Origin 時才回，
+       又沒有 Vary: Origin。共用快取一旦被不帶 Origin 的請求灌進去，之後跨來源的
+       fetch 全部 Failed to fetch，最長一小時——這頁會靜靜地整頁掉回 MOCK.health。 */
+    const r = await (await fetch(`${API}/health`, { cache: "no-store" })).json();
     renderHealth(r);
   } catch { offline(); renderHealth(MOCK.health); }
 }

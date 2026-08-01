@@ -67,7 +67,10 @@
     const timer = setTimeout(() => abort.abort(), 2500);
     let report = null;
     try {
-      const response = await fetch(window.API_BASE + "/health", { signal: abort.signal });
+      /* no-store 的理由見 home-service.js 同一個呼叫點：/health 是
+         `public, max-age=3600` 但 ACAO 只在帶 Origin 時才回、又沒有 Vary: Origin，
+         共用快取一被不帶 Origin 的請求灌進去，跨來源 fetch 就整整一小時拿不到。 */
+      const response = await fetch(window.API_BASE + "/health", { signal: abort.signal, cache: "no-store" });
       if (response.ok) report = await response.json();
     } catch (_) { /* 落回示範資料 */ }
     finally { clearTimeout(timer); }
