@@ -77,10 +77,13 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem("mm_
     body: document.body.dataset.homeStyle,
     pressed: [...document.querySelectorAll("[data-style]")].filter((b) => b.getAttribute("aria-pressed") === "true").map((b) => b.dataset.style),
     hint: document.getElementById("home-style-hint").textContent,
+    hintShown: !document.getElementById("home-style-hint").hidden,
   }));
   if (styleDefault.body !== "analytical" || styleDefault.pressed.join() !== "analytical")
     throw new Error(`版面預設未跟著問卷答案：${JSON.stringify(styleDefault)}`);
   if (!styleDefault.hint.includes("問卷")) throw new Error(`版面提示文案異常：${styleDefault.hint}`);
+  // 還沒自己選過時要看得到「為什麼現在是這個版面」——問卷帶入卻不說明會很莫名其妙
+  if (!styleDefault.hintShown) throw new Error("問卷帶入版面時提示行卻被收起");
   await page.click('[data-style="concise"]');
   await page.waitForFunction(() => document.body.dataset.homeStyle === "concise");
   const conciseHides = await page.evaluate(() => {
@@ -90,10 +93,17 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem("mm_
   if (conciseHides !== "none") throw new Error("「成長陪跑」（concise）未收起解釋／證據區塊");
   await page.reload();
   await page.waitForSelector(".bottom-nav");
-  const remembered = await page.evaluate(() => ({ body: document.body.dataset.homeStyle, hint: document.getElementById("home-style-hint").textContent }));
+  const remembered = await page.evaluate(() => ({
+    body: document.body.dataset.homeStyle,
+    hint: document.getElementById("home-style-hint").textContent,
+    hintShown: !document.getElementById("home-style-hint").hidden,
+  }));
   if (remembered.body !== "concise" || !remembered.hint.includes("已記住"))
     throw new Error(`版面選擇未被記住：${JSON.stringify(remembered)}`);
-  console.log("1c 三種版面 OK：預設＝問卷 Q6（analytical）、改選 concise 會收起解釋且刷新後記住");
+  /* 自己選過之後那行引導就該收起。textContent 在 hidden 時仍讀得到，所以只驗文字
+     會漏掉「其實還佔著一行」——這裡改驗使用者真的看不看得到。 */
+  if (remembered.hintShown) throw new Error("使用者已自選版面，提示行卻仍佔著一行");
+  console.log("1c 三種版面 OK：預設＝問卷 Q6（analytical）＋顯示來源說明、改選 concise 會收起解釋、刷新後記住且提示行收起");
 
   // ── 5. 「我的」→ 資料授權 → 返回回到設定頁
   await page.goto(`${base}/settings.html`);

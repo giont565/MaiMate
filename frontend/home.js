@@ -1183,7 +1183,13 @@
       button.setAttribute("aria-pressed", String(button.dataset.style === style));
     });
     const hint = byId("home-style-hint");
-    if (hint) hint.textContent = STYLE_HINTS[source] || STYLE_HINTS.default;
+    if (hint) {
+      hint.textContent = STYLE_HINTS[source] || STYLE_HINTS.default;
+      /* 使用者自己選過之後就收起：那行字是引導，看過一次就只剩佔位，而橫幅是常駐的。
+         還沒選過（問卷帶入或全新使用者）仍要說明「為什麼現在是這個版面」。
+         文字留在 DOM 不清空——aria-describedby 指著它，煙測也靠它確認選擇有被記住。 */
+      hint.hidden = source === "userChoice";
+    }
   }
 
   function bindStyleSwitch() {

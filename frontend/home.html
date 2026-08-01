@@ -66,8 +66,10 @@
   /* ── 三種版面（＝問卷 Q6 的三種溝通風格；呈現密度不同，資料完全相同）──
      貼在頂欄下的窄橫幅。原本是內容流裡三顆帶框 44px 按鈕＋一行提示，約 84px；
      改成無框文字鈕後剩約 50px，而且不再把問候語往下推。 */
+  /* 底部留白放在橫幅上而不是提示行上：提示行選過就收起（見 home.js applyStyle），
+     留白掛在它身上會一起消失，橫幅會突然變得很擠。 */
   .style-bar{
-    position:sticky;top:58px;z-index:19;padding:0 18px;
+    position:sticky;top:58px;z-index:19;padding:0 18px 6px;
     background:rgba(251,252,254,.96);border-bottom:1px solid rgba(227,233,245,.86)
   }
   .style-switch{display:flex;align-items:center;gap:2px;overflow-x:auto;scrollbar-width:none}
@@ -82,7 +84,7 @@
   }
   .style-switch button::after{content:"";position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:44px}
   .style-switch button[aria-pressed="true"]{background:var(--tint);color:var(--blue)}
-  .style-hint{margin:0;padding-bottom:7px;color:var(--mut);font-size:10px;line-height:1.5}
+  .style-hint{margin:-1px 0 0;color:var(--mut);font-size:10px;line-height:1.5}
 
   /* 成長陪跑（concise）：留結論與摘要，收起解釋段落與證據數字 */
   body[data-home-style="concise"] .today-explanation,
