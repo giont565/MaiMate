@@ -373,6 +373,45 @@ const MARKET_PATH = /\/market(\?|$)/;
       ok("11 return-core OK：剔除入金／未滿一年不年化／分母≤0 不給數字／TWR 串接");
     }
 
+    /* ── 12. 三種模式在三個畫面必須同名同序 ────────────────────────────
+     * index.html 的模式徽章（app.js MODE_LABELS）、home.html 的版面切換、
+     * onboarding 問卷 Q6，講的是同一件事「麥麥怎麼跟你說話」。原本 index 叫
+     * 安心白話／成長陪跑／專業效率，home 與問卷叫陪我慢慢看懂／先告訴我重點／
+     * 給我更多數據——同一個設定在三個畫面三套名字，使用者會以為是三件事。 */
+    {
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      await page.route(HEALTH_PATH, (r) => r.fulfill({ json: HEALTH }));
+      await page.route(MARKET_PATH, (r) => r.fulfill({ json: { kind: "ticker", market: "btctwd", data: { last: "100" } } }));
+
+      await page.goto(`${base}/index.html`);
+      await page.waitForSelector("#mode-badge");
+      /* app.js 頂層的 const 不掛在 window 上，但在同一個 global lexical scope
+         裡查得到名字，所以 evaluate 可以直接讀。 */
+      const modes = await page.evaluate(() => MODE_ORDER.map((k) => MODE_LABELS[k]));
+
+      await page.goto(`${base}/home.html?demo=STEADY_PLANNER`);
+      await page.waitForSelector(".style-switch button");
+      const switches = await page.evaluate(
+        () => [...document.querySelectorAll(".style-switch button")].map((b) => b.textContent.trim())
+      );
+      await page.close();
+
+      assert(modes.length === 3 && switches.length === 3,
+        `模式數量不是三個：index ${modes.length}／home ${switches.length}`);
+      modes.forEach((label, i) => {
+        assert(label === switches[i],
+          `第 ${i + 1} 個模式兩頁不同名：\n  index.html：${label}\n  home.html ：${switches[i]}`);
+      });
+
+      /* 問卷 Q6 是使用者第一次選這個設定的地方，也要同名。 */
+      const q6 = fs.readFileSync(path.join(ROOT, "onboarding.js"), "utf8")
+        .match(/id: "communicationStyle"[\s\S]*?\]\s*\}/)[0];
+      modes.forEach((label) => {
+        assert(q6.includes(`l: "${label}"`), `問卷 Q6 缺少「${label}」選項（三個畫面必須同名）`);
+      });
+      ok(`12 模式同名 OK：${modes.join("／")} 在 index、home、問卷 Q6 三處一致`);
+    }
+
     console.log("全部通過 ✅");
   } catch (error) {
     console.error("FAIL:", error.message);

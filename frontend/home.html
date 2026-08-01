@@ -63,18 +63,28 @@
   .profile-reminder p{margin-top:2px;color:var(--sub);font-size:11.5px;line-height:1.55}
   .profile-reminder button{flex:none;min-height:44px;padding:0 8px;border:0;background:none;color:var(--blue);font-size:12px;font-weight:800;cursor:pointer}
 
-  /* ── 三種版面（＝問卷 Q6 的三種溝通風格；呈現密度不同，資料完全相同）── */
-  .style-switch{display:flex;align-items:center;gap:6px;margin:2px 0 14px;overflow-x:auto;scrollbar-width:none}
-  .style-switch::-webkit-scrollbar{display:none}
-  .style-switch .sw-label{flex:none;font-size:11.5px;color:var(--mut);font-weight:800;margin-right:2px}
-  .style-switch button{
-    flex:none;min-height:44px;padding:0 13px;border:1.5px solid var(--line);border-radius:12px;
-    background:#fff;color:var(--sub);font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap
+  /* ── 三種版面（＝問卷 Q6 的三種溝通風格；呈現密度不同，資料完全相同）──
+     貼在頂欄下的窄橫幅。原本是內容流裡三顆帶框 44px 按鈕＋一行提示，約 84px；
+     改成無框文字鈕後剩約 50px，而且不再把問候語往下推。 */
+  .style-bar{
+    position:sticky;top:58px;z-index:19;padding:0 18px;
+    background:rgba(251,252,254,.96);border-bottom:1px solid rgba(227,233,245,.86)
   }
-  .style-switch button[aria-pressed="true"]{border-color:var(--blue);background:var(--tint);color:var(--blue)}
-  .style-hint{margin:-8px 0 14px;color:var(--mut);font-size:11.5px;line-height:1.6}
+  .style-switch{display:flex;align-items:center;gap:2px;overflow-x:auto;scrollbar-width:none}
+  .style-switch::-webkit-scrollbar{display:none}
+  .style-switch .sw-label{flex:none;font-size:11px;color:var(--mut);font-weight:800;margin-right:6px}
+  /* 視覺 32px、字 11.5px，但下面的 ::after 會把可點範圍撐到 44px（Apple HIG 最小值）。
+     橫幅本身沒有其他控件，放大的熱區不會壓到別人。 */
+  .style-switch button{
+    position:relative;flex:none;height:32px;padding:0 9px;border:0;border-radius:8px;
+    background:none;color:var(--mut);font-size:11.5px;font-weight:700;cursor:pointer;
+    font-family:inherit;white-space:nowrap
+  }
+  .style-switch button::after{content:"";position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:44px}
+  .style-switch button[aria-pressed="true"]{background:var(--tint);color:var(--blue)}
+  .style-hint{margin:0;padding-bottom:7px;color:var(--mut);font-size:10px;line-height:1.5}
 
-  /* 先告訴我重點：留結論與摘要，收起解釋段落與證據數字 */
+  /* 成長陪跑（concise）：留結論與摘要，收起解釋段落與證據數字 */
   body[data-home-style="concise"] .today-explanation,
   body[data-home-style="concise"] .module-note,
   body[data-home-style="concise"] .learning-reason,
@@ -83,12 +93,12 @@
   body[data-home-style="concise"] .module-card{padding:14px 15px}
   body[data-home-style="concise"] .insight-list .insight-card:nth-child(n+2){display:none}
 
-  /* 陪我慢慢看懂：保留解釋，收起證據數字列，行距放鬆 */
+  /* 安心白話（guided）：保留解釋，收起證據數字列，行距放鬆 */
   body[data-home-style="guided"] .evidence-list{display:none}
   body[data-home-style="guided"] .module-copy{font-size:13.5px;line-height:1.85}
   body[data-home-style="guided"] .module-stack{gap:16px}
 
-  /* 給我更多數據與脈絡：解釋與證據全展開 */
+  /* 專業效率（analytical）：解釋與證據全展開 */
   body[data-home-style="analytical"] .module-copy{font-size:12.5px;line-height:1.7}
   body[data-home-style="analytical"] .evidence-list{display:flex}
 
@@ -351,6 +361,24 @@
     </div>
   </header>
 
+  <!-- 版面切換做成貼在頂欄下的窄橫幅（原本是內容流裡三顆 44px 帶框按鈕＋提示行，
+       吃掉約 84px 首屏）。窄化不能犧牲熱區：視覺 32px，靠 ::after 撐出 44px 隱形
+       觸控範圍——同 index.html 模式徽章那招。內容還沒好之前整條隱藏，避免使用者
+       在骨架畫面上切一個還沒東西可切的版面。 -->
+  <div class="style-bar" id="home-style-bar" hidden>
+    <div class="style-switch" id="home-style-switch" role="group" aria-label="選擇版面呈現方式"
+         aria-describedby="home-style-hint">
+      <span class="sw-label">版面</span>
+      <!-- 標籤與 app.js 的 MODE_LABELS 同名同序（安心白話／成長陪跑／專業效率）。
+           同一個「麥麥怎麼跟你說話」在三個畫面叫三套名字，使用者會以為是三件事。
+           smoke:home:integration 第 12 段會逐字比對，改一邊就會紅。 -->
+      <button type="button" data-style="guided" aria-pressed="false">安心白話</button>
+      <button type="button" data-style="concise" aria-pressed="false">成長陪跑</button>
+      <button type="button" data-style="analytical" aria-pressed="false">專業效率</button>
+    </div>
+    <p class="style-hint" id="home-style-hint" aria-live="polite"></p>
+  </div>
+
   <main class="home-main" id="home-main">
     <section class="skeleton" id="home-loading" aria-label="正在整理首頁" aria-busy="true">
       <div class="skeleton-line title"></div>
@@ -382,13 +410,6 @@
         <div class="copy"><b>你的投資樣貌還沒確認</b><p>目前已先套用初步設定，你可以隨時回去確認。</p></div>
         <button type="button" id="profile-draft-link">去看看</button>
       </aside>
-      <div class="style-switch" id="home-style-switch" role="group" aria-label="選擇版面呈現方式">
-        <span class="sw-label">版面</span>
-        <button type="button" data-style="guided" aria-pressed="false">陪我慢慢看懂</button>
-        <button type="button" data-style="concise" aria-pressed="false">先告訴我重點</button>
-        <button type="button" data-style="analytical" aria-pressed="false">給我更多數據</button>
-      </div>
-      <p class="style-hint" id="home-style-hint" aria-live="polite"></p>
       <div class="module-stack" id="home-modules"></div>
     </div>
   </main>

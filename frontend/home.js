@@ -942,6 +942,9 @@
     byId("home-error").hidden = true;
     byId("home-content").hidden = false;
     byId("home-content").setAttribute("aria-busy", "false");
+    /* 版面橫幅在頂欄下、內容區之外，要跟著內容一起開關——骨架畫面上放一個
+       切了也沒東西可切的控制列只會讓人困惑。 */
+    byId("home-style-bar").hidden = false;
     if (!options || !options.background) {
       analytics("maimate_home_viewed");
       window.scrollTo({ top: 0, behavior: "auto" });
@@ -953,12 +956,14 @@
     byId("home-loading").hidden = false;
     byId("home-error").hidden = true;
     byId("home-content").hidden = true;
+    byId("home-style-bar").hidden = true;
   }
 
   function showError(error) {
     uiState.loading = false;
     byId("home-loading").hidden = true;
     byId("home-content").hidden = true;
+    byId("home-style-bar").hidden = true;
     const errorState = byId("home-error");
     errorState.hidden = false;
     if (error && error.userMessage) setText("home-error-copy", error.userMessage);

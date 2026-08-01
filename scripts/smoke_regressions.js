@@ -87,7 +87,7 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem("mm_
     const el = document.querySelector(".evidence-list") || document.querySelector(".module-note");
     return el ? getComputedStyle(el).display : "none";
   });
-  if (conciseHides !== "none") throw new Error("「先告訴我重點」未收起解釋／證據區塊");
+  if (conciseHides !== "none") throw new Error("「成長陪跑」（concise）未收起解釋／證據區塊");
   await page.reload();
   await page.waitForSelector(".bottom-nav");
   const remembered = await page.evaluate(() => ({ body: document.body.dataset.homeStyle, hint: document.getElementById("home-style-hint").textContent }));

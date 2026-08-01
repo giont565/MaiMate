@@ -90,9 +90,11 @@ function mmHomeState() {
 }
 
 /* 三種版面＝問卷 Q6 的三種溝通風格（呈現偏好，不是投資人格分類）：
- *   guided     陪我慢慢看懂——保留解釋段落，少一點數字
- *   concise    先告訴我重點——只留結論與摘要
- *   analytical 給我更多數據與脈絡——解釋與證據數字全展開 */
+ *   guided     安心白話——保留解釋段落，少一點數字
+ *   concise    成長陪跑——只留結論與摘要
+ *   analytical 專業效率——解釋與證據數字全展開
+ *
+ * 三個標籤與 app.js 的 MODE_LABELS 同名同序，改一邊 smoke:home:integration 會紅。 */
 const MM_HOME_STYLES = ["guided", "concise", "analytical"];
 
 /** 目前套用的版面：使用者在首頁選過就以他的選擇為準，否則跟著問卷 Q6 的答案 */
