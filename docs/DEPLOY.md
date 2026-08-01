@@ -168,7 +168,7 @@ curl "<ApiUrl>/market?market=btctwd&kind=ticker"        # 應回 MAX 行情
 - **刪除很快是特例**：本次 `delete-stack` 幾分鐘就完成，因為 PR #40 的 CloudFront
   當時還沒真的部署過，stack 裡沒有 distribution。**已經有 distribution 的環境，刪除要 15–90 分鐘**
 - **CloudFront 第一次建立**約 5–15 分鐘，佔了這 46 分鐘的大宗
-- 全新 stack 的 **ApiUrl 與前端網址都會換**：`API_BASE` 三個檔要改、對外連結要換。
+- 全新 stack 的 **ApiUrl 與前端網址都會換**：`API_BASE` 要用 glob 改**全部** `frontend/*.html`（別逐檔列名／別寫「N 個檔」，每加一頁就多一處，寫死數量遲早漏掉——見 §3 sed＋`sort -u` 檢查），對外連結也要換。
   舊的 `*.s3-website-*.amazonaws.com` 在 PR #40 之後已永久失效（bucket 轉私有）
 - 全新環境的金鑰**一定**是空的（模板不含金鑰），這步無法省
 - 驗收用 `python3 scripts/verify_live.py --base <ApiUrl>`，22 項自動判定
