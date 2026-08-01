@@ -69,9 +69,10 @@
   .bn .c{font-size:28px;color:#86868B;margin-top:14px;line-height:1.5}
   .bn .c b{color:#F5F5F7;font-weight:700}
 
-  .s-nums .bignums{gap:40px}
-  .s-nums .bn .v{font-size:118px}
-  .s-nums .bn .c{font-size:25px;margin-top:10px}
+  .s-nums{padding-top:74px;padding-bottom:74px}
+  .s-nums .bignums{gap:30px}
+  .s-nums .bn .v{font-size:100px}
+  .s-nums .bn .c{font-size:23px;margin-top:8px;max-width:1100px}
   .s-nums .lede{margin-bottom:40px!important;font-size:34px}
   .s-nums h3{margin-top:44px!important;font-size:40px}
 
@@ -178,6 +179,56 @@
   .qa dd{font-size:19px;color:#475569;line-height:1.6;margin-top:7px;padding-left:26px;border-left:3px solid #E8EDF5}
   .qa dd b{color:#0F172A;font-weight:800}
 
+
+  /* ═══ Golden Path 五頁的固定版型 ═══ */
+  .gp{display:flex;gap:74px;flex:1;min-height:0;align-items:stretch;text-align:left;width:100%}
+  .gp .left{flex:42;display:flex;flex-direction:column;justify-content:center;min-width:0}
+  .gp .right{flex:58;display:flex;flex-direction:column;gap:20px;min-width:0;
+             align-items:center;justify-content:center}
+  .gp h2{font-size:60px;line-height:1.24;letter-spacing:-.03em}
+  .gp .val{font-size:31px;line-height:1.55;color:#A1A1A6;margin-top:24px;font-weight:400}
+  .gp .val b{color:#F5F5F7;font-weight:700}
+  .gp ul{margin-top:40px;display:flex;flex-direction:column;gap:19px}
+  .gp li{list-style:none;font-size:25px;line-height:1.45;color:#D2D2D7;
+         padding-left:34px;position:relative;font-weight:500}
+  .gp li::before{content:"";position:absolute;left:0;top:12px;width:16px;height:5px;
+                 border-radius:3px;background:#E64A4D}
+  .gp li:nth-child(even)::before{background:#1E4DA7}
+  .gp li b{color:#fff;font-weight:700}
+  .tags{display:flex;flex-wrap:wrap;gap:11px;margin-top:auto;padding-top:40px}
+  .tags em{font-style:normal;font-size:18px;font-weight:700;color:#A1A1A6;
+           border:1px solid #35353A;border-radius:999px;padding:9px 17px}
+  .tags em.hot{color:#FF8A85;border-color:#5A2A2A}
+
+  .vbox{position:relative;width:100%;flex:1;min-height:0;display:flex;
+        align-items:center;justify-content:center}
+  .vbox video,.vbox img{max-width:100%;max-height:100%;border-radius:22px;background:#0A0A0C;
+    box-shadow:0 34px 80px rgba(0,0,0,.68),0 0 0 1px rgba(255,255,255,.09)}
+  .vbox .miss{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;
+    justify-content:center;gap:10px;border:2px dashed #2A2A2E;border-radius:22px;
+    color:#6E6E73;text-align:center;font-size:19px}
+  .vbox.novideo .miss{display:flex}
+  .vbox.novideo video{display:none}
+  .vcap{font-size:18px;color:#5A5A5F;text-align:center;flex:none}
+
+  /* ═══ 產品地圖：一條由左到右的旅程 ═══ */
+  .journey{display:flex;gap:0;width:100%;flex:1;min-height:0;margin-top:24px}
+  .jst{flex:1;padding:0 26px;position:relative;display:flex;flex-direction:column}
+  .jst:first-child{padding-left:0} .jst:last-child{padding-right:0}
+  .jst::after{content:"";position:absolute;right:0;top:34px;bottom:34px;width:1px;background:#26262A}
+  .jst:last-child::after{display:none}
+  .jn{font-size:21px;font-weight:800;color:#5A5A5F;margin-bottom:12px}
+  .jh{font-size:31px;font-weight:800;letter-spacing:-.02em;margin-bottom:14px}
+  .jst:nth-child(odd) .jh{color:#FF6B6B} .jst:nth-child(even) .jh{color:#6C9BFF}
+  .jd{font-size:20px;line-height:1.55;color:#A1A1A6;margin-bottom:auto}
+  .jscore{margin-top:26px;padding-top:18px;border-top:1px solid #26262A;
+          font-size:17px;line-height:1.7;color:#86868B;font-weight:600}
+  .stackline{font-size:20px;color:#5A5A5F;text-align:center;margin-top:32px;letter-spacing:.06em}
+  .slide.on .jst{animation:rise .85s cubic-bezier(.22,1,.36,1) both;
+                 animation-delay:calc(var(--j,0) * 150ms + 450ms)}
+  .slide.on .gp li{animation:rise .8s cubic-bezier(.22,1,.36,1) both;
+                   animation-delay:calc(var(--k,0) * 130ms + 620ms)}
+
   /* ═══ 進場：Apple 的節奏——慢、少、一項一項 ═══ */
   .slide.on{animation:fadeIn .7s cubic-bezier(.22,1,.36,1) both}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -201,7 +252,8 @@
 
   @media (prefers-reduced-motion:reduce){
     .slide.on,.slide.on > *,.slide.on .bn,.slide.on .wcol span,
-    .slide.on .beat,.slide.on .sig i{animation:none!important}
+    .slide.on .beat,.slide.on .sig i,.slide.on .jst,
+    .slide.on .gp li{animation:none!important}
   }
   #hud{position:absolute;left:0;bottom:0;padding:10px 18px;font-size:13px;color:#2E2E33;
        font-family:ui-monospace,Menlo,monospace;pointer-events:none}
@@ -218,131 +270,220 @@
 <body>
 <div id="stage">
 
-<!-- ═══ 1 情懷 ═══ -->
+<!-- ═══ 1 情懷（0:00–0:30）═══ -->
 <section class="slide stage spot m-idle on" data-n="1">
   <div class="sig"><i></i><i></i></div>
-  <div class="kicker">2026 雲湧智生黑客松 · MaiCoin 智慧理財命題</div>
-  <h1>2017 年我剛進幣圈，<br>最深的感覺不是興奮。</h1>
-  <h1 class="grad" style="margin-top:26px">是害怕。</h1>
-  <p class="lede" style="margin-top:64px;max-width:1280px">
-    資訊封閉，充斥高風險的場外交易。<br>
-    看著螢幕上跳動的紅紅綠綠，我感受到的是冰冷，還有孤獨。
+  <div class="kicker">2026 雲湧智生黑客松 · MaiCoin 智慧理財命題 · 隊伍「第五名」</div>
+  <h1>2017 年，<br>我第一次走進幣圈。</h1>
+  <p class="lede" style="margin-top:58px;max-width:1220px">
+    那時候，我以為自己走進的是未來。<br>
+    但我最先感受到的，不是興奮——<span style="color:#F5F5F7;font-weight:700">是害怕</span>。
+  </p>
+  <p class="note" style="margin-top:40px;font-size:27px;line-height:1.7">
+    資訊散落在群組、論壇和陌生人的一句話裡。<br>
+    每個人都說自己知道答案，卻沒有人告訴我，哪一個答案值得相信。
   </p>
   <div class="foot">MaiMate 麥麥</div>
 </section>
 
-<!-- ═══ 2 三模式：陪你長大 ═══ -->
-<section class="slide stage spot" data-n="2">
+<!-- ═══ 2 痛點：三個數字（0:30–1:05）═══ -->
+<section class="slide stage spot m-risk s-nums" data-n="2">
   <div class="sig"><i></i><i></i></div>
-  <h2>所以麥麥有三種模式。</h2>
-  <p class="lede" style="margin-top:44px">不是三種介面。是三個階段。</p>
-  <h1 class="grad" style="font-size:104px;margin-top:56px">安心白話 → 成長陪跑 → 專業效率</h1>
-  <p class="lede" style="margin-top:56px;font-size:42px;color:#F5F5F7">
-    陪你從什麼都不懂的初心者，<br>一路長成看得懂數字的<b style="font-weight:800">巨鱷</b>。
-  </p>
-</section>
-
-<!-- ═══ 3 痛點：三個數字 ═══ -->
-<section class="slide stage spot m-risk s-nums" data-n="3">
-  <div class="sig"><i></i><i></i></div>
-  <p class="lede" style="margin-bottom:56px">一個真實帳戶，一整年 10,000 筆交易，我們全部算過一遍。</p>
-  <div class="bignums">
+  <h2 style="font-size:56px">真正的風險，可能不是市場。<br>是你<span class="grad">沒有看見自己</span>。</h2>
+  <div class="bignums" style="margin-top:40px">
     <div class="bn">
-      <div class="v blue">+117,482</div>
-      <div class="c">他以為自己一直在虧錢。其實這一年<b>是賺的</b>。</div>
+      <div class="v">10,000</div>
+      <div class="c">一個真實帳戶、一整年的交易紀錄，被<b>重新理解</b>了一遍</div>
     </div>
     <div class="bn">
-      <div class="v">963</div>
-      <div class="c">真正虧最多的那一筆，只虧了<b>九百六十三塊</b>。</div>
+      <div class="v blue">+117,482</div>
+      <div class="c">他以為自己一直在虧錢。其實這一年的已實現損益<b>是正的</b></div>
     </div>
     <div class="bn">
       <div class="v red">26,598,877</div>
-      <div class="c">但賣掉之後又漲上去的<b>機會成本</b>，一年兩千六百五十九萬。</div>
+      <div class="c">重複在急跌時賣出，所<b>錯過的機會成本</b>（依既定方法回推的歷史數字，非帳戶損失）</div>
     </div>
   </div>
-  <h3 style="margin-top:64px">他不是不會投資。他是<span class="grad">看不見自己</span>。</h3>
-</section>
-
-<!-- ═══ 4 產品地圖 ═══ -->
-<section class="slide" data-n="4" style="align-items:center;justify-content:center;text-align:center;padding:96px 130px">
-  <div class="sig"><i></i><i></i></div>
-  <h2 style="font-size:72px">麥麥現在做得到的事</h2>
-  <p class="lede" style="margin-top:18px;font-size:30px;margin-bottom:20px">四層能力，全部已經在線上。</p>
-  <div class="wall" style="text-align:left">
-    <div class="wcol">
-      <div class="wh blue">看見你</div><div class="ws">行為健檢引擎</div>
-      <span><b>10,000 筆</b>交易預計算</span>
-      <span>追高指數 · 殺低比例</span>
-      <span><b>機會成本</b>歸因到單筆</span>
-      <span>峰值集中度 · 出金紀律</span>
-      <span>投資健康分（透明加權）</span>
-    </div>
-    <div class="wcol">
-      <div class="wh red">懂你</div><div class="ws">三模式 Profile</div>
-      <span><b>安心白話</b> · 初心者</span>
-      <span><b>成長陪跑</b> · 進階中</span>
-      <span><b>專業效率</b> · 巨鱷</span>
-      <span>確定性規則判定，附依據</span>
-      <span><b>語氣隨階段變，數字不變</b></span>
-    </div>
-    <div class="wcol">
-      <div class="wh blue">陪你想</div><div class="ws">對話 · 行情 · 知識</div>
-      <span>Bedrock Converse 工具迴圈</span>
-      <span>Haiku / Sonnet 分層＋快取</span>
-      <span>MAX 即時行情（價差程式算）</span>
-      <span><b>RAG 防詐</b>知識庫，附出處</span>
-      <span><b>三方案試算</b>，對等呈現</span>
-    </div>
-    <div class="wcol">
-      <div class="wh red">幫你做</div><div class="ws">授權執行 · 可問責</div>
-      <span>下單確認卡 · <b>60 秒憑證</b></span>
-      <span><b>MAX Private 真實成交</b></span>
-      <span>決策軌跡 append-only</span>
-      <span>不報明牌三層護欄</span>
-      <span>斷網降級並明示標示</span>
-    </div>
-  </div>
-  <div class="dims">
-    <em>創新性</em><em>可行性</em><em>商業價值</em><em>AI 應用</em><em>命題契合</em><em>完成度</em>
-  </div>
-</section>
-
-<!-- ═══ 5 實機演示 ═══ -->
-<section class="slide" data-n="5" style="padding:110px 130px">
-  <div class="sig" style="justify-content:flex-start;margin-bottom:30px"><i></i><i></i></div>
-  <h2 style="font-size:64px;margin-bottom:44px">「ETH 跌太多了，幫我全部賣掉！」</h2>
-  <div class="demo">
-    <div class="beats">
-      <div class="beat"><h4><i>1</i>它先去查，不是先回答</h4>
-        <p>查行情 → 查餘額 → 方案試算，<b>每次工具呼叫都亮一個 chip</b></p></div>
-      <div class="beat"><h4><i>2</i>沒有照做，先反問你</h4>
-        <p>攤開你自己的機會成本 <b>NT$26,598,877</b>，再問你一句</p></div>
-      <div class="beat"><h4><i>3</i>三個算好數字的選項</h4>
-        <p>金額、手續費、賣後集中度<b>全由程式計算</b>，不標推薦</p></div>
-      <div class="beat"><h4><i>4</i>最後一步永遠由你</h4>
-        <p>確認卡 <b>60 秒失效、不可重放</b>。麥麥不會替你按下去</p></div>
-      <div class="beat"><h4><i>5</i>全程留痕，只能新增</h4>
-        <p>交易所單號 <b>#20720919534</b> 就在決策軌跡裡</p></div>
-    </div>
-    <div class="screen" id="scr">
-      <video id="demoVideo" src="demo.mp4" poster="pitch_shots/04_scenarios.png" controls preload="metadata"></video>
-      <div class="miss">
-        <b style="font-size:24px;color:#A1A1A6">演示影片放這裡</b>
-        <span style="font-size:18px">存成 docs/demo.mp4，重新整理就會出現</span>
-      </div>
-    </div>
-  </div>
-  <div class="foot">https://d1z0776b4u2tmf.cloudfront.net</div>
-</section>
-
-<!-- ═══ 6 願景 ═══ -->
-<section class="slide stage spot light" data-n="6">
-  <img src="brand/kv_start.png" alt="麥麥" style="height:360px;margin-bottom:48px;mix-blend-mode:multiply">
-  <h1 style="font-size:104px">幣圈的牛熊冷暖交替，<br>但 <span class="grad">麥麥永遠在這裡陪著你</span>。</h1>
-  <p class="lede" style="margin-top:52px;font-size:36px">
-    從初心者，到巨鱷。每一個階段，麥麥都在旁邊。
+  <p class="lede" style="margin-top:40px;font-size:29px">
+    所以我們沒有再做一張更複雜的圖表。<br>
+    <span style="color:#F5F5F7;font-weight:700">我們做了一個先看懂你，再陪你看市場的 AI 投資夥伴。</span>
   </p>
-  <div class="foot">謝謝大家 ｜ https://d1z0776b4u2tmf.cloudfront.net</div>
+</section>
+
+<!-- ═══ 3 產品地圖（1:05–1:45）═══ -->
+<section class="slide" data-n="3" style="padding:92px 110px;align-items:center;text-align:center">
+  <div class="sig"><i></i><i></i></div>
+  <h2 style="font-size:66px">麥麥不只回答問題。<br>它<span class="grad">陪使用者走完一次決定</span>。</h2>
+  <div class="journey">
+    <div class="jst">
+      <div class="jn">①</div><div class="jh">看懂你</div>
+      <div class="jd">交易紀錄、投資樣貌、行為盲點</div>
+      <div class="jscore">創意度 25%<br>AI 設計 15%<br>企業資料應用</div>
+    </div>
+    <div class="jst">
+      <div class="jn">②</div><div class="jh">看懂現在</div>
+      <div class="jd">MAX 即時行情、持倉、交易史、RAG 知識庫</div>
+      <div class="jscore">技術可行性 20%<br>主題切合度 10%<br>MAX Public API</div>
+    </div>
+    <div class="jst">
+      <div class="jn">③</div><div class="jh">把選擇說清楚</div>
+      <div class="jd">人話解釋、風險提醒、三方案比較</div>
+      <div class="jscore">AI 設計 15%<br>商業應用性 20%<br>個人化體驗</div>
+    </div>
+    <div class="jst">
+      <div class="jn">④</div><div class="jh">安全地行動</div>
+      <div class="jd">訂單草稿、二次確認、Private API、完整留痕</div>
+      <div class="jscore">完成度 10%<br>MAX Lv2 Private API +5%<br>安全與法遵</div>
+    </div>
+    <div class="jst">
+      <div class="jn">⑤</div><div class="jh">陪你繼續成長</div>
+      <div class="jd">三種模式、投資健康、學習與回顧</div>
+      <div class="jscore">創意度 25%<br>商業應用性 20%<br>留存與長期價值</div>
+    </div>
+  </div>
+  <div class="stackline">AWS Bedrock Agent　｜　MAX API　｜　Kiro 規格驅動　｜　線上實測</div>
+  <div class="foot" style="text-align:center;left:0;right:0">接下來，我們用一個真實的投資瞬間，帶大家走完這條路。</div>
+</section>
+
+<!-- ═══ 4 它先看懂你（1:45–2:25）═══ -->
+<section class="slide" data-n="4" style="padding:104px 120px">
+  <div class="gp">
+    <div class="left">
+      <div class="sig" style="justify-content:flex-start;margin-bottom:26px"><i></i><i></i></div>
+      <h2>在看市場以前，<br>麥麥先<span class="grad">看懂你</span>。</h2>
+      <p class="val">把使用者<b>看不見的行為模式</b>，帶回到當下的決定裡。</p>
+      <ul>
+        <li>分析 <b>10,000 筆</b>交易紀錄</li>
+        <li>找出<b>追高、急跌賣出與集中度</b>模式</li>
+        <li>產生個人化投資樣貌與<b>健康摘要</b></li>
+      </ul>
+      <div class="tags"><em>創意度 25%</em><em>AI 設計 15%</em><em>企業資料應用</em></div>
+    </div>
+    <div class="right">
+      <div class="vbox">
+        <video src="demo/01_profile.mp4" poster="pitch_shots/01_health.png"
+               autoplay muted loop playsinline></video>
+        <div class="miss"><b>01_profile.mp4</b><span>存進 docs/demo/ 就會自動播</span></div>
+      </div>
+      <div class="vcap">個人化首頁 → 投資樣貌 → 三個行為指標 → 健康分</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 5 它先去查（2:25–3:05）═══ -->
+<section class="slide" data-n="5" style="padding:104px 120px">
+  <div class="gp">
+    <div class="left">
+      <div class="sig" style="justify-content:flex-start;margin-bottom:26px"><i></i><i></i></div>
+      <h2>「ETH 跌太多了，<br>幫我全部賣掉。」</h2>
+      <p class="val">麥麥收到的不是一個指令。<br>而是一個<b>需要被理解的時刻</b>。</p>
+      <ul>
+        <li>Agent 自主查詢 <b>MAX 即時行情</b></li>
+        <li>讀取<b>持倉、餘額與交易歷史</b></li>
+        <li>Tool chips <b>即時呈現資料來源</b></li>
+      </ul>
+      <div class="tags"><em>AI Agent</em><em>MAX API</em><em>技術可行性 20%</em><em>主題切合度 10%</em></div>
+    </div>
+    <div class="right">
+      <div class="vbox">
+        <video src="demo/02_tools.mp4" poster="pitch_shots/02_chips.png"
+               autoplay muted loop playsinline></video>
+        <div class="miss"><b>02_tools.mp4</b><span>存進 docs/demo/ 就會自動播</span></div>
+      </div>
+      <div class="vcap">輸入「全部賣掉」→ ticker → portfolio → 交易歷史 → 分析中</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 6 它先記得（3:05–3:45）═══ -->
+<section class="slide" data-n="6" style="padding:104px 120px">
+  <div class="gp">
+    <div class="left">
+      <div class="sig" style="justify-content:flex-start;margin-bottom:26px"><i></i><i></i></div>
+      <h2>好的陪伴，<br><span class="grad">不是永遠說好</span>。</h2>
+      <p class="val">它做的是一件過去做不到的事——<br>在行動發生的當下，<b>把這個人的歷史帶回來</b>。</p>
+      <ul>
+        <li>比對本次行為與<b>歷史模式</b></li>
+        <li>顯示過去急跌賣出後<b>實際發生了什麼</b></li>
+        <li>用<b>提問</b>取代武斷的買賣建議</li>
+      </ul>
+      <div class="tags"><em>創意度 25%</em><em>AI 設計 15%</em><em>個人化風險提醒</em></div>
+    </div>
+    <div class="right">
+      <div class="vbox">
+        <video src="demo/03_context.mp4" poster="pitch_shots/03_context.png"
+               autoplay muted loop playsinline></video>
+        <div class="miss"><b>03_context.mp4</b><span>存進 docs/demo/ 就會自動播</span></div>
+      </div>
+      <div class="vcap">「這次的行為，和你過去幾次急跌時全部離場的模式相似。<br>在替你準備訂單以前，要先一起看看三種做法嗎？」</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 7 三方案（3:45–4:30）═══ -->
+<section class="slide" data-n="7" style="padding:104px 120px">
+  <div class="gp">
+    <div class="left">
+      <div class="sig" style="justify-content:flex-start;margin-bottom:26px"><i></i><i></i></div>
+      <h2>不給一個答案。<br>給你<span class="grad">三條看得懂的路</span>。</h2>
+      <p class="val">金額、費用與賣出後的持倉變化<b>全部由後端程式計算</b>。<br>
+         AI 不算金融數字，也不標記推薦方案。</p>
+      <ul>
+        <li><b>全部賣出</b> · <b>賣出 25%</b> · <b>暫停／冷靜期</b></li>
+        <li>每案顯示成交金額、手續費、剩餘持倉、集中度變化</li>
+        <li>「暫停」導向<b>定期定額</b>——把一次性手續費變成年金</li>
+      </ul>
+      <div class="tags"><em>AI 設計 15%</em><em>技術可行性 20%</em><em class="hot">商業應用性 20%</em></div>
+    </div>
+    <div class="right">
+      <div class="vbox">
+        <video src="demo/04_scenarios.mp4" poster="pitch_shots/04_scenarios.png"
+               autoplay muted loop playsinline></video>
+        <div class="miss"><b>04_scenarios.mp4</b><span>存進 docs/demo/ 就會自動播</span></div>
+      </div>
+      <div class="vcap">三張方案卡切換 → 比較表更新 → 選定後只建立訂單草稿</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 8 最後一步（4:30–5:30）═══ -->
+<section class="slide" data-n="8" style="padding:104px 120px">
+  <div class="gp">
+    <div class="left">
+      <div class="sig" style="justify-content:flex-start;margin-bottom:26px"><i></i><i></i></div>
+      <h2>AI 有手。<br><span class="grad">方向盤仍在你手上</span>。</h2>
+      <p class="val">這不是一段免責聲明。<br>是 <b>AI 即使想越權，也沒有路可以走</b>。</p>
+      <ul>
+        <li>訂單草稿<b>不等於下單</b>；使用者二次確認後才送出</li>
+        <li><b>60 秒憑證</b>，失效且不可重放</li>
+        <li><b>MAX Private API 真實成交</b> · 決策軌跡全程留痕</li>
+      </ul>
+      <div class="tags"><em class="hot">完成度 10%</em><em class="hot">MAX Lv2 Private API +5%</em><em>技術可行性 20%</em></div>
+    </div>
+    <div class="right">
+      <div class="vbox">
+        <video src="demo/05_execute.mp4" poster="pitch_shots/05_confirm.png"
+               autoplay muted loop playsinline></video>
+        <div class="miss"><b>05_execute.mp4</b><span>存進 docs/demo/ 就會自動播</span></div>
+      </div>
+      <div class="vcap">確認卡（幣種 · 數量 · 手續費 · 60 秒倒數）→ 7/31 真實成交 · 單號 #20720919534 → 決策軌跡</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 9 願景（5:30–6:00）═══ -->
+<section class="slide stage spot" data-n="9">
+  <img src="brand/kv_start.png" alt="麥麥" style="height:280px;margin-bottom:44px;
+       filter:drop-shadow(0 30px 60px rgba(0,0,0,.6))">
+  <h3 class="grad" style="font-size:46px;margin-bottom:34px;letter-spacing:.02em">
+    安心白話　→　成長陪跑　→　專業效率
+  </h3>
+  <h1 style="font-size:88px">麥麥不是要讓人永遠依賴 AI。<br>
+    是陪一個人，<span class="grad">慢慢長成能為自己做決定的人</span>。</h1>
+  <p class="lede" style="margin-top:46px;font-size:34px">
+    市場一直在變。<span style="color:#F5F5F7;font-weight:700">麥麥一直陪你。</span>
+  </p>
+  <div class="foot">謝謝大家 ｜ https://d1z0776b4u2tmf.cloudfront.net ｜ 問答時可現場開站實測</div>
 </section>
 
 <!-- ═══ 附錄 0 信任邊界 ═══ -->
@@ -605,6 +746,7 @@
 </section>
 
 
+
 </div>
 
 <div id="hud">← → 換頁 ｜ F 全螢幕 ｜ ⌘P 印成 PDF</div>
@@ -613,12 +755,13 @@
   const slides = [...document.querySelectorAll('.slide')];
   let i = 0;
   const stage = document.getElementById('stage');
-  const vid = document.getElementById('demoVideo');
-  const scr = document.getElementById('scr');
-  if (vid) {
-    vid.addEventListener('error', () => scr.classList.add('novideo'));
-    vid.addEventListener('click', e => e.stopPropagation());
-  }
+
+  // 影片缺檔時顯示提示（poster 仍會當靜態備援）
+  document.querySelectorAll('.vbox video').forEach(v => {
+    v.addEventListener('error', () => v.closest('.vbox').classList.add('novideo'));
+    v.addEventListener('click', e => e.stopPropagation());
+  });
+
   function fit(){
     const s = Math.min(innerWidth / 1920, innerHeight / 1080) * 0.97;
     slides.forEach(el => el.style.transform = `scale(${s})`);
@@ -629,8 +772,8 @@
     el.appendChild(b);
     [...el.children].forEach((c, k) => { if (c !== b) c.style.setProperty('--i', k); });
     el.querySelectorAll('.bn').forEach((f, k) => f.style.setProperty('--j', k));
-    el.querySelectorAll('.beat').forEach((f, k) => f.style.setProperty('--j', k));
-    el.querySelectorAll('.wcol span').forEach((f, k) => f.style.setProperty('--k', k));
+    el.querySelectorAll('.jst').forEach((f, k) => f.style.setProperty('--j', k));
+    el.querySelectorAll('.gp li').forEach((f, k) => f.style.setProperty('--k', k));
   });
   function countUp(el){
     const raw = el.dataset.raw || (el.dataset.raw = el.textContent.trim());
@@ -652,16 +795,17 @@
     slides.forEach((el, k) => {
       el.classList.remove('on');
       if (k === i) { void el.offsetWidth; el.classList.add('on'); }
+      el.querySelectorAll('video').forEach(v => { if (k !== i) v.pause(); });
     });
     const cur = slides[i];
-    if (vid && !vid.paused) vid.pause();
+    // 進到這頁才從頭播，講者停久了也不會演到一半
+    cur.querySelectorAll('video').forEach(v => { try { v.currentTime = 0; v.play(); } catch(e){} });
     const b = cur.querySelector('.bar i');
     if (b) requestAnimationFrame(() => b.style.width = ((i + 1) / slides.length * 100) + '%');
     cur.querySelectorAll('.bn .v').forEach((el, k) => setTimeout(() => countUp(el), 700 + k * 620));
   }
   addEventListener('resize', fit);
   addEventListener('keydown', e => {
-    if (e.key === ' ' && document.activeElement === vid) return;
     if (['ArrowRight',' ','PageDown','ArrowDown'].includes(e.key)) { e.preventDefault(); go(i + 1); }
     if (['ArrowLeft','PageUp','ArrowUp'].includes(e.key))          { e.preventDefault(); go(i - 1); }
     if (e.key === 'Home') go(0);
@@ -669,7 +813,7 @@
     if (e.key.toLowerCase() === 'f') document.documentElement.requestFullscreen?.();
   });
   stage.addEventListener('click', e => {
-    if (e.target.closest('.screen')) return;
+    if (e.target.closest('.vbox')) return;
     go(i + (e.clientX > innerWidth / 2 ? 1 : -1));
   });
   fit(); go(0);
