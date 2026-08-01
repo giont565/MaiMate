@@ -152,6 +152,13 @@
   .videowrap.novideo video{display:none}
   .print-alt{display:none}
 
+  /* ── 品牌主視覺 ── */
+  .kv{height:100%;width:auto;object-fit:contain;border-radius:16px}
+  .kvfull{width:100%;height:100%;object-fit:contain}
+  .swatch{display:flex;gap:14px;margin-top:10px}
+  .swatch div{text-align:center;font-size:11.5px;color:var(--mute);line-height:1.5}
+  .swatch i{display:block;width:52px;height:52px;border-radius:50%;margin-bottom:6px;border:1px solid rgba(0,0,0,.08)}
+
   /* ── 導覽 ── */
   #hud{
     position:fixed;left:0;right:0;bottom:0;padding:8px 14px;
@@ -196,9 +203,38 @@
   <div class="tag">MaiMate 麥麥 — 從冰冷的數字，到溫暖的陪伴</div>
 </section>
 
-<!-- ══════════ 2 遇見 MaiMate ══════════ -->
+<!-- ══════════ 2 遇見麥麥 ══════════ -->
 <section class="slide" data-n="2">
-  <div class="kicker">① 所以我們做了麥麥</div>
+  <div class="kicker">① 所以我們做了一個夥伴</div>
+  <div class="row" style="align-items:center">
+    <div class="col" style="justify-content:center">
+      <h1 style="font-size:46px;line-height:1.3">嗨，<span class="hl">我是麥麥</span>。</h1>
+      <p class="sub" style="margin-top:22px;font-size:21px;line-height:1.8">
+        我會根據你的<b style="color:var(--ink)">持倉、交易紀錄與投資習慣</b>，<br>
+        把複雜的市場資訊，翻成比較容易理解的內容。
+      </p>
+      <div class="card" style="margin-top:24px">
+        <b style="font-size:16px">連長相都是兩個品牌長出來的</b>
+        <p class="quiet" style="margin-top:6px">
+          麥麥的臉是 MaiCoin 與 MAX 的「幣」字拆解重組——<b style="color:#E64A4D">紅色來自 MaiCoin</b>、
+          <b style="color:#1E4DA7">藍色來自 MAX</b>，組成它的情緒燈與身體。
+        </p>
+        <div class="swatch">
+          <div><i style="background:#E64A4D"></i>MaiCoin 紅<br>#E64A4D</div>
+          <div><i style="background:#1E4DA7"></i>MAX 藍<br>#1E4DA7</div>
+          <div><i style="background:#FFFFFF"></i>純淨白<br>#FFFFFF</div>
+          <div><i style="background:#0F172A"></i>深海藍<br>#0F172A</div>
+        </div>
+      </div>
+    </div>
+    <img class="kv" src="brand/kv_meet.png" alt="嗨，我是麥麥">
+  </div>
+  <div class="tag">簡單 · 聰明 · 專業 · 值得信賴</div>
+</section>
+
+<!-- ══════════ 3 一萬筆數據 ══════════ -->
+<section class="slide" data-n="3">
+  <div class="kicker">② 而「看得懂你」不是形容詞</div>
   <h2>它不只是交易工具，是一個看得懂你的夥伴</h2>
   <p class="sub" style="margin-bottom:16px">
     而「看得懂你」不是形容詞——我們把一個真實帳戶<b>一整年 10,000 筆交易</b>全部算過一遍。
@@ -227,10 +263,11 @@
 </section>
 
 <!-- ══════════ 3 信任邊界 ══════════ -->
-<section class="slide" data-n="3">
-  <div class="kicker">② 大家最怕的那件事</div>
+<section class="slide" data-n="4">
+  <div class="kicker">③ 大家最怕的那件事</div>
   <h2 style="margin-bottom:18px">「AI 會不會亂花我的錢？」</h2>
   <div class="matrix">
+    <img class="kv" src="brand/kv_boundary.png" alt="我不會幫你決定買賣，但我會陪你做出更清楚的決定">
     <div class="mcol yes">
       <h3>✅ 麥麥能做的</h3>
       <ul>
@@ -257,8 +294,8 @@
 </section>
 
 <!-- ══════════ 4 落地與商業 ══════════ -->
-<section class="slide" data-n="4">
-  <div class="kicker">③ 這份安全感，是真的能落地的</div>
+<section class="slide" data-n="5">
+  <div class="kicker">④ 這份安全感，是真的能落地的</div>
   <h2 style="margin-bottom:16px">準上線級系統，而且交易所今天就會想要它</h2>
   <div class="tri">
     <div class="card">
@@ -299,8 +336,8 @@
 </section>
 
 <!-- ══════════ 5 實機演示 ══════════ -->
-<section class="slide" data-n="5">
-  <div class="kicker">④ 接下來，我直接演給各位看</div>
+<section class="slide" data-n="6">
+  <div class="kicker">⑤ 接下來，我直接演給各位看</div>
   <h2 style="margin-bottom:16px">「ETH 跌太多了，幫我全部賣掉！」</h2>
   <div class="strip">
     <div class="shot"><img src="pitch_shots/02_chips.png" alt="工具鏈">
@@ -317,20 +354,27 @@
   <div class="tag">五張皆為 8/1 線上站實機截圖（非 mockup、非離線劇本）；上台時這一頁是實機演示，掛掉才用它</div>
 </section>
 
-<!-- ══════════ 6 總結與願景 ══════════ -->
-<section class="slide dark" data-n="6" style="justify-content:center;align-items:center;text-align:center">
-  <img src="brand/maimate_bot.png" alt="麥麥" style="width:112px;image-rendering:pixelated;margin-bottom:26px">
-  <p class="sub" style="font-size:22px;margin-bottom:20px;line-height:1.7">
-    技術的進步，是為了讓人感受到<b class="hl">科技的溫度</b>。
-  </p>
-  <h1 style="font-size:50px;line-height:1.32">
-    幣圈的牛熊冷暖交替，<br>但 <span class="hl">麥麥永遠在這裡陪著你</span>。
-  </h1>
-  <p class="sub" style="margin-top:28px;font-size:20px;line-height:1.7">
-    我們希望麥麥能成為每一個人探索 Web3 世界的嚮導。<br>
-    <b style="color:#fff">AI 有手，方向盤在你手上。</b>
-  </p>
-  <p class="sub" style="margin-top:26px;font-size:15px">謝謝大家 ｜ https://d1z0776b4u2tmf.cloudfront.net</p>
+<!-- ══════════ 7 總結與願景 ══════════ -->
+<section class="slide" data-n="7">
+  <div class="row" style="align-items:center">
+    <div class="col" style="justify-content:center">
+      <p class="sub" style="font-size:21px;margin-bottom:16px">
+        技術的進步，是為了讓人感受到<b style="color:var(--gold)">科技的溫度</b>。
+      </p>
+      <h1 style="font-size:44px;line-height:1.32">
+        幣圈的牛熊冷暖交替，<br>但 <span class="hl">麥麥永遠在這裡陪著你</span>。
+      </h1>
+      <p class="sub" style="margin-top:24px;font-size:19px;line-height:1.75">
+        我們希望麥麥能成為每一個人探索 Web3 世界的嚮導。<br>
+        <b style="color:var(--ink)">AI 有手，方向盤在你手上。</b>
+      </p>
+      <p class="big" style="margin-top:26px;font-size:24px;color:var(--navy)">
+        簡單的陪伴，<span class="hl">穩健的未來</span>。
+      </p>
+      <p class="quiet" style="margin-top:20px">謝謝大家 ｜ https://d1z0776b4u2tmf.cloudfront.net</p>
+    </div>
+    <img class="kv" src="brand/kv_start.png" alt="開始認識我">
+  </div>
 </section>
 
 <!-- ══════════ 附錄 1 架構 ══════════ -->
@@ -499,6 +543,18 @@
       </p>
     </div>
   </div>
+</section>
+
+<!-- ══════════ 附錄 6 品牌形象 ══════════ -->
+<section class="slide appendix" data-n="附錄 6" style="padding:44px 40px">
+  <div class="kicker" style="margin-bottom:6px">品牌形象規範</div>
+  <img class="kvfull" src="brand/brandsheet.png" alt="MaiMate 品牌形象規範">
+</section>
+
+<!-- ══════════ 附錄 7 入口動畫 ══════════ -->
+<section class="slide appendix" data-n="附錄 7" style="padding:44px 40px">
+  <div class="kicker" style="margin-bottom:6px">入口動畫分鏡（約 8–10 秒）</div>
+  <img class="kvfull" src="brand/storyboard.png" alt="麥麥入口動畫分鏡腳本">
 </section>
 
 </div>
