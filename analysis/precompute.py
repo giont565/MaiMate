@@ -18,6 +18,14 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
+try:
+    # ``python -m analysis.precompute`` / unit-test imports.
+    from analysis.annual_return import build_demo_annual_return
+except ModuleNotFoundError:
+    # The documented invocation is ``python analysis/precompute.py``; in that
+    # mode Python places ``analysis/`` (not the repository root) on sys.path.
+    from annual_return import build_demo_annual_return
+
 DATA = Path(__file__).parent.parent / "data" / "MaiCoin_transactions.csv"
 OUT = Path(__file__).parent.parent / "data" / "health_report.json"
 
@@ -325,6 +333,24 @@ def holding_period_distribution(rows):
 
 def main():
     rows = load_rows()
+    concentration_data = concentration(rows)
+    annual_return = build_demo_annual_return(
+        rows,
+        monthly_values={
+            month: value["portfolio_twd"]
+            for month, value in concentration_data["monthly_top_holding"].items()
+        },
+    )
+    # live 區塊由 refresh_annual_return.py 以 read-only MAX API 產生；重跑官方 CSV 時保留。
+    if OUT.exists():
+        try:
+            previous = json.loads(OUT.read_text(encoding="utf-8")).get("annual_return", {})
+            annual_return.update({
+                year: value for year, value in previous.items()
+                if value.get("source") == "live"
+            })
+        except (OSError, ValueError, TypeError):
+            pass
     report = {
         "generated_at": datetime.now(tz=timezone.utc).isoformat(),
         "row_count": len(rows),
@@ -335,12 +361,13 @@ def main():
         "chase_index": chase_index(rows),
         "opportunity_cost": opportunity_cost(rows),
         "realized_pnl": realized_pnl(rows),
-        "concentration": concentration(rows),
+        "concentration": concentration_data,
         "cash_flow_behavior": cash_flow_behavior(rows),
         "activity_profile": activity_profile(rows),
         "holdings_snapshot": holdings_snapshot(rows),
         "change_attribution": change_attribution(rows),
         "holding_period_distribution": holding_period_distribution(rows),
+        "annual_return": annual_return,
     }
     OUT.write_text(json.dumps(report, ensure_ascii=False, indent=2))
     json.dump(report, sys.stdout, ensure_ascii=False, indent=2)

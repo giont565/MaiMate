@@ -60,6 +60,59 @@ class BuildRequestTests(unittest.TestCase):
                 max_private._build_request("GET", "/api/v3/info")
 
 
+class HistoryReadTests(unittest.TestCase):
+    @patch("backend.integrations.max_private._signed_request")
+    def test_read_only_history_methods_use_official_v3_paths(self, request):
+        request.return_value = []
+        max_private.trades(market="btctwd", timestamp=1767196800000, limit=500)
+        request.assert_called_with(
+            "GET", "/api/v3/wallet/spot/trades",
+            {"order": "asc", "limit": 500, "timestamp": 1767196800000,
+             "market": "btctwd"})
+
+        max_private.deposits(currency="twd", timestamp=1767196800000)
+        request.assert_called_with(
+            "GET", "/api/v3/deposits",
+            {"order": "asc", "limit": 1000, "timestamp": 1767196800000,
+             "currency": "twd"})
+
+        max_private.withdrawals(currency="twd", state="done", timestamp=1767196800000)
+        request.assert_called_with(
+            "GET", "/api/v3/withdrawals",
+            {"order": "asc", "limit": 1000, "timestamp": 1767196800000,
+             "currency": "twd", "state": "done"})
+
+    def test_history_limit_validation_matches_official_contract(self):
+        with self.assertRaisesRegex(ValueError, "between 1 and 1000"):
+            max_private.trades(limit=1001)
+        with self.assertRaisesRegex(ValueError, "asc or desc"):
+            max_private.deposits(order="newest")
+
+    @patch("backend.integrations.max_private.trades")
+    def test_history_since_paginates_filters_and_deduplicates(self, fetch):
+        start = 1767196800000
+        fetch.side_effect = [
+            [
+                {"id": 1, "created_at": start, "market": "btctwd"},
+                {"id": 2, "created_at": start + 10, "market": "btctwd"},
+            ],
+            [
+                {"id": 2, "created_at": start + 10, "market": "btctwd"},
+                {"id": 3, "created_at": start + 20, "market": "btctwd"},
+            ],
+            [],
+        ]
+        rows = max_private.history_since(
+            "trades", start, end_timestamp=start + 20, page_size=2)
+        self.assertEqual([row["id"] for row in rows], [1, 2, 3])
+        self.assertEqual(fetch.call_args_list[0].kwargs["timestamp"], start)
+        self.assertEqual(fetch.call_args_list[1].kwargs["timestamp"], start + 11)
+
+    def test_history_since_rejects_bad_range(self):
+        with self.assertRaisesRegex(ValueError, "range is invalid"):
+            max_private.history_since("trades", 20, end_timestamp=10)
+
+
 BTC_RULES = {"market": "btctwd", "base_unit": "btc", "base_precision": 8,
              "min_base_amount": 0.0001, "min_quote_amount": 250.0, "status": "active"}
 

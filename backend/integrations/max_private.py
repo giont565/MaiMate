@@ -88,6 +88,102 @@ def balances():
     return _signed_request("GET", "/api/v3/wallet/spot/accounts")
 
 
+def _history_params(timestamp=None, order="asc", limit=1000, **optional):
+    """驗證 MAX v3 歷史查詢的共同參數（官方單頁上限 1,000）。"""
+    if order not in ("asc", "desc"):
+        raise ValueError("order must be asc or desc")
+    try:
+        limit = int(limit)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("limit must be an integer") from exc
+    if not 1 <= limit <= 1000:
+        raise ValueError("limit must be between 1 and 1000")
+    params = {"order": order, "limit": limit}
+    if timestamp is not None:
+        try:
+            timestamp = int(timestamp)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("timestamp must be an integer") from exc
+        if timestamp <= 0:
+            raise ValueError("timestamp must be greater than zero")
+        params["timestamp"] = timestamp
+    params.update({key: value for key, value in optional.items() if value is not None})
+    return params
+
+
+def trades(market=None, timestamp=None, from_id=None, order="asc", limit=1000):
+    """查 spot 已成交紀錄（Read）；不建立、取消或修改訂單。"""
+    params = _history_params(timestamp, order, limit, market=market, from_id=from_id)
+    return _signed_request("GET", "/api/v3/wallet/spot/trades", params)
+
+
+def deposits(currency=None, timestamp=None, order="asc", limit=1000):
+    """查外部入金歷史（Read）。"""
+    params = _history_params(timestamp, order, limit, currency=currency)
+    return _signed_request("GET", "/api/v3/deposits", params)
+
+
+def withdrawals(currency=None, state=None, timestamp=None, order="asc", limit=1000):
+    """查外部出金歷史（Read）；此函式不具提領能力。"""
+    params = _history_params(timestamp, order, limit, currency=currency, state=state)
+    return _signed_request("GET", "/api/v3/withdrawals", params)
+
+
+def history_since(kind, start_timestamp, end_timestamp=None, page_size=1000, max_pages=100):
+    """依 ``created_at`` 由舊到新取得指定期間歷史，並去重與限制最大頁數。
+
+    MAX 的三個歷史端點都使用毫秒級 ``timestamp``、``order``、``limit``。每頁滿載時
+    下一頁從最後時間戳加一毫秒繼續，避免重複；若 API 無法推進游標就明確報錯，不回傳
+    一份看似完整、實際被截斷的年度資料。
+    """
+    fetchers = {"trades": trades, "deposits": deposits, "withdrawals": withdrawals}
+    if kind not in fetchers:
+        raise ValueError("kind must be trades, deposits or withdrawals")
+    try:
+        cursor = int(start_timestamp)
+        start = cursor
+        end = None if end_timestamp is None else int(end_timestamp)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("history timestamps must be integers") from exc
+    if cursor <= 0 or (end is not None and end < cursor):
+        raise ValueError("history timestamp range is invalid")
+    if max_pages <= 0:
+        raise ValueError("max_pages must be greater than zero")
+
+    rows = []
+    seen = set()
+    fetcher = fetchers[kind]
+    for _page in range(max_pages):
+        batch = fetcher(timestamp=cursor, order="asc", limit=page_size)
+        if not isinstance(batch, list):
+            raise RuntimeError(f"MAX {kind} history returned a non-list response")
+        timestamps = []
+        for item in batch:
+            if not isinstance(item, dict) or item.get("created_at") is None:
+                raise RuntimeError(f"MAX {kind} history row has no created_at")
+            created = int(item["created_at"])
+            timestamps.append(created)
+            if created < start or (end is not None and created > end):
+                continue
+            identity = item.get("id") or item.get("uuid") or (
+                created, item.get("market"), item.get("amount"), item.get("volume"))
+            if identity not in seen:
+                seen.add(identity)
+                rows.append(item)
+        if len(batch) < page_size or not timestamps:
+            break
+        newest = max(timestamps)
+        if end is not None and newest >= end:
+            break
+        next_cursor = newest + 1
+        if next_cursor <= cursor:
+            raise RuntimeError(f"MAX {kind} history pagination did not advance")
+        cursor = next_cursor
+    else:
+        raise RuntimeError(f"MAX {kind} history exceeded {max_pages} pages")
+    return sorted(rows, key=lambda item: (int(item["created_at"]), str(item.get("id") or item.get("uuid") or "")))
+
+
 def resolve_volume(order):
     """把確認卡的 volume_twd 換算成 MAX 要的下單量（base currency）。
 

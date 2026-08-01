@@ -20,9 +20,23 @@
 ```bash
 # CSV 放 data/MaiCoin_transactions.csv（Drive 下載；不進 git）
 python3 analysis/precompute.py     # 產出 data/health_report.json（會隨 Lambda 打包）
+
+# 有 MAX 唯讀金鑰時，補目前年度的年初市值與外部出入金（不下單、不提領）
+python3 scripts/refresh_annual_return.py --year 2026
 ```
 
-- [ ] 確認 `data/health_report.json` 存在且含 `realized_pnl` 區塊（虧損/少賺回答的數據源）
+- [ ] 確認 `data/health_report.json` 存在且含 `realized_pnl` 與
+      `annual_return.2025.periods`（虧損/少賺與分年度報酬的數據源）
+
+年度報酬資料規則（#47）：
+
+- 2025 demo 僅把 CSV 中 `currency=twd` 的 `deposit`／`withdrawal` 視為外部流；
+  帳戶內 buy／sell 只是資產重配置，不可算入；對外契約只保留月度淨額，不曝光逐日軌跡。
+- 2026 live 透過 MAX 的 balances／trades／deposits／withdrawals **唯讀端點**回推年初持倉，
+  並以歷史日 K 線換算 TWD 市值。API 權限維持「讀取＋交易、不開提領」即可。
+- 歷史行情或幣別價格缺失時欄位會寫 `null` 並列在 `missing[]`，不可用 0 假裝完整。
+- 官方 CSV 仍只從 Drive 下載到本機、執行完刪除；只提交衍生的
+  `data/health_report.json`。
 
 ## 2. 後端部署｜預估 15 分
 
@@ -133,7 +147,9 @@ aws cloudfront create-invalidation --distribution-id <FrontendDistributionId> --
 
 ```bash
 curl <ApiUrl>/health                                    # 應回 health_report JSON
+curl "<ApiUrl>/health?section=annual_return"             # 應回 2025/2026 年度資料
 curl "<ApiUrl>/market?market=btctwd&kind=ticker"        # 應回 MAX 行情
+curl "<ApiUrl>/market?market=btctwd&kind=kline&period=1440&timestamp=1767225600&limit=2"
 ```
 
 - [ ] 前端行情面板四幣有數字、10 秒刷新只變數字不閃爍
