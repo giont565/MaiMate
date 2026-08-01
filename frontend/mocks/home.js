@@ -174,3 +174,15 @@ window.MM_HOME_MOCK = Object.freeze({
     ],
   },
 });
+
+/* /health 取不到時的離線備援。數字逐格對齊 app.js 的 MOCK.health（2025 真實紀錄，
+ * 見 CLAUDE.md「真實數據已驗證」），因為同一個健康分不能在兩頁長得不一樣。
+ * 用到它時 payload.source 會是 "demo"，畫面必須明示是示範資料——這條線的重點就是
+ * 不要再有「畫面全都正常但資料是假的」。 */
+window.MM_HOME_HEALTH_MOCK = Object.freeze({
+  chase_index: { buy_above_ma_pct: 65.0, buy_total: 2350 },
+  opportunity_cost: { total_missed_twd: 26598877 },
+  realized_pnl: { total_realized_twd: 117482, loss_trades: 493, profit_trades: 981 },
+  concentration: { peak_concentration: { top_pct: 98.6, month: "2025-12", top_currency: "twd" } },
+  cash_flow_behavior: { withdrawals_after_7d_btc_drop_pct: 14.2, twd_withdrawal_count: 417 },
+});

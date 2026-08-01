@@ -73,27 +73,49 @@ const store = (page) => page.evaluate(() => JSON.parse(localStorage.getItem("mm_
   console.log("1 示範帳戶 OK：沿用使用者問卷人格（advanced/analytical）＋示範歷史投資資料，未留多餘快照");
 
   // ── 1c. 三種版面：預設跟著問卷 Q6，改選會記住
-  const styleDefault = await page.evaluate(() => ({
-    body: document.body.dataset.homeStyle,
-    pressed: [...document.querySelectorAll("[data-style]")].filter((b) => b.getAttribute("aria-pressed") === "true").map((b) => b.dataset.style),
-    hint: document.getElementById("home-style-hint").textContent,
-  }));
-  if (styleDefault.body !== "analytical" || styleDefault.pressed.join() !== "analytical")
+  const styleDefault = await page.evaluate(() => {
+    const badge = document.getElementById("home-style-badge");
+    return {
+      body: document.body.dataset.homeStyle,
+      badgeStyle: badge.dataset.style,
+      badgeText: badge.textContent.trim(),
+      // 徽章是循環切換，光看標籤不知道按下去會怎樣——aria-label 要講出下一個是什麼
+      aria: badge.getAttribute("aria-label") || "",
+      toast: document.getElementById("home-toast").textContent,
+    };
+  });
+  if (styleDefault.body !== "analytical" || styleDefault.badgeStyle !== "analytical")
     throw new Error(`版面預設未跟著問卷答案：${JSON.stringify(styleDefault)}`);
-  if (!styleDefault.hint.includes("問卷")) throw new Error(`版面提示文案異常：${styleDefault.hint}`);
-  await page.click('[data-style="concise"]');
+  if (styleDefault.badgeText !== "專業效率") throw new Error(`徽章標籤異常：${styleDefault.badgeText}`);
+  if (!styleDefault.aria.includes("點一下換成 安心白話"))
+    throw new Error(`徽章沒有說明點下去會換成什麼：${styleDefault.aria}`);
+  // 問卷幫你選了版面卻不說一聲會很莫名其妙——每個 session 提示一次
+  if (!styleDefault.toast.includes("問卷")) throw new Error(`未提示版面來源：${styleDefault.toast}`);
+
+  // 循環順序 analytical → guided → concise，兩下才會到 concise
+  await page.click("#home-style-badge");
+  await page.waitForFunction(() => document.body.dataset.homeStyle === "guided");
+  await page.click("#home-style-badge");
   await page.waitForFunction(() => document.body.dataset.homeStyle === "concise");
   const conciseHides = await page.evaluate(() => {
     const el = document.querySelector(".evidence-list") || document.querySelector(".module-note");
     return el ? getComputedStyle(el).display : "none";
   });
-  if (conciseHides !== "none") throw new Error("「先告訴我重點」未收起解釋／證據區塊");
+  if (conciseHides !== "none") throw new Error("「成長陪跑」（concise）未收起解釋／證據區塊");
   await page.reload();
   await page.waitForSelector(".bottom-nav");
-  const remembered = await page.evaluate(() => ({ body: document.body.dataset.homeStyle, hint: document.getElementById("home-style-hint").textContent }));
-  if (remembered.body !== "concise" || !remembered.hint.includes("已記住"))
+  const remembered = await page.evaluate(() => ({
+    body: document.body.dataset.homeStyle,
+    badgeText: document.getElementById("home-style-badge").textContent.trim(),
+    title: document.getElementById("home-style-badge").title,
+    toast: document.getElementById("home-toast").textContent,
+  }));
+  if (remembered.body !== "concise" || remembered.badgeText !== "成長陪跑")
     throw new Error(`版面選擇未被記住：${JSON.stringify(remembered)}`);
-  console.log("1c 三種版面 OK：預設＝問卷 Q6（analytical）、改選 concise 會收起解釋且刷新後記住");
+  if (!remembered.title.includes("已記住")) throw new Error(`徽章 title 未反映來源：${remembered.title}`);
+  /* 自己選過之後就別再提示來源——那句話是給「版面不是我選的」的人看的。 */
+  if (remembered.toast.includes("問卷")) throw new Error("使用者已自選版面，卻仍提示問卷來源");
+  console.log("1c 三種版面 OK：預設＝問卷 Q6（analytical）＋來源提示一次、徽章循環兩下到 concise 會收起解釋、刷新後記住");
 
   // ── 5. 「我的」→ 資料授權 → 返回回到設定頁
   await page.goto(`${base}/settings.html`);
