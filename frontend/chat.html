@@ -94,7 +94,10 @@
     padding:10px 13px;text-align:left;font-size:13.5px;font-weight:800;color:var(--blue);cursor:pointer;font-family:inherit}
 
   /* ── Golden Path：三方案卡／確認卡／決策軌跡（沿用既有結構與文案）── */
-  .scen{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:10px}
+  .scen{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:10px;cursor:pointer}
+  /* 卡片是可點的選項——沒有游標與提示行，使用者不知道它能點（2026-08-02 實機回報「卡片不能點」）。 */
+  .scen .hint{font-size:10px;color:var(--sub);margin-top:8px;text-align:right}
+  .scen:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
   .scen.pick{border-color:var(--blue);box-shadow:0 0 0 2px rgba(30,77,167,.09)}
   .scen .t{font-size:14.5px;font-weight:800;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
   .scen .t .tag{margin-left:auto;font-size:10.5px;font-weight:800;color:var(--blue);background:var(--tint);border-radius:12px;padding:3px 9px}
