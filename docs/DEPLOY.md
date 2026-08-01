@@ -100,8 +100,13 @@ python3 scripts/setup_rag_kb.py --corpus <repo外的語料檔路徑>   # 沒有�
       CloudFormation 收斂掉，而且悄悄關閉、沒有任何訊號。要開請用：
       `sam deploy --parameter-overrides EnablePromptCache=1`
       —— 開啟後對話一次確認無 ValidationException 才留著
-- [ ] （#6 Guardrail 建好後）ChatFunction 環境變數：`GUARDRAIL_ID=<id>`（版本非 DRAFT
-      再加 `GUARDRAIL_VERSION`）—— 設定後 converse 自動掛載，與程式層護欄疊加
+- [ ] ~~（#6 Guardrail 建好後）ChatFunction 環境變數：`GUARDRAIL_ID=<id>`~~
+      **不要在主控台設。** `GUARDRAIL_ID` 是模板參數，`scripts/deploy.sh` 每次都帶
+      `--parameter-overrides GuardrailId=<環境對照表的值>`，主控台手動設的值下一次部署就被改回去。
+      而 `loop.py` 對 `off`／`none`／`disabled` 一律靜默停用——不掛 guardrailConfig、不 log、
+      不報錯，模型層護欄整層消失而畫面完全正常。要開請改 `scripts/deploy.sh` 環境對照表裡的
+      `GUARDRAIL=`（私人帳號已有 READY 的 `MaiMateRedLine`；比賽帳號沒建，`off` 是唯一正確值）。
+      腳本每次部署都會把本次採用的值印出來，讓「不掛護欄」變成看得見的決定。
 
 > **不用手動設的**（模板已自動帶入，PR #21 之後）：`KB_ID`（參數 `KnowledgeBaseId`，
 > 預設 `DSIYBVI1IX`，RAG 部署完即通）、`BEDROCK_REGION`（跟隨部署 region）、`TABLE_NAME`。

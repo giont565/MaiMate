@@ -27,10 +27,15 @@ const path = require("path");
 const { chromium } = require("playwright");
 
 const ROOT = path.join(__dirname, "..", "frontend");
-// 新增頁面時務必補進來——這份清單漏一頁，該頁的 API_BASE 就沒人在看。
-// 07/31 實測：host-app.html 不在清單裡，它指著已刪除的舊 API 而 L3.1 判定通過。
-const PAGES = ["welcome.html", "onboarding.html", "index.html", "home.html", "chat.html",
-               "insights.html", "settings.html", "host-app.html"];
+// 這份清單漏一頁，該頁就沒人在看——而手寫版本已經漏過兩次：
+//   07/31 host-app.html 不在清單裡，它指著已刪除的舊 API 而 L3.1 判定通過。
+//   08/02 intro.html 不在清單裡，而它正是比賽環境唯一 403 的檔（入口動畫整段沒上去）。
+// 靠人同步已經證明失敗，改成直接讀 frontend/，新增頁面不必記得回來補。
+const PAGES = fs.readdirSync(ROOT).filter((f) => f.endsWith(".html")).sort();
+
+// 本地「應該要有 API_BASE」的頁。L3.3 用它當期望集合——見該條的註解。
+const hasApiBase = (src) => /window\.API_BASE\s*=\s*["']/.test(src);
+const LOCAL_API_PAGES = PAGES.filter((p) => hasApiBase(fs.readFileSync(path.join(ROOT, p), "utf8")));
 
 // ---------- CLI ----------
 const argv = process.argv.slice(2);
@@ -103,13 +108,13 @@ function localFiles() {
         r.status === 200 && isHtml ? "" : `HTTP ${r.status}${isHtml ? "" : "（回應不是 HTML）"} → 檢查 CloudFront DefaultRootObject 是否為 index.html`);
     } catch (e) { check("L1.2", "根路徑直接載入首頁", false, `連不上：${e.message}`); }
 
-    // 七頁都要在。少一頁＝那頁沒 sync 上去，但其他頁正常，很難當場發現
+    // 每一頁都要在。少一頁＝那頁沒 sync 上去，但其他頁正常，很難當場發現
     const missing = [];
     for (const p of PAGES) {
       try { const r = await get(`${BASE}/${p}`); if (r.status !== 200) missing.push(`${p}(${r.status})`); }
       catch (e) { missing.push(`${p}(${e.message})`); }
     }
-    check("L1.3", `七個進入頁都取得到`, missing.length === 0,
+    check("L1.3", `${PAGES.length} 個進入頁都取得到`, missing.length === 0,
       missing.length === 0 ? PAGES.join(" / ") : `取不到：${missing.join("、")}`);
   }
 
@@ -177,11 +182,16 @@ function localFiles() {
       } catch (e) { unreachable.push(`${p}(${e.message})`); }
     }
     const uniq = [...new Set(found.map(([, v]) => v))];
+    // 線上沒有 API_BASE 的頁，要分成兩種：本地也沒有（設計如此）與本地有（真故障，見 L3.3）。
+    // 混在一起講成「另 N 頁不需要」，正是 L3.1 綠燈卻有一頁在跑假資料的原因。
+    const foundNames = new Set(found.map(([p]) => p));
+    const lostApi = LOCAL_API_PAGES.filter((p) => !foundNames.has(p) && !unreachable.some((u) => u.startsWith(`${p}(`)));
+    const expectedNone = none.filter((p) => !LOCAL_API_PAGES.includes(p));
 
     // DEPLOY.md §3 標為「最常忘的一步」：漏改任一頁不會報錯，只會讓該頁靜默掉回離線 mock
     check("L3.1", "有 API_BASE 的頁面全部同一個值", uniq.length === 1 && unreachable.length === 0,
       unreachable.length ? `取不到：${unreachable.join("、")}`
-        : uniq.length === 1 ? `${uniq[0]}（${found.length} 頁一致${none.length ? `；另 ${none.length} 頁不需要：${none.join("、")}` : ""}）`
+        : uniq.length === 1 ? `${uniq[0]}（${found.length} 頁一致${expectedNone.length ? `；另 ${expectedNone.length} 頁不需要：${expectedNone.join("、")}` : ""}${lostApi.length ? `；⚠ ${lostApi.length} 頁該有卻沒有，見 L3.3` : ""}）`
           : uniq.length === 0 ? "所有頁面都沒有 API_BASE ——整站會跑離線 mock"
             : `發現 ${uniq.length} 個不同的值：\n    ${found.map(([p, v]) => `${p} → ${v}`).join("\n    ")}\n    → 值不同的那幾頁會打到錯的後端或直接掉回離線 mock（畫面正常、數字正常，但全是假的）`);
 
@@ -189,9 +199,18 @@ function localFiles() {
     check("L3.2", "API_BASE 是 HTTPS 絕對網址", bad.length === 0,
       bad.length === 0 ? "" : `不合格：${bad.map(([p, v]) => `${p} → ${v || "(空字串)"}`).join("、")}（空值、localhost 或 http 都會讓線上頁面連不到後端）`);
 
-    // 純 mock 頁（home / insights / settings）沒有 API_BASE 是設計如此，不是漏改——講明白，
-    // 免得下一個人看到「只有 4 頁有」以為漏了三頁而去亂加
-    if (none.length) console.log(`    （${none.join("、")} 本來就不打 API，純前端 mock 頁，沒有 API_BASE 是正常的）`);
+    // L3.1 有個致命盲點：抓不到 API_BASE 的頁被丟進 none[]，而 none[] 完全不參與判定。
+    // 於是「線上某頁的 API_BASE 整行不見了」＝L3.1 綠燈。2026-08-02 實測：比賽環境線上
+    // home.html 沒有 API_BASE，L3.1 照樣通過，而 home-service 的 fetch 全部落到同源、
+    // 失敗、靜默走 mock——畫面完整但沒有一筆真資料。所以要拿本地當期望集合對一次。
+    check("L3.3", "本地有 API_BASE 的頁，線上也都有", lostApi.length === 0,
+      lostApi.length === 0 ? `${LOCAL_API_PAGES.length} 頁應有、線上都有`
+        : `線上這幾頁的 API_BASE 不見了：${lostApi.join("、")}\n    → 該頁的 fetch 會落到同源、失敗、靜默走離線 mock（畫面完整、數字正常，但沒有一筆真資料）。\n    → 多半是線上跑的是舊版該頁，重新部署本地 main 即可。`);
+
+    // 真的不打 API 的頁沒有 API_BASE 是設計如此，不是漏改——講明白，免得下一個人以為漏了而去亂加。
+    // 這行以前是寫死的「home / insights / settings」，而 home.html 後來拿到了 API_BASE，
+    // 這句就變成叫人忽略一個真故障的安撫文案。改成用本地內容推導。
+    if (expectedNone.length) console.log(`    （${expectedNone.join("、")} 本地就沒有 API_BASE，不打 API 的純前端頁，正常）`);
   }
 
   // ══ L4 真的連得到後端 ═════════════════════════════════════════════
