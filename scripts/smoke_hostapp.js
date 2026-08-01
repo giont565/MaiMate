@@ -22,7 +22,12 @@ const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; cha
   ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" };
 
 // 麥麥的兩個入口該進哪一頁——寫在這裡當單一事實來源，改入口就要改這裡
-const ENTRY_GRID = "intro.html?from=index.html";        // 九宮格 icon：先播入口動畫，播完/跳過轉 index.html（#45 的落點）
+// 九宮格 icon：先播入口動畫，播完/跳過轉 welcome.html。
+// 落點是 welcome.html 而不是 index.html，因為 welcome.html 是**風險問卷的唯一守門頁**
+// （welcome.js:155 依 entryState 分流：新用戶／設定到一半 → onboarding.html#/consent 五屏問卷；
+// 已完成 → home.html）。#53 為了保住 #45 的「直接進主畫面」寫成 ?from=index.html，
+// 副作用是問卷從進場流程整個消失。2026-08-02 決賽日改回完整流程。
+const ENTRY_GRID = "intro.html?from=welcome.html";
 const ENTRY_TAB = "home.html?demo=STEADY_PLANNER";      // 底部分頁：Screen 6 新首頁
 
 const server = http.createServer((req, res) => {
