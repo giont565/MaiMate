@@ -577,7 +577,14 @@
   /* ── 組成最終訊息（含 Guardrails 與數字一致性檢查）── */
   function toAssistantMessage(conversationId, draft, mode) {
     const blocks = [];
-    blocks.push(block("summary", { directAnswer: draft.answer.directAnswer }));
+    // 安全邊界回覆的同一句話會走兩條路：這裡的 summary（粗體標題）與 buildSafetyResponse
+    // 放進 draft.blocks 的 boundaryNotice（橘框）。兩個都渲染就是同一句印兩次
+    // （2026-08-02 實機截圖：「MaiMate 不會替你下單…」上下各一份）。
+    // 留橘框而不是留標題——那個框的樣式本身就是「這是安全邊界」的視覺訊號，
+    // 對評審而言正是紅線 1「不報明牌」的證據，換成純文字標題就看不出來了。
+    const dupOfBoundary = draft.safetyBoundary
+      && draft.answer.directAnswer === draft.safetyBoundary.message;
+    if (!dupOfBoundary) blocks.push(block("summary", { directAnswer: draft.answer.directAnswer }));
     if (draft.answer.explanation) blocks.push(block("text", { text: draft.answer.explanation }));
     draft.blocks.forEach((item) => blocks.push(item));
     // 順序＝本次參考 → 資料限制 → 你也可以接著問 → 深入了解

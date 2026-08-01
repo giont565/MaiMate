@@ -210,9 +210,12 @@
     const copy = el("button", "", "複製");
     copy.type = "button";
     copy.onclick = () => {
+      // boundaryNotice 一定要收：安全邊界回覆整句話只存在那個 block 裡
+      // （chat-service.js 的 toAssistantMessage 已不再重複產生 summary），
+      // 漏掉它會讓「複製」在安全邊界那幾題複製出空字串。
       const text = message.blocks
-        .filter((blk) => blk.type === "summary" || blk.type === "text")
-        .map((blk) => blk.payload.directAnswer || blk.payload.text).join("\n");
+        .filter((blk) => blk.type === "summary" || blk.type === "text" || blk.type === "boundaryNotice")
+        .map((blk) => blk.payload.directAnswer || blk.payload.text || blk.payload.message).join("\n");
       if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
     };
     wrap.append(helpful, notHelpful, copy);
