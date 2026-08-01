@@ -64,9 +64,11 @@ const server = http.createServer((req, res) => {
   }
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } }); // 手機優先（mockup 尺寸）
 
-  // index.html 可能寫死絕對 API_BASE，用路徑尾端比對同時涵蓋 /api/* 與絕對網址
-  await page.route("**/health*", (r) => r.fulfill({ json: HEALTH }));
-  await page.route("**/market*", (route) => {
+  // index.html 可能寫死絕對 API_BASE，用路徑尾端比對同時涵蓋 /api/* 與絕對網址。
+  // 用 RegExp 把結尾錨在 `?` 或字串尾——原本的 `**/health*` 會連 health-core.js
+  // 一起攔下來，回一包 JSON 當 JS 送進瀏覽器，錯誤訊息是難查的 SyntaxError。
+  await page.route(/\/health(\?|$)/, (r) => r.fulfill({ json: HEALTH }));
+  await page.route(/\/market(\?|$)/, (route) => {
     if (marketMode === "fail") return route.abort();
     const m = new URL(route.request().url()).searchParams.get("market");
     route.fulfill({ json: { kind: "ticker", market: m, data: { last: PRICES[marketMode][m] } } });

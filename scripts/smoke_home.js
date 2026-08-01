@@ -521,8 +521,10 @@ function collectKeys(value, target) {
       concentration: { peak_concentration: { top_pct: 98.6, month: "2025-12" } },
       cash_flow_behavior: { withdrawals_after_7d_btc_drop_pct: 14.2, twd_withdrawal_count: 417 },
     };
-    await page.route("**/health*", (route) => route.fulfill({ json: health }));
-    await page.route("**/market*", (route) => {
+    // 結尾錨在 `?` 或字串尾：`**/health*` 會連 health-core.js／market-core.js
+    // 一起攔下來當成 API 回 JSON，瀏覽器只會丟一個看不出原因的 SyntaxError。
+    await page.route(/\/health(\?|$)/, (route) => route.fulfill({ json: health }));
+    await page.route(/\/market(\?|$)/, (route) => {
       const market = new URL(route.request().url()).searchParams.get("market");
       route.fulfill({ json: { kind: "ticker", market, data: { last: "100" } } });
     });
@@ -560,7 +562,10 @@ function collectKeys(value, target) {
     await page.setViewportSize({ width: 375, height: 812 });
     await openDemo(page, base);
     const layout = await page.evaluate(() => {
-      const plan = document.getElementById("plan-alignment-card").getBoundingClientRect();
+      /* 這條原本寫死 plan-alignment-card。整合健檢卡之後模組順序改了（健檢在最前），
+         但這條斷言真正要守的是「第一屏看得到下一張卡的開頭」＝使用者知道還能往下捲，
+         所以改成檢查第二張模組卡，不綁特定型別。 */
+      const plan = document.querySelectorAll("#home-modules .module-card")[1].getBoundingClientRect();
       const chat = document.getElementById("persistent-chat-entry").getBoundingClientRect();
       const nav = document.getElementById("home-bottom-nav").getBoundingClientRect();
       const mascot = document.querySelector("#personal-greeting img");
@@ -574,7 +579,7 @@ function collectKeys(value, target) {
       };
     });
     assert(layout.scrollWidth <= 375, `375px 出現水平捲動：${layout.scrollWidth}`);
-    assert(layout.planTop < layout.viewportHeight, `第一屏看不到 Plan Alignment 開頭：${layout.planTop}`);
+    assert(layout.planTop < layout.viewportHeight, `第一屏看不到第二張模組卡的開頭：${layout.planTop}`);
     assert(layout.chatBottom <= layout.navTop + 1, "Sticky Chat 與 Bottom Navigation 重疊");
     assert(parseFloat(layout.mascotAnimation) <= 0.001 || layout.mascotAnimation === "0s",
       `Reduced Motion 仍有非必要動畫：${layout.mascotAnimation}`);

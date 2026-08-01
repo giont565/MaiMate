@@ -1,7 +1,7 @@
 /* 自動生成——請勿手改。重生：npm run build:sw
  * 內容：service worker 的 precache 清單與版本（版本＝所有檔案內容的雜湊，
  * 改了任何檔就換版本，舊快取自動淘汰）。 */
-self.SW_VERSION = "761f48188d";
+self.SW_VERSION = "23d70fd53a";
 self.SW_ASSETS = [
   "app.js",
   "brand/maicoin.png",
@@ -11,6 +11,7 @@ self.SW_ASSETS = [
   "chat-service.js",
   "chat.html",
   "chat.js",
+  "health-core.js",
   "home-core.js",
   "home-service.js",
   "home.html",
@@ -30,6 +31,7 @@ self.SW_ASSETS = [
   "maimate_bot_small.png",
   "maimate_hero.png",
   "manifest.webmanifest",
+  "market-core.js",
   "mocks/account.js",
   "mocks/chat.js",
   "mocks/home.js",

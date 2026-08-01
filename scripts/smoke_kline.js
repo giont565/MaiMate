@@ -60,8 +60,9 @@ const ok = (m) => console.log(m);
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 375, height: 812 } });
 
-  await page.route("**/health", (r) => r.fulfill({ json: HEALTH }));
-  await page.route("**/market**", (r) => {
+  await page.route(/\/health(\?|$)/, (r) => r.fulfill({ json: HEALTH }));
+  // 同 smoke_frontend：`**/market**` 也會吃掉 market-core.js
+  await page.route(/\/market(\?|$)/, (r) => {
     const url = r.request().url();
     if (url.includes("kind=kline")) {
       if (klineMode === "fail") return r.abort();

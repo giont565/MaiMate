@@ -10,7 +10,10 @@
   :root{
     --bg:#FBFCFE;--card:#FFFFFF;--red:#E64A4D;--blue:#1E4DA7;--txt:#0F172A;
     --sub:#46557B;--mut:#6B7280;--line:#E3E9F5;--tint:#EEF3FC;--warm:#FFF6EC;
-    --bar:#7592CA;--sheet-mask:rgba(15,23,42,.42)
+    --bar:#7592CA;--sheet-mask:rgba(15,23,42,.42);
+    /* 健康分與 K 線沿用 index.html 的視覺系統色（docs/mockups/base.css），
+       前綴 --mm- 是為了不撞到本頁既有的 --red。同一個綠／紅在兩頁必須一致。 */
+    --mm-gold:#E8A13A;--mm-green:#1F9D66;--mm-red:#D64550;--mm-navy:#16224D
   }
   *{box-sizing:border-box;font-family:"Noto Sans CJK TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;margin:0}
   html,body{max-width:100%;overflow-x:clip}
@@ -91,6 +94,57 @@
 
   .module-stack{display:flex;flex-direction:column;gap:14px}
   .module-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:17px 15px}
+
+  /* ── 健康分卡（整合自 index.html 的 hero＋2×2）────────────────────────── */
+  /* 高度是這張卡的硬約束：它排在最前面，太高會把第二張卡的開頭擠出第一屏，
+     使用者就看不出還能往下捲（smoke_home 19–20 有斷言）。下面每個尺寸都是為了
+     讓整張卡收在 ~470px 內，別隨手放大。 */
+  .health-head{display:flex;align-items:center;gap:13px;margin-top:9px}
+  .health-ring{width:66px;height:66px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center}
+  .health-ring-inner{width:50px;height:50px;border-radius:50%;background:var(--card);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+  .health-ring-inner b{font-size:20px;font-weight:800;color:var(--mm-navy)}
+  .health-ring-inner span{font-size:8px;color:var(--mut);margin-top:2px}
+  .health-text{min-width:0}
+  .health-worst{font-size:11px;color:var(--sub);line-height:1.45}
+  .health-pnl{font-size:11px;margin-top:4px;color:var(--sub)}
+  .health-pnl b.pos{color:var(--mm-green)} .health-pnl b.neg{color:var(--mm-red)}
+  .health-formula{font-size:9px;color:var(--mut);margin-top:4px;line-height:1.4}
+  .health-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px}
+  .health-cell{background:var(--tint);border-radius:11px;padding:9px 10px}
+  .health-cell b{display:block;font-size:19px;font-weight:800;color:var(--mm-navy)}
+  .health-cell span{display:block;font-size:9.5px;color:var(--mut);margin-top:2px;line-height:1.35}
+  .health-cell.tone-risk b{color:var(--mm-red)}
+  .health-cell.tone-warn b{color:var(--mm-gold)}
+  .health-cell.tone-good b{color:var(--mm-green)}
+  .health-insight{font-size:11px;line-height:1.55;margin-top:8px;padding:8px 10px;
+    border-left:3px solid var(--mm-red);background:var(--tint);border-radius:9px}
+  .health-insight.tone-good{border-left-color:var(--mm-green)}
+  .health-source{font-size:9px;color:var(--mut);margin-top:8px}
+
+  /* ── 行情卡＋K 線（消費 /market，見 kline-core.js）─────────────────────── */
+  .market-note{font-size:10.5px;color:var(--mut);margin-top:4px}
+  .market-list{margin-top:9px}
+  .market-row+.market-row{margin-top:6px}
+  /* 44px 是 Apple HIG 的最小觸控目標，整列可點 */
+  .market-tick{display:flex;align-items:center;gap:9px;width:100%;min-height:44px;
+    padding:8px 12px;background:var(--tint);border:0;border-radius:11px;text-align:left;cursor:pointer}
+  .market-tick b{font-size:12.5px;color:var(--mm-navy)}
+  .market-price{margin-left:auto;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;transition:color .3s}
+  .market-price.up{color:var(--mm-green)} .market-price.down{color:var(--mm-red)}
+  .market-caret{font-size:10px;color:var(--mut);transition:transform .2s}
+  .market-tick[aria-expanded="true"] .market-caret{transform:rotate(180deg)}
+  .market-panel{padding:9px 2px 2px}
+  .market-periods{display:flex;gap:6px;flex-wrap:wrap}
+  .market-period{min-width:44px;min-height:44px;padding:0 10px;border:1px solid var(--line);
+    background:var(--card);border-radius:10px;font-size:11px;color:var(--sub);cursor:pointer}
+  .market-period.active{border-color:var(--mm-gold);color:var(--mm-navy);font-weight:700;background:#FFFDF6}
+  .market-chart{margin-top:9px}
+  .market-chart svg{width:100%;height:132px;display:block}
+  .market-axis{display:flex;justify-content:space-between;gap:8px;
+    font-size:9.5px;color:var(--mut);margin-top:3px;font-variant-numeric:tabular-nums}
+  .market-empty{font-size:11px;color:var(--mut);padding:14px 0;text-align:center}
+  .market-offline{font-size:11px;color:var(--mut);margin-top:9px;line-height:1.5}
   .module-eyebrow{font-size:12px;font-weight:800;color:var(--blue)}
   .module-title{font-size:17px;line-height:1.45}
   .module-copy{margin-top:7px;color:var(--sub);font-size:13px;line-height:1.72}
@@ -383,11 +437,19 @@
 
 <div class="toast" id="home-toast" role="status" aria-live="polite"></div>
 
+<!-- 這一頁原本沒有 API_BASE，於是 home-service 的 fetch 全部落到同源、失敗、靜默走 mock——
+     畫面完整但沒有一筆真資料。補上之後 /health 與 /market 才真的接得到。
+     鐵則：每次重部署都要跟著改（DEPLOY.md 清單）。 -->
+<script>window.API_BASE = "https://10n5xyf7i4.execute-api.us-west-2.amazonaws.com";</script>
 <script src="mocks/account.js"></script>
 <script src="mocks/onboarding.js"></script>
 <script src="onboarding-core.js"></script>
 <script src="investment-analysis.js"></script>
 <script src="mocks/home.js"></script>
+<!-- 純函式層要在 home-core 之前：home-core 的 marketWatch 驗證會用到 MM_MARKET_CORE -->
+<script src="kline-core.js"></script>
+<script src="market-core.js"></script>
+<script src="health-core.js"></script>
 <script src="home-core.js"></script>
 <script src="home-service.js"></script>
 <script src="navigation-context.js"></script>
