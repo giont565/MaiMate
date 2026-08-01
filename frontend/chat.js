@@ -346,10 +346,18 @@
     return card;
   }
 
+  /* 卡片本身就是選項，使用者（與評審）第一直覺是直接點它。
+   * 這份原本只組 DOM 不掛任何事件——三張卡點下去毫無反應，Golden Path
+   * （三方案 → 選一個 → 確認卡）在這一頁整條斷掉。
+   * app.js 早就修過同一個問題（見該檔 addScenarios 的註解），這裡把同樣的做法補上：
+   * 點擊／Enter／空白鍵都會把卡片標題填回輸入框並送出，沿用既有那條路徑（含離線 fallback）。 */
   function addScenarios(list) {
     (list || []).forEach((scenario, index) => {
       const meta = SCEN_META[scenario.key] || ["💡", "選項 " + (index + 1)];
       const card = el("div", "scen" + (index === 0 ? " pick" : ""));
+      card.setAttribute("role", "button");
+      card.tabIndex = 0;
+      card.dataset.label = scenario.label;
       const title = el("div", "t", meta[0] + " " + scenario.label);
       title.append(el("span", "tag", meta[1]));
       card.append(title);
@@ -360,6 +368,17 @@
       if (scenario.post_concentration_pct != null) row.append(cell("執行後佔比", fmt(scenario.post_concentration_pct) + "%"));
       card.append(row);
       if (scenario.behavior_note) card.append(el("div", "note", scenario.behavior_note));
+      card.append(el("div", "hint", "點這張卡片選它 →"));
+      const choose = () => {
+        if (ui.stream) return;              // 正在等回覆時不要重複送出
+        const input = byId("q");
+        input.value = scenario.label;
+        byId("chatform").requestSubmit();
+      };
+      card.onclick = choose;
+      card.onkeydown = (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); choose(); }
+      };
       byId("chatlog").append(card);
     });
   }

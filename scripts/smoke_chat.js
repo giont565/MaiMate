@@ -400,6 +400,60 @@ const ALLOWED_EVENT_KEYS = ["e", "q", "src", "intent", "tool", "style", "status"
     console.log("28 安全邊界 OK：同一句只印一次，且「複製」取得到完整內容");
   }
 
+  /* 29 三方案卡必須真的可以點（2026-08-02 實機回報「卡片不能點」回歸）
+   * chat.js 的 addScenarios 原本只組 DOM 不掛任何事件，三張卡是純裝飾，
+   * Golden Path（三方案 → 選一個 → 確認卡）在這一頁整條斷掉。
+   * 第 27 項雖然有 page.click(".scen")，但它跟後面的 waitForSelector 都寫了
+   * `.catch(() => {})`，失敗被吞掉——這就是這個 bug 能溜上線的原因。這一條不吞。 */
+  {
+    await page.route(/\/chat(\?|$)/, (route) => route.abort());   // 逼走離線劇本，方案卡可重現
+    await page.goto(`${base}/chat.html`);
+    await page.waitForSelector("#q");
+    await page.fill("#q", "ETH 跌太多了，幫我全部賣掉！");
+    await page.click("#chat-send").catch(() => page.press("#q", "Enter"));
+    await page.waitForSelector(".scen", { timeout: 10000 });
+
+    const a11y = await page.evaluate(() => {
+      const cards = [...document.querySelectorAll(".scen")];
+      return cards.map((c) => ({
+        role: c.getAttribute("role"),
+        tabindex: c.getAttribute("tabindex"),
+        label: c.dataset.label || null,
+        hint: !!c.querySelector(".hint"),
+        cursor: getComputedStyle(c).cursor,
+      }));
+    });
+    if (!a11y.length) throw new Error("29 失敗：沒有渲染出任何方案卡");
+    const bad = a11y.filter((c) => c.role !== "button" || c.tabindex !== "0" || !c.label);
+    if (bad.length) {
+      throw new Error(`29 失敗：${bad.length}/${a11y.length} 張方案卡不是可操作元件`
+        + `（缺 role=button／tabindex=0／data-label）——鍵盤與輔助技術都選不了`);
+    }
+    if (a11y.some((c) => !c.hint)) throw new Error("29 失敗：方案卡沒有「點這張卡片選它」提示，使用者不知道能點");
+    if (a11y.some((c) => c.cursor !== "pointer")) throw new Error("29 失敗：方案卡的游標不是 pointer，看起來不可點");
+
+    // 真的點下去要送得出訊息（不吞例外）
+    const before = await page.evaluate(() => document.querySelectorAll("#chatlog .bubble-user").length);
+    await page.click(".scen");
+    await page.waitForTimeout(1200);
+    const after = await page.evaluate(() => ({
+      users: document.querySelectorAll("#chatlog .bubble-user").length,
+      qEmpty: document.getElementById("q").value === "",
+    }));
+    if (after.users <= before) {
+      throw new Error("29 失敗：點了方案卡但沒有送出任何訊息（卡片只有樣式沒有行為）");
+    }
+    if (!after.qEmpty) throw new Error("29 失敗：送出後輸入框沒有清空，會和使用者下一句疊在一起");
+
+    // 鍵盤也要能選（role=button 就必須支援 Enter）
+    await page.evaluate(() => { const c = document.querySelector(".scen"); if (c) c.focus(); });
+    const focused = await page.evaluate(() => document.activeElement && document.activeElement.classList.contains("scen"));
+    if (!focused) throw new Error("29 失敗：方案卡拿不到鍵盤焦點");
+
+    console.log("29 方案卡 OK：可點、可鍵盤操作、有提示、點下去真的送得出去");
+    await page.unroute(/\/chat(\?|$)/);
+  }
+
   if (errors.length) throw new Error("頁面拋出例外：" + errors[0].slice(0, 160));
   await page.screenshot({ path: "smoke_chat.png", fullPage: true });
   await browser.close();
