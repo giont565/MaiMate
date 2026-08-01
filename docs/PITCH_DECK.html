@@ -167,6 +167,60 @@
   .s-table .lede{font-size:26px;line-height:1.6;margin-bottom:26px!important}
   .s-table .note{font-size:20px}
 
+
+  /* ═══ 產品地圖 ═══ */
+  .map{display:flex;gap:0;flex:1;min-height:0}
+  .grp{flex:1;padding:0 40px;border-left:1px solid #E8EDF5;display:flex;flex-direction:column}
+  .grp:first-child{padding-left:0;border-left:0}
+  .grp:last-child{padding-right:0}
+  .grp .gh{font-size:32px;font-weight:900;margin-bottom:8px;letter-spacing:-.02em}
+  .grp .gs{font-size:19px;color:#94A3B8;margin-bottom:28px;font-weight:600}
+  .grp li{list-style:none;font-size:22px;line-height:1.5;padding:19px 0;
+          border-bottom:1px solid #F0F4FA;color:#334155}
+  .grp li:last-child{border:0}
+  .grp li b{font-weight:800;color:#0F172A}
+  .dims{flex:none;display:flex;gap:12px;margin-top:34px}
+  .dims span{
+    flex:1;text-align:center;font-size:19px;font-weight:800;color:#475569;
+    background:#F4F7FD;border-radius:10px;padding:14px 8px;
+  }
+  .dims span em{display:block;font-style:normal;font-size:15px;font-weight:600;color:#94A3B8;margin-top:5px}
+
+  /* ═══ 實機展示：左功能 右畫面 ═══ */
+  .demo{display:flex;gap:64px;flex:1;min-height:0}
+  .beats{flex:1.25;display:flex;flex-direction:column;justify-content:center;gap:26px}
+  .beat{display:flex;gap:22px;align-items:flex-start}
+  .beat i{
+    flex:none;width:52px;height:52px;border-radius:14px;background:#0F172A;color:#fff;
+    font-style:normal;font-size:24px;font-weight:900;display:grid;place-items:center;
+  }
+  .beat.hot i{background:linear-gradient(135deg,#E64A4D,#1E4DA7)}
+  .beat h4{font-size:31px;font-weight:900;letter-spacing:-.02em;line-height:1.3}
+  .beat p{font-size:20px;color:#64748B;line-height:1.55;margin-top:6px}
+  .beat p b{color:#0F172A;font-weight:800}
+  .screen{flex:.75;display:flex;align-items:center;justify-content:center;min-width:0;position:relative}
+  .screen video,.screen img{
+    max-height:100%;max-width:100%;border-radius:26px;background:#0F172A;
+    box-shadow:0 30px 70px rgba(15,23,42,.26);
+  }
+  .screen .miss{
+    position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
+    gap:10px;border:2px dashed #C5CFE4;border-radius:26px;color:#94A3B8;text-align:center;padding:30px;
+  }
+  .screen.novideo .miss{display:flex}
+  .screen.novideo video{display:none}
+
+  /* ═══ 問答備援頁 ═══ */
+  .qa{display:flex;gap:56px;flex:1;min-height:0}
+  .qa .col{gap:0}
+  .qa dl{display:block}
+  .qa dt{font-size:23px;font-weight:900;color:#0F172A;margin-top:22px;line-height:1.4}
+  .qa dt:first-child{margin-top:0}
+  .qa dt::before{content:"Q ";color:#E64A4D;font-weight:900}
+  .qa dd{font-size:19px;color:#475569;line-height:1.6;margin-top:7px;padding-left:26px;
+         border-left:3px solid #E8EDF5}
+  .qa dd b{color:#0F172A;font-weight:800}
+
   /* ═══════════ 發表會模式 ═══════════ */
 
   /* 換頁：淡入＋極輕微推近，不做花俏轉場 */
@@ -237,53 +291,31 @@
 <body>
 <div id="stage">
 
-<!-- ═══ 1 痛點 ═══ -->
+<!-- ═══ 1 情懷：從初心者到巨鱷 ═══ -->
 <section class="slide ink m-idle on" data-n="1" style="justify-content:center">
-  <div class="eyebrow">2026 雲湧智生黑客松 · MaiCoin 智慧理財命題</div>
-  <h1>2017 年我剛進幣圈，<br>最深的感覺不是興奮，<br><span class="grad">是害怕。</span></h1>
-  <p class="lede" style="margin-top:56px">
-    資訊封閉，甚至充斥高風險的場外交易。<br>
-    看著螢幕上跳動的紅紅綠綠，我感受到的是<span style="color:#fff;font-weight:800">冰冷</span>，
-    還有<span style="color:#fff;font-weight:800">孤獨</span>。
+  <div class="eyebrow">2026 雲湧智生黑客松 · MaiCoin 智慧理財命題 · 隊伍「第五名」</div>
+  <h1 style="font-size:96px">2017 年我剛進幣圈，<br>最深的感覺不是興奮，<span class="grad">是害怕</span>。</h1>
+  <p class="lede" style="margin-top:44px;font-size:32px">
+    資訊封閉、充斥高風險的場外交易。看著螢幕上跳動的紅紅綠綠，<br>
+    我感受到的是 <b style="color:#fff">冰冷</b>，還有 <b style="color:#fff">孤獨</b>。
   </p>
-  <div class="foot">MaiMate 麥麥 — 從冰冷的數字，到溫暖的陪伴 ｜ 隊伍「第五名」</div>
+  <p class="lede" style="margin-top:38px;font-size:30px;color:#CBD5E1">
+    所以麥麥有<b style="color:#fff"> 三種模式 </b>——不是三種介面，是<b style="color:#fff">三個階段</b>：<br>
+    <span class="grad" style="font-weight:800">安心白話 → 成長陪跑 → 專業效率</span><br>
+    陪你從什麼都不懂的初心者，一路長成看得懂數字的<b style="color:#fff">巨鱷</b>。
+  </p>
+  <div class="foot">MaiMate 麥麥 — 從冰冷的數字，到溫暖的陪伴</div>
 </section>
 
-<!-- ═══ 2 遇見麥麥 ═══ -->
-<section class="slide m-think" data-n="2">
-  <div class="eyebrow">① 所以我們做了一個夥伴</div>
+<!-- ═══ 2 痛點：一萬筆算出來的傷口 ═══ -->
+<section class="slide s-data m-think" data-n="2">
+  <div class="eyebrow">① 我們要解決的，是這件事</div>
+  <h2>他以為自己在虧錢。<br>其實他<span class="grad">看不見自己</span>。</h2>
   <div class="row">
-    <div class="col">
-      <h1>嗨，<span class="grad">我是麥麥</span>。</h1>
-      <p class="lede" style="margin-top:40px">
-        我會根據你的持倉、交易紀錄與投資習慣，<br>
-        把複雜的市場資訊，翻成你聽得懂的話。
-      </p>
-      <p class="note" style="margin-top:44px;max-width:900px">
-        連長相都是兩個品牌長出來的——麥麥的臉是 MaiCoin 與 MAX 的「幣」字拆解重組，
-        <b class="red">紅色來自 MaiCoin</b>、<b class="blue">藍色來自 MAX</b>，組成它的情緒燈與身體。
-      </p>
-      <div class="swatch">
-        <div><i style="background:#E64A4D"></i>MaiCoin 紅<br>#E64A4D</div>
-        <div><i style="background:#1E4DA7"></i>MAX 藍<br>#1E4DA7</div>
-        <div><i style="background:#FFFFFF"></i>純淨白<br>#FFFFFF</div>
-        <div><i style="background:#0F172A"></i>深海藍<br>#0F172A</div>
-      </div>
-    </div>
-    <img class="kv" src="brand/kv_meet.png" alt="嗨，我是麥麥">
-  </div>
-  <div class="foot">簡單 · 聰明 · 專業 · 值得信賴</div>
-</section>
-
-<!-- ═══ 3 一萬筆數據 ═══ -->
-<section class="slide s-data" data-n="3">
-  <div class="eyebrow">② 而「看得懂你」不是形容詞</div>
-  <h2>我們把一個真實帳戶<br>一整年 <span class="grad">10,000 筆交易</span>全部算過一遍</h2>
-  <div class="row" style="margin-top:14px">
     <div class="col figs">
       <div class="fig win">
         <div class="n">+117,482</div>
-        <div class="t">他以為自己一直在虧錢。其實這一年<b>是賺的</b>，勝率 66.6%</div>
+        <div class="t">一整年 <b>10,000 筆</b>真實交易算過一遍——這一年<b>是賺的</b>，勝率 66.6%</div>
       </div>
       <div class="fig small">
         <div class="n">963</div>
@@ -291,19 +323,130 @@
       </div>
       <div class="fig loss">
         <div class="n">26,598,877</div>
-        <div class="t">但<b>賣掉之後又漲上去</b>的機會成本，一年兩千六百五十九萬——這才是真正的傷口</div>
+        <div class="t">但<b>賣掉之後又漲上去</b>的機會成本，一年兩千六百五十九萬——<b>這才是真正的傷口</b></div>
       </div>
-      <h3 style="margin-top:10px;font-size:46px">他不是不會投資。他是<span class="red">看不見自己</span>。</h3>
+      <h3 style="margin-top:8px;font-size:34px">沒有工具會在你按下「全部賣出」的前一秒，<br>把你自己做過同一件事的後果攤開給你看。</h3>
     </div>
     <img class="kv" src="pitch_shots/01_health.png" alt="投資健檢首屏" style="border-radius:22px;box-shadow:0 22px 60px rgba(15,23,42,.20)">
   </div>
-  <div class="foot">數字全部由程式從真實交易紀錄計算（health_report.json），不是舉例</div>
+  <div class="foot">數字全部由程式從真實交易紀錄計算，不是舉例</div>
 </section>
 
-<!-- ═══ 4 信任邊界 ═══ -->
-<section class="slide m-risk" data-n="4" style="padding-bottom:0">
-  <div class="eyebrow">③ 大家最怕的那件事</div>
-  <h2 style="margin-bottom:46px">「AI 會不會亂花我的錢？」</h2>
+<!-- ═══ 3 產品地圖 ═══ -->
+<section class="slide" data-n="3" style="padding-bottom:70px">
+  <div class="eyebrow">② 麥麥現在做得到的事</div>
+  <h2 style="font-size:60px;margin-bottom:36px">產品地圖 — <span class="grad">四層能力，全部已上線</span></h2>
+  <div class="map">
+    <div class="grp">
+      <div class="gh blue">看見你</div>
+      <div class="gs">行為健檢引擎</div>
+      <ul>
+        <li><b>10,000 筆</b>交易預計算</li>
+        <li>追高指數・殺低比例</li>
+        <li><b>機會成本</b>歸因到單筆</li>
+        <li>峰值集中度・出金紀律</li>
+        <li>投資健康分（透明加權）</li>
+      </ul>
+    </div>
+    <div class="grp">
+      <div class="gh red">懂你</div>
+      <div class="gs">三模式 Profile</div>
+      <ul>
+        <li><b>安心白話</b>／初心者</li>
+        <li><b>成長陪跑</b>／進階中</li>
+        <li><b>專業效率</b>／巨鱷</li>
+        <li>確定性規則判定，附依據</li>
+        <li><b>語氣隨階段變，數字不變</b></li>
+      </ul>
+    </div>
+    <div class="grp">
+      <div class="gh blue">陪你想</div>
+      <div class="gs">對話・行情・知識</div>
+      <ul>
+        <li>Bedrock Converse 工具迴圈</li>
+        <li>Haiku／Sonnet 分層＋快取</li>
+        <li>MAX 即時行情（價差程式算）</li>
+        <li><b>RAG 防詐</b>知識庫，附出處</li>
+        <li><b>三方案試算</b>，對等呈現</li>
+      </ul>
+    </div>
+    <div class="grp">
+      <div class="gh red">幫你做</div>
+      <div class="gs">授權執行・可問責</div>
+      <ul>
+        <li>下單確認卡・<b>60 秒憑證</b></li>
+        <li><b>MAX Private 真實成交</b></li>
+        <li>決策軌跡 append-only</li>
+        <li>不報明牌三層護欄</li>
+        <li>斷網降級並明示標示</li>
+      </ul>
+    </div>
+  </div>
+  <div class="dims">
+    <span>創新性<em>行為盲點×即時行情</em></span>
+    <span>可行性<em>sidecar・主系統零改動</em></span>
+    <span>商業價值<em>手續費放大器</em></span>
+    <span>AI 應用<em>工具迴圈・數字不由 LLM 產</em></span>
+    <span>命題契合<em>MAX Public＋Private</em></span>
+    <span>完成度<em>已上線・46 分鐘可重建</em></span>
+  </div>
+</section>
+
+<!-- ═══ 4 實機展示 ═══ -->
+<section class="slide" data-n="4">
+  <div class="eyebrow">③ 接下來，我直接演給各位看</div>
+  <h2 style="font-size:56px;margin-bottom:34px">「ETH 跌太多了，幫我全部賣掉！」</h2>
+  <div class="demo">
+    <div class="beats">
+      <div class="beat"><i>1</i><div>
+        <h4>它先去查，不是先回答</h4>
+        <p>查行情 → 查餘額 → 方案試算，<b>每一次工具呼叫都亮一個 chip</b>，看得見它在做什麼</p></div></div>
+      <div class="beat hot"><i>2</i><div>
+        <h4>沒有照做，先反問你</h4>
+        <p>攤開你自己的機會成本 <b>NT$26,598,877</b>，再問一句「是基本面變了，還是短期情緒？」</p></div></div>
+      <div class="beat"><i>3</i><div>
+        <h4>三個算好數字的選項</h4>
+        <p>金額、手續費、賣後集中度<b>全由程式計算</b>；三方案對等呈現，<b>不標推薦</b></p></div></div>
+      <div class="beat"><i>4</i><div>
+        <h4>最後一步永遠由你</h4>
+        <p>確認卡寫明滑價風險，<b>60 秒失效、不可重放</b>。麥麥不會替你按下這顆按鈕</p></div></div>
+      <div class="beat hot"><i>5</i><div>
+        <h4>全程留痕，只能新增不能改</h4>
+        <p>草稿 → 確認 → 成交，交易所單號 <b>#20720919534</b> 就在軌跡裡</p></div></div>
+    </div>
+    <div class="screen" id="scr">
+      <video id="demoVideo" src="demo.mp4" poster="pitch_shots/04_scenarios.png" controls preload="metadata"></video>
+      <div class="miss">
+        <b style="font-size:22px;color:#475569">🎬 演示影片放這裡</b>
+        <span style="font-size:17px">存成 <code>docs/demo.mp4</code>，重新整理就會出現</span>
+        <span style="font-size:15px">還沒錄之前，這頁直接走實機</span>
+      </div>
+    </div>
+  </div>
+  <div class="foot">實機網址 https://d1z0776b4u2tmf.cloudfront.net ｜ 掛掉就用右邊的影片，台詞不變</div>
+</section>
+
+<!-- ═══ 5 願景 ═══ -->
+<section class="slide" data-n="5">
+  <div class="row">
+    <div class="col">
+      <p class="note" style="font-size:30px;margin-bottom:24px">技術的進步，是為了讓人感受到<b class="red">科技的溫度</b>。</p>
+      <h1 style="font-size:82px">幣圈的牛熊冷暖交替，<br>但 <span class="grad">麥麥永遠在這裡陪著你</span>。</h1>
+      <p class="lede" style="margin-top:40px">
+        從什麼都不懂的初心者，到看得懂數字的巨鱷——<br>
+        <b style="color:#0F172A">每一個階段，麥麥都在旁邊。</b>
+      </p>
+      <h3 style="margin-top:40px;font-size:42px">簡單的陪伴，<span class="grad">穩健的未來</span>。</h3>
+      <p class="note" style="margin-top:30px">謝謝大家 ｜ https://d1z0776b4u2tmf.cloudfront.net</p>
+    </div>
+    <img class="kv" src="brand/kv_start.png" alt="開始認識我">
+  </div>
+</section>
+
+<!-- ═══ 附錄 0 信任邊界 ═══ -->
+<section class="slide appendix m-risk" data-n="附錄 1" style="padding-bottom:0">
+  <div class="eyebrow">安全邊界</div>
+  <h2 style="margin-bottom:40px">「AI 會不會亂花我的錢？」</h2>
   <div class="two">
     <div class="half can">
       <h3><span class="mark ok">✓</span>麥麥能做的</h3>
@@ -330,71 +473,8 @@
   </div>
 </section>
 
-<!-- ═══ 5 落地與商業 ═══ -->
-<section class="slide" data-n="5">
-  <div class="eyebrow">④ 這份安全感，是真的能落地的</div>
-  <h2 style="margin-bottom:56px">準上線級系統，<br>而且交易所<span class="grad">今天就會想要它</span></h2>
-  <div class="cols">
-    <div class="colx">
-      <h3 class="blue">物理級別的解耦</h3>
-      <p>Serverless 架構。AI 決策的 <b>/chat</b> 與執行交易的 <b>/order</b> 拆成兩支獨立 Lambda——
-         AI 只能把憑證寫進資料庫，<b>碰不到私有 API</b>。</p>
-      <p class="kick">純 Vanilla JS 的 PWA，零框架、載入極快，已可直接嵌進 MAX／MaiCoin App，主交易系統零改動。</p>
-    </div>
-    <div class="colx">
-      <h3 class="red">它是手續費放大器</h3>
-      <p>新手「看不懂→不敢交易」，麥麥陪跑出<b>第一筆單</b>；恐慌離場的用戶 LTV 歸零，
-         <b>攔住一個就是保住未來的年金</b>；冷靜期導向定期定額。</p>
-      <p class="kick">重度用戶 AI 成本 &lt;NT$60/月——用戶月交易額只要 NT$4 萬，手續費就回本。</p>
-    </div>
-    <div class="colx">
-      <h3>不是 POC，是線上服務</h3>
-      <p><b>7/31 真實成交</b>：本人帳戶、最小額度，交易所單號 #20720919534、#20721028463，
-         MAX App 推播為證。砍掉整套環境從零重建，<b>實測 46 分鐘</b>。</p>
-      <p class="kick">開發全程用 Kiro：steering×3、spec×6、MCP 設定都在 repo 裡。</p>
-    </div>
-  </div>
-  <div class="foot">接下來的四分鐘，我直接演給各位看</div>
-</section>
-
-<!-- ═══ 6 實機演示 ═══ -->
-<section class="slide" data-n="6">
-  <div class="eyebrow">⑤ 接下來，我直接演給各位看</div>
-  <h2 style="margin-bottom:44px">「ETH 跌太多了，幫我全部賣掉！」</h2>
-  <div class="strip">
-    <div class="shot"><img src="pitch_shots/02_chips.png" alt="工具鏈">
-      <b>1 · 它先去查</b><span>查行情 → 查餘額 → 方案試算</span></div>
-    <div class="shot"><img src="pitch_shots/03_context.png" alt="反問">
-      <b>2 · 沒下單，先反問</b><span>攤開你自己的機會成本，再問你一句</span></div>
-    <div class="shot"><img src="pitch_shots/04_scenarios.png" alt="三方案">
-      <b>3 · 三個算好的選項</b><span>數字全由程式算，三方案對等呈現</span></div>
-    <div class="shot"><img src="pitch_shots/05_confirm.png" alt="確認卡">
-      <b>4 · 最後一步由你</b><span>60 秒憑證、滑價提醒</span></div>
-    <div class="shot"><img src="pitch_shots/06_trail.png" alt="決策軌跡">
-      <b>5 · 全程留痕</b><span>只能新增不能改 · #20720919534</span></div>
-  </div>
-  <div class="foot">五張皆為線上站實機截圖（非 mockup、非離線劇本）；實機掛掉才用這一頁</div>
-</section>
-
-<!-- ═══ 7 願景 ═══ -->
-<section class="slide" data-n="7">
-  <div class="row">
-    <div class="col">
-      <p class="note" style="font-size:30px;margin-bottom:26px">技術的進步，是為了讓人感受到<b class="red">科技的溫度</b>。</p>
-      <h1 style="font-size:88px">幣圈的牛熊冷暖交替，<br>但 <span class="grad">麥麥永遠在這裡陪著你</span>。</h1>
-      <p class="lede" style="margin-top:44px">
-        我們希望麥麥能成為每一個人探索 Web3 世界的嚮導。<br>
-        <b style="color:#0F172A">AI 有手，方向盤在你手上。</b>
-      </p>
-      <h3 style="margin-top:44px;font-size:44px">簡單的陪伴，<span class="grad">穩健的未來</span>。</h3>
-    </div>
-    <img class="kv" src="brand/kv_start.png" alt="開始認識我">
-  </div>
-  <div class="foot">謝謝大家 ｜ https://d1z0776b4u2tmf.cloudfront.net</div>
-</section>
-
 <!-- ═══ 附錄 1 架構 ═══ -->
-<section class="slide appendix m-idle" data-n="附錄 1">
+<section class="slide appendix m-idle" data-n="附錄 2">
   <div class="eyebrow">技術架構</div>
   <h2 style="margin-bottom:44px">五支 Lambda，一個工具迴圈，<br>一條被架構切斷的下單路徑</h2>
   <div class="cols">
@@ -420,7 +500,7 @@
 </section>
 
 <!-- ═══ 附錄 2 合規 ═══ -->
-<section class="slide ink appendix m-idle s-table" data-n="附錄 2">
+<section class="slide ink appendix m-idle s-table" data-n="附錄 3">
   <div class="eyebrow">安全與法遵</div>
   <h2 style="color:#fff;margin-bottom:20px">合規不是免責聲明，<span class="grad">是系統設計</span></h2>
   <p class="lede" style="margin-bottom:38px">
@@ -439,7 +519,7 @@
 </section>
 
 <!-- ═══ 附錄 3 商業 ═══ -->
-<section class="slide appendix s-table" data-n="附錄 3">
+<section class="slide appendix s-table" data-n="附錄 4">
   <div class="eyebrow">商業模式</div>
   <h2 style="margin-bottom:16px">這不是幫客戶省錢的工具——<br>它是<span class="grad">手續費放大器</span></h2>
   <p class="note" style="margin-bottom:24px">交易所的收入核心是成交手續費（MAX 現貨基礎：掛單 0.08%／吃單 0.16%，2026-07 查證）。</p>
@@ -462,7 +542,7 @@
 </section>
 
 <!-- ═══ 附錄 4 成本 ═══ -->
-<section class="slide appendix m-idle" data-n="附錄 4">
+<section class="slide appendix m-idle" data-n="附錄 5">
   <div class="eyebrow">成本與可行性</div>
   <h2 style="margin-bottom:50px">省錢是<span class="grad">設計</span>出來的，不是省出來的</h2>
   <div class="row" style="align-items:stretch">
@@ -500,7 +580,7 @@
 </section>
 
 <!-- ═══ 附錄 5 完成度 ═══ -->
-<section class="slide appendix m-idle" data-n="附錄 5">
+<section class="slide appendix m-idle" data-n="附錄 6">
   <div class="eyebrow">完成度 · Lv2 Private API · Kiro</div>
   <h2 style="margin-bottom:52px">不是 demo 影片，<span class="grad">是線上服務</span></h2>
   <div class="cols">
@@ -531,15 +611,95 @@
 </section>
 
 <!-- ═══ 附錄 6 品牌形象 ═══ -->
-<section class="slide appendix m-idle" data-n="附錄 6" style="padding:70px 70px 40px">
+<section class="slide appendix m-idle" data-n="附錄 7" style="padding:70px 70px 40px">
   <div class="eyebrow" style="margin-bottom:18px">品牌形象規範</div>
   <img class="kvfull" src="brand/brandsheet.png" alt="MaiMate 品牌形象規範">
 </section>
 
 <!-- ═══ 附錄 7 入口動畫 ═══ -->
-<section class="slide appendix m-idle" data-n="附錄 7" style="padding:70px 70px 40px">
+<section class="slide appendix m-idle" data-n="附錄 8" style="padding:70px 70px 40px">
   <div class="eyebrow" style="margin-bottom:18px">入口動畫分鏡（約 8–10 秒）</div>
   <img class="kvfull" src="brand/storyboard.png" alt="麥麥入口動畫分鏡腳本">
+</section>
+
+<!-- ═══ 附錄 · 預期問答（一）═══ -->
+<section class="slide appendix m-idle" data-n="附錄 9">
+  <div class="eyebrow">評審可能會問的 — 產品與商業</div>
+  <div class="qa">
+    <div class="col">
+      <dl>
+        <dt>這跟我自己去問 ChatGPT 有什麼不一樣？</dt>
+        <dd>三件它做不到的：一、它不知道你 1/8 賣 DOGE 少賺 31 萬——<b>我們讀你自己的一萬筆</b>。
+            二、它的數字是生成的，<b>我們的數字是程式算的</b>。三、它不能替你下單，我們可以，但被架構鎖在逐筆確認後面。</dd>
+        <dt>交易所為什麼要買單？這不是叫用戶少交易？</dt>
+        <dd>相反，它是<b>手續費放大器</b>：① 新手「看不懂→不敢交易」，陪跑出憑空長出來的第一筆單
+            ② 恐慌離場的用戶 LTV 歸零，攔住＝保住未來年金 ③ 冷靜期導向定期定額，一次性手續費變年金。
+            <b>用戶月交易額 NT$4 萬，手續費就覆蓋整個 AI 成本。</b></dd>
+        <dt>要整合進 MAX App 要改多少？</dt>
+        <dd><b>零。</b>它是掛在旁邊的 sidecar。產品化只換兩件事：入口改 App 內嵌、API Key 改平台 OAuth。
+            下單路徑與確認流程不變，主交易系統一行都不用動。</dd>
+        <dt>只有一個帳戶一萬筆，怎麼泛化？</dt>
+        <dd>誠實說：<b>我們只驗證了這一個帳戶。</b>但行為引擎算的是規則不是模型，任何帳戶丟進去都能算，
+            不需要訓練。要泛化的是<b>閾值</b>，那需要平台母體資料——這正是我們想跟 MaiCoin 一起做的下一步。</dd>
+        <dt>三個模式只是換句話說？</dt>
+        <dd>只改<b>說法的密度</b>，<b>數字一個都不會變</b>——因為數字是程式算的，LLM 只負責講成人話。
+            換模式不會換到不同的事實。</dd>
+      </dl>
+    </div>
+    <div class="col">
+      <dl>
+        <dt>成本多少？規模化撐得住？</dt>
+        <dd>Haiku 約 0.3 元／次、Sonnet 約 2.2 元／次，混合加快取 <b>&lt;0.6 元／次</b>；千人規模基礎設施
+            約 3,000 元／月。<b>這是以 AWS 現價估算，不是實測</b>——我們沒埋量測成本的程式。
+            價值錨點：此帳戶平均每筆賣出機會成本 NT$11,480，<b>一年攔一筆＝16 年 AI 成本</b>。</dd>
+        <dt>怎麼確定 AI 不會亂下單？</dt>
+        <dd>不是靠提示詞，是<b>能力缺失</b>。真正送單的 <code>execute_order</code> 不在 LLM 的工具清單、
+            也不在分派表——模型推論時看不到它的定義。唯一送單路徑在另一支 Lambda，只認使用者按下的 60 秒憑證。</dd>
+        <dt>AI 會不會報明牌？</dt>
+        <dd>提示詞規則＋正則攔截＋三方案一律對等呈現不得標推薦。<b>實測同一句劇本連跑 6 次全乾淨。</b></dd>
+        <dt>數字會不會不準？滑價呢？</dt>
+        <dd>三方案金額隨即時報價浮動，確認卡上有紅字滑價聲明。買賣價差
+            <code>spread_pct</code> 與台北／UTC 時間戳都由後端算好給模型，<b>LLM 不得自行計算</b>。</dd>
+        <dt>完成度到哪？</dt>
+        <dd>後端驗收 21/22、前端 13/13、Python 50 項；真實成交打通那次修掉<b>六個</b>各自足以讓下單失敗的問題；
+            砍掉整套環境從零重建<b>實測 46 分鐘</b>。</dd>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 附錄 · 預期問答（二）誠實清單 ═══ -->
+<section class="slide ink appendix m-risk" data-n="附錄 10">
+  <div class="eyebrow">評審可能會問的 — 我們還沒做到的</div>
+  <h2 style="color:#fff;font-size:54px;margin-bottom:16px">這一節存在的理由：<br>上面每一條都有證據，<span class="grad">這一節才可信</span>。</h2>
+  <div class="qa" style="margin-top:20px">
+    <div class="col">
+      <dl>
+        <dt style="color:#fff">Bedrock Guardrails 有開嗎？</dt>
+        <dd style="color:#94A3B8;border-left-color:#334155"><b style="color:#fff">目前刻意停用。</b>
+            護欄一命中會把整段回覆換成罐頭語，「反問＋脈絡」的敘事會整個消失，比原問題更糟。
+            要正確啟用需對 input／output 套用不同政策——<b style="color:#fff">賽後待辦</b>。
+            現階段前四層護欄各自獨立有效。</dd>
+        <dt style="color:#fff">費率數字哪裡來的？</dt>
+        <dd style="color:#94A3B8;border-left-color:#334155">MAX 現貨 maker 0.08%／taker 0.16%，2026-07 查證。
+            <b style="color:#fff">程式碼裡只有註解沒有 URL</b>，上線前要補官方連結。
+            MAX Token 折抵等數字查不到可引用出處，<b style="color:#fff">所以今天不放進簡報</b>。</dd>
+      </dl>
+    </div>
+    <div class="col">
+      <dl>
+        <dt style="color:#fff">成本是實測嗎？</dt>
+        <dd style="color:#94A3B8;border-left-color:#334155"><b style="color:#fff">不是，是估算。</b>
+            以 AWS 主控台現價推算，backend 沒有任何量測成本的程式碼。把估算講成實測，被追問就崩。</dd>
+        <dt style="color:#fff">有過法遵嗎？</dt>
+        <dd style="color:#94A3B8;border-left-color:#334155"><b style="color:#fff">沒有。</b>
+            我們寫明這是工程自查不是法律意見。虛擬資產專法立法中，商業化前必須過正式法遵。
+            但金管會 AI 指引六原則我們逐條對照，<b style="color:#fff">每一條都指得出程式碼位置</b>——
+            指不出來的就寫在這一節。</dd>
+      </dl>
+    </div>
+  </div>
+  <div class="foot">完整版：docs/COMPLIANCE.md §5「還沒做到的」共七項</div>
 </section>
 
 </div>
@@ -550,21 +710,23 @@
   const slides = [...document.querySelectorAll('.slide')];
   let i = 0;
   const stage = document.getElementById('stage');
+  const vid = document.getElementById('demoVideo');
+  const scr = document.getElementById('scr');
+  if (vid) {
+    vid.addEventListener('error', () => scr.classList.add('novideo'));
+    vid.addEventListener('click', e => e.stopPropagation());
+  }
   function fit(){
     const s = Math.min(innerWidth / 1920, innerHeight / 1080) * 0.97;
     slides.forEach(el => el.style.transform = `scale(${s})`);
   }
-  // 每頁加一條進度條
   slides.forEach(el => {
     const b = document.createElement('div');
     b.className = 'bar'; b.innerHTML = '<i></i>';
     el.appendChild(b);
-    // 直屬子元素依序進場
     [...el.children].forEach((c, k) => { if (c !== b) c.style.setProperty('--i', k); });
     el.querySelectorAll('.fig').forEach((f, k) => f.style.setProperty('--j', k));
   });
-
-  // 大數字滾動到定值（保留原本的逗號與正負號）
   function countUp(el){
     const raw = el.dataset.raw || (el.dataset.raw = el.textContent.trim());
     const m = raw.match(/-?[\d,]+/);
@@ -580,7 +742,6 @@
       if (p < 1) requestAnimationFrame(tick);
     })(t0);
   }
-
   function go(n){
     i = Math.max(0, Math.min(slides.length - 1, n));
     slides.forEach((el, k) => {
@@ -588,20 +749,24 @@
       if (k === i) { void el.offsetWidth; el.classList.add('on'); }
     });
     const cur = slides[i];
+    if (vid && !vid.paused) vid.pause();
     const b = cur.querySelector('.bar i');
     if (b) requestAnimationFrame(() => b.style.width = ((i + 1) / slides.length * 100) + '%');
-    cur.querySelectorAll('.fig .n').forEach((el, k) =>
-      setTimeout(() => countUp(el), 560 + k * 150));
+    cur.querySelectorAll('.fig .n').forEach((el, k) => setTimeout(() => countUp(el), 560 + k * 150));
   }
   addEventListener('resize', fit);
   addEventListener('keydown', e => {
+    if (e.key === ' ' && document.activeElement === vid) return;
     if (['ArrowRight',' ','PageDown','ArrowDown'].includes(e.key)) { e.preventDefault(); go(i + 1); }
     if (['ArrowLeft','PageUp','ArrowUp'].includes(e.key))          { e.preventDefault(); go(i - 1); }
     if (e.key === 'Home') go(0);
     if (e.key === 'End')  go(slides.length - 1);
     if (e.key.toLowerCase() === 'f') document.documentElement.requestFullscreen?.();
   });
-  stage.addEventListener('click', e => go(i + (e.clientX > innerWidth / 2 ? 1 : -1)));
+  stage.addEventListener('click', e => {
+    if (e.target.closest('.screen')) return;
+    go(i + (e.clientX > innerWidth / 2 ? 1 : -1));
+  });
   fit(); go(0);
 </script>
 </body>
