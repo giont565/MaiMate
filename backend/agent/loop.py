@@ -7,7 +7,11 @@ from . import audit, tools
 # 以主控台實際顯示的 us. 開頭 inference profile ID 為準（見 tech.md）
 # 模型分工路由（#5）：日常對話與工具調度走 Haiku；深度歸因/分析意圖升級 Sonnet
 MODEL_HAIKU = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
-MODEL_SONNET = "us.anthropic.claude-sonnet-4-5-v1:0"
+# ⚠ 推論設定檔 ID 必須帶日期。短別名 us.anthropic.claude-sonnet-4-5-v1:0 在 us-east-1
+# 與 us-west-2 都是 ValidationException（list-inference-profiles 也查無此 ID），
+# 於是所有深度意圖問題（為什麼／分析／歸因…）走到這裡就 /chat 500。
+# 08-01 決賽當天實測抓到：「為什麼我會一直追高？幫我分析一下」→ HTTP 500。
+MODEL_SONNET = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
 MODEL_ID = MODEL_HAIKU  # 相容既有引用；實際每輪由 pick_model 決定
 _DEEP_INTENT = re.compile(r"歸因|分析|為什麼|為何|檢討|評估|回顧|深入|總結|比較|解釋一下|怎麼看")
 # prompt caching：真環境驗證通過後把 ENABLE_PROMPT_CACHE=1 設進 Lambda 環境變數（見 DEPLOY.md）
