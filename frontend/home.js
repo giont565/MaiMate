@@ -854,7 +854,6 @@
     const greeting = response.greeting || {};
     setText("home-greeting-title", greeting.title || "今天先看一件和你有關的事。");
     setText("home-greeting-subtitle", greeting.subtitle || "市場一直在變，麥麥會陪你一起看懂。");
-    setText("home-brand-subtitle", greeting.brandSubtitle || "市場一直在變，麥麥會陪你一起看懂。");
   }
 
   function renderDraftReminder(response) {
