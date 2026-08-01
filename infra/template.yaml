@@ -22,6 +22,17 @@ Parameters:
     Default: "1"
     Description: Bedrock Guardrail version to attach
 
+  # loop.py:18 讀 ENABLE_PROMPT_CACHE=="1" 決定要不要掛 cachePoint。原本只寫在
+  # DEPLOY.md 的部署後手動清單裡（§「選配，先驗證再開」），而 CloudFormation 更新時
+  # 會把函式設定收斂回模板宣告的內容——手動加的環境變數不在模板裡就會被移除。
+  # 結果是：某次 sam deploy 之後 cache 悄悄關掉，成本上升但沒有任何訊號。
+  # 預設 "0"＝關閉，與目前現況一致；要開就 --parameter-overrides EnablePromptCache=1。
+  EnablePromptCache:
+    Type: String
+    Default: "0"
+    AllowedValues: ["0", "1"]
+    Description: Set to "1" to enable Bedrock prompt caching (loop.py cachePoint)
+
 Globals:
   Function:
     Runtime: python3.12
@@ -52,6 +63,7 @@ Resources:
           BEDROCK_REGION: !Ref AWS::Region
           GUARDRAIL_ID: !Ref GuardrailId
           GUARDRAIL_VERSION: !Ref GuardrailVersion
+          ENABLE_PROMPT_CACHE: !Ref EnablePromptCache
       Policies:
         - Statement:
             - Effect: Allow

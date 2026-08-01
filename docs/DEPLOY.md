@@ -95,8 +95,11 @@ python3 scripts/setup_rag_kb.py --corpus <repo外的語料檔路徑>   # 沒有�
       `MAX_API_KEY`、`MAX_API_SECRET`（或 Secrets Manager；權限只開「讀取＋交易」，**不開提領**）
       —— ChatFunction 的 get_account_balance／三方案引擎查持倉需要（07/21 實測發現漏設會
       讓模型答「帳戶 API 未設定」、Golden Path 卡在查持倉）
-- [ ] （選配，先驗證再開）ChatFunction 環境變數：`ENABLE_PROMPT_CACHE=1`
-      —— prompt caching 開關；開啟後對話一次確認無 ValidationException 才留著
+- [ ] ~~（選配，先驗證再開）ChatFunction 環境變數：`ENABLE_PROMPT_CACHE=1`~~
+      **已改為模板參數（#43），不要再手動設。** 手動設的會在下次 `sam deploy` 被
+      CloudFormation 收斂掉，而且悄悄關閉、沒有任何訊號。要開請用：
+      `sam deploy --parameter-overrides EnablePromptCache=1`
+      —— 開啟後對話一次確認無 ValidationException 才留著
 - [ ] （#6 Guardrail 建好後）ChatFunction 環境變數：`GUARDRAIL_ID=<id>`（版本非 DRAFT
       再加 `GUARDRAIL_VERSION`）—— 設定後 converse 自動掛載，與程式層護欄疊加
 
