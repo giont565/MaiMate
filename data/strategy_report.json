@@ -1,0 +1,545 @@
+{
+  "generated_at": "2026-08-01T09:37:42.344490+00:00",
+  "source": "MAX 公開日線 /api/v3/k（period=1440），非命題 CSV",
+  "assumptions": {
+    "fee_rate_each_side": 0.0008,
+    "fee_note": "MAX 現貨基礎 maker 0.08%／taker 0.16%（2026-07 查證，上線前再對官網）",
+    "capital_basis_twd": 100000.0,
+    "dca_times": 10,
+    "grid_levels": 10,
+    "grid_depth_pct": 20.0,
+    "fills_at": "日收盤價，不計滑價與掛單未成交"
+  },
+  "markets": {
+    "btctwd": {
+      "data_period": {
+        "start": "2024-05-24",
+        "end": "2026-08-01",
+        "days": 800
+      },
+      "scenarios": {
+        "uptrend": {
+          "period": {
+            "start": "2024-08-05",
+            "end": "2025-01-31",
+            "days": 180
+          },
+          "price_move_pct": 88.5,
+          "deepest_dip_pct": -3.9,
+          "strategies": {
+            "lump_sum": {
+              "label": "一次全買",
+              "return_pct": 88.3,
+              "max_drawdown_pct": -15.0,
+              "end_cash_pct": 0.0,
+              "trades": 1,
+              "fee_pct": 0.08
+            },
+            "dca": {
+              "label": "分批買入 x10",
+              "return_pct": 40.4,
+              "max_drawdown_pct": -9.7,
+              "end_cash_pct": 0.0,
+              "trades": 10,
+              "fee_pct": 0.08
+            },
+            "grid": {
+              "label": "網格 10 格（深度 -20%）",
+              "return_pct": 0.5,
+              "max_drawdown_pct": -0.0,
+              "end_cash_pct": 100.5,
+              "trades": 2,
+              "fee_pct": 0.02
+            }
+          }
+        },
+        "downtrend": {
+          "period": {
+            "start": "2025-08-10",
+            "end": "2026-02-05",
+            "days": 180
+          },
+          "price_move_pct": -43.7,
+          "deepest_dip_pct": -43.7,
+          "strategies": {
+            "lump_sum": {
+              "label": "一次全買",
+              "return_pct": -43.7,
+              "max_drawdown_pct": -47.2,
+              "end_cash_pct": 0.0,
+              "trades": 1,
+              "fee_pct": 0.08
+            },
+            "dca": {
+              "label": "分批買入 x10",
+              "return_pct": -33.5,
+              "max_drawdown_pct": -35.3,
+              "end_cash_pct": 0.0,
+              "trades": 10,
+              "fee_pct": 0.08
+            },
+            "grid": {
+              "label": "網格 10 格（深度 -20%）",
+              "return_pct": -30.1,
+              "max_drawdown_pct": -32.2,
+              "end_cash_pct": 5.0,
+              "trades": 36,
+              "fee_pct": 0.29
+            }
+          }
+        },
+        "sideways": {
+          "period": {
+            "start": "2024-11-22",
+            "end": "2025-05-20",
+            "days": 180
+          },
+          "price_move_pct": -0.0,
+          "deepest_dip_pct": -21.8,
+          "strategies": {
+            "lump_sum": {
+              "label": "一次全買",
+              "return_pct": -0.1,
+              "max_drawdown_pct": -27.4,
+              "end_cash_pct": 0.0,
+              "trades": 1,
+              "fee_pct": 0.08
+            },
+            "dca": {
+              "label": "分批買入 x10",
+              "return_pct": 5.4,
+              "max_drawdown_pct": -15.5,
+              "end_cash_pct": 0.0,
+              "trades": 10,
+              "fee_pct": 0.08
+            },
+            "grid": {
+              "label": "網格 10 格（深度 -20%）",
+              "return_pct": 17.9,
+              "max_drawdown_pct": -8.4,
+              "end_cash_pct": 117.9,
+              "trades": 64,
+              "fee_pct": 0.53
+            }
+          }
+        }
+      },
+      "full_period_grid_vs_hold": {
+        "grid": {
+          "return_pct": -6.6,
+          "max_drawdown_pct": -29.7,
+          "note": "每 30 天以當時價格重新置中"
+        },
+        "buy_and_hold": {
+          "return_pct": -8.0,
+          "max_drawdown_pct": -50.8,
+          "note": "t0 一次買進，全期持有"
+        }
+      }
+    },
+    "ethtwd": {
+      "data_period": {
+        "start": "2024-05-24",
+        "end": "2026-08-01",
+        "days": 800
+      },
+      "scenarios": {
+        "uptrend": {
+          "period": {
+            "start": "2025-04-10",
+            "end": "2025-10-06",
+            "days": 180
+          },
+          "price_move_pct": 183.9,
+          "deepest_dip_pct": 0.0,
+          "strategies": {
+            "lump_sum": {
+              "label": "一次全買",
+              "return_pct": 183.7,
+              "max_drawdown_pct": -21.1,
+              "end_cash_pct": 0.0,
+              "trades": 1,
+              "fee_pct": 0.08
+            },
+            "dca": {
+              "label": "分批買入 x10",
+              "return_pct": 65.7,
+              "max_drawdown_pct": -16.9,
+              "end_cash_pct": 0.0,
+              "trades": 10,
+              "fee_pct": 0.08
+            },
+            "grid": {
+              "label": "網格 10 格（深度 -20%）",
+              "return_pct": 0.0,
+              "max_drawdown_pct": 0.0,
+              "end_cash_pct": 100.0,
+              "trades": 0,
+              "fee_pct": 0.0
+            }
+          }
+        },
+        "downtrend": {
+          "period": {
+            "start": "2025-08-28",
+            "end": "2026-02-23",
+            "days": 180
+          },
+          "price_move_pct": -57.7,
+          "deepest_dip_pct": -57.8,
+          "strategies": {
+            "lump_sum": {
+              "label": "一次全買",
+              "return_pct": -57.7,
+              "max_drawdown_pct": -59.1,
+              "end_cash_pct": 0.0,
+              "trades": 1,
+              "fee_pct": 0.08
+            },
+            "dca": {
+              "label": "分批買入 x10",
+              "return_pct": -40.2,
+              "max_drawdown_pct": -40.7,
+              "end_cash_pct": 0.0,
+              "trades": 10,
+              "fee_pct": 0.08
+            },
+            "grid": {
+              "label": "網格 10 格（深度 -20%）",
+              "return_pct": -40.3,
+              "max_drawdown_pct": -46.3,
+              "end_cash_pct": 10.3,
+              "trades": 44,
+              "fee_pct": 0.36
+            }
+          }
+        },
+        "sideways": {
+          "period": {
+            "start": "2024-08-14",
+            "end": "2025-02-09",
+            "days": 180
+          },
+          "price_move_pct": -0.0,
+          "deepest_dip_pct": -17.0,
+          "strategies": {
+            "lump_sum": {
+              "label": "一次全買",
+              "return_pct": -0.1,
+              "max_drawdown_pct": -33.9,
+              "end_cash_pct": 0.0,
+              "trades": 1,
+              "fee_pct": 0.08
+            },
+            "dca": {
+              "label": "分批買入 x10",
+              "return_pct": -6.4,
+              "max_drawdown_pct": -29.1,
+              "end_cash_pct": 0.0,
+              "trades": 10,
+              "fee_pct": 0.08
+            },
+            "grid": {
+              "label": "網格 10 格（深度 -20%）",
+              "return_pct": 16.2,
+              "max_drawdown_pct": -5.6,
+              "end_cash_pct": 116.2,
+              "trades": 54,
+              "fee_pct": 0.45
+            }
+          }
+        }
+      },
+      "full_period_grid_vs_hold": {
+        "grid": {
+          "return_pct": -24.1,
+          "max_drawdown_pct": -41.1,
+          "note": "每 30 天以當時價格重新置中"
+        },
+        "buy_and_hold": {
+          "return_pct": -49.9,
+          "max_drawdown_pct": -65.8,
+          "note": "t0 一次買進，全期持有"
+        }
+      }
+    },
+    "soltwd": {
+      "data_period": {
+        "start": "2024-05-24",
+        "end": "2026-08-01",
+        "days": 800
+      },
+      "scenarios": {
+        "uptrend": {
+          "period": {
+            "start": "2025-04-06",
+            "end": "2025-10-02",
+            "days": 180
+          },
+          "price_move_pct": 102.9,
+          "deepest_dip_pct": -0.9,
+          "strategies": {
+            "lump_sum": {
+              "label": "一次全買",
+              "return_pct": 102.8,
+              "max_drawdown_pct": -29.9,
+              "end_cash_pct": 0.0,
+              "trades": 1,
+              "fee_pct": 0.08
+            },
+            "dca": {
+              "label": "分批買入 x10",
+              "return_pct": 43.2,
+              "max_drawdown_pct": -19.3,
+              "end_cash_pct": 0.0,
+              "trades": 10,
+              "fee_pct": 0.08
+            },
+            "grid": {
+              "label": "網格 10 格（深度 -20%）",
+              "return_pct": 0.0,
+              "max_drawdown_pct": 0.0,
+              "end_cash_pct": 100.0,
+              "trades": 0,
+              "fee_pct": 0.0
+            }
+          }
+        },
+        "downtrend": {
+          "period": {
+            "start": "2025-10-05",
+            "end": "2026-04-02",
+            "days": 180
+          },
+          "price_move_pct": -63.5,
+          "deepest_dip_pct": -64.8,
+          "strategies": {
+            "lump_sum": {
+              "label": "一次全買",
+              "return_pct": -63.6,
+              "max_drawdown_pct": -65.3,
+              "end_cash_pct": 0.0,
+              "trades": 1,
+              "fee_pct": 0.08
+            },
+            "dca": {
+              "label": "分批買入 x10",
+              "return_pct": -31.7,
+              "max_drawdown_pct": -32.5,
+              "end_cash_pct": 0.0,
+              "trades": 10,
+              "fee_pct": 0.08
+            },
+            "grid": {
+              "label": "網格 10 格（深度 -20%）",
+              "return_pct": -50.6,
+              "max_drawdown_pct": -54.8,
+              "end_cash_pct": 6.8,
+              "trades": 30,
+              "fee_pct": 0.25
+            }
+          }
+        },
+        "sideways": {
+          "period": {
+            "start": "2025-02-23",
+            "end": "2025-08-21",
+            "days": 180
+          },
+          "price_move_pct": -0.2,
+          "deepest_dip_pct": -36.7,
+          "strategies": {
+            "lump_sum": {
+              "label": "一次全買",
+              "return_pct": -0.3,
+              "max_drawdown_pct": -40.7,
+              "end_cash_pct": 0.0,
+              "trades": 1,
+              "fee_pct": 0.08
+            },
+            "dca": {
+              "label": "分批買入 x10",
+              "return_pct": 15.6,
+              "max_drawdown_pct": -17.3,
+              "end_cash_pct": 0.0,
+              "trades": 10,
+              "fee_pct": 0.08
+            },
+            "grid": {
+              "label": "網格 10 格（深度 -20%）",
+              "return_pct": 53.0,
+              "max_drawdown_pct": -20.7,
+              "end_cash_pct": 153.0,
+              "trades": 112,
+              "fee_pct": 0.94
+            }
+          }
+        }
+      },
+      "full_period_grid_vs_hold": {
+        "grid": {
+          "return_pct": -21.8,
+          "max_drawdown_pct": -51.1,
+          "note": "每 30 天以當時價格重新置中"
+        },
+        "buy_and_hold": {
+          "return_pct": -56.5,
+          "max_drawdown_pct": -77.1,
+          "note": "t0 一次買進，全期持有"
+        }
+      }
+    },
+    "dogetwd": {
+      "data_period": {
+        "start": "2024-05-24",
+        "end": "2026-08-01",
+        "days": 800
+      },
+      "scenarios": {
+        "uptrend": {
+          "period": {
+            "start": "2024-07-09",
+            "end": "2025-01-04",
+            "days": 180
+          },
+          "price_move_pct": 271.0,
+          "deepest_dip_pct": -15.0,
+          "strategies": {
+            "lump_sum": {
+              "label": "一次全買",
+              "return_pct": 270.7,
+              "max_drawdown_pct": -34.8,
+              "end_cash_pct": 0.0,
+              "trades": 1,
+              "fee_pct": 0.08
+            },
+            "dca": {
+              "label": "分批買入 x10",
+              "return_pct": 169.3,
+              "max_drawdown_pct": -31.4,
+              "end_cash_pct": 0.0,
+              "trades": 10,
+              "fee_pct": 0.08
+            },
+            "grid": {
+              "label": "網格 10 格（深度 -20%）",
+              "return_pct": 16.1,
+              "max_drawdown_pct": -3.2,
+              "end_cash_pct": 116.1,
+              "trades": 46,
+              "fee_pct": 0.38
+            }
+          }
+        },
+        "downtrend": {
+          "period": {
+            "start": "2025-09-13",
+            "end": "2026-03-11",
+            "days": 180
+          },
+          "price_move_pct": -66.3,
+          "deepest_dip_pct": -67.7,
+          "strategies": {
+            "lump_sum": {
+              "label": "一次全買",
+              "return_pct": -66.3,
+              "max_drawdown_pct": -67.7,
+              "end_cash_pct": 0.0,
+              "trades": 1,
+              "fee_pct": 0.08
+            },
+            "dca": {
+              "label": "分批買入 x10",
+              "return_pct": -34.7,
+              "max_drawdown_pct": -36.5,
+              "end_cash_pct": 0.0,
+              "trades": 10,
+              "fee_pct": 0.08
+            },
+            "grid": {
+              "label": "網格 10 格（深度 -20%）",
+              "return_pct": -54.5,
+              "max_drawdown_pct": -58.5,
+              "end_cash_pct": 5.9,
+              "trades": 26,
+              "fee_pct": 0.21
+            }
+          }
+        },
+        "sideways": {
+          "period": {
+            "start": "2025-03-03",
+            "end": "2025-08-29",
+            "days": 180
+          },
+          "price_move_pct": 0.2,
+          "deepest_dip_pct": -31.3,
+          "strategies": {
+            "lump_sum": {
+              "label": "一次全買",
+              "return_pct": 0.1,
+              "max_drawdown_pct": -40.5,
+              "end_cash_pct": 0.0,
+              "trades": 1,
+              "fee_pct": 0.08
+            },
+            "dca": {
+              "label": "分批買入 x10",
+              "return_pct": 6.2,
+              "max_drawdown_pct": -24.4,
+              "end_cash_pct": 0.0,
+              "trades": 10,
+              "fee_pct": 0.08
+            },
+            "grid": {
+              "label": "網格 10 格（深度 -20%）",
+              "return_pct": 52.6,
+              "max_drawdown_pct": -14.9,
+              "end_cash_pct": 152.6,
+              "trades": 112,
+              "fee_pct": 0.94
+            }
+          }
+        }
+      },
+      "full_period_grid_vs_hold": {
+        "grid": {
+          "return_pct": -41.8,
+          "max_drawdown_pct": -43.8,
+          "note": "每 30 天以當時價格重新置中"
+        },
+        "buy_and_hold": {
+          "return_pct": -57.1,
+          "max_drawdown_pct": -85.3,
+          "note": "t0 一次買進，全期持有"
+        }
+      }
+    }
+  },
+  "risk_tiers": {
+    "cautious": {
+      "label": "安心型",
+      "primary_metric": "max_drawdown_pct",
+      "why": "最在意「會不會嚇到睡不著」，先看最大回撤（帳面最深跌幅），報酬其次。",
+      "tradeoff_line": "回撤是這一級的主要決策依據；願意用多頭報酬換帳面平穩，就會偏向分批或網格。"
+    },
+    "growth": {
+      "label": "成長型",
+      "primary_metric": "return_pct",
+      "why": "同時看報酬與回撤，重點是理解「這筆代價換到了什麼」。",
+      "tradeoff_line": "三種方式的差異就是一句話：多頭賺多少 vs 空頭痛多少，兩者不可能同時最佳。"
+    },
+    "pro": {
+      "label": "效率型",
+      "primary_metric": "return_pct",
+      "why": "在意踏空成本與資金效率，先看多頭情境下的報酬差與未投入現金比例。",
+      "tradeoff_line": "網格在多頭的未投入現金比例就是踏空成本，直接看那個數字。"
+    }
+  },
+  "data_notes": [
+    "三種方式對等呈現，本報告不含「建議用哪一種」——決策留給使用者（紅線 1）。",
+    "情境窗格是事後挑出來的，用途是呈現同一種方式在不同市況的樣子。",
+    "『事前判斷該不該開網格』的規則測過並且失敗：Kaufman 效率比門檻 0.15 時 BTC +18.9%，門檻挪到 0.20 就變 -3.0%，參數一動結論翻盤＝過度擬合。任何情況下都不得對外宣稱能事前判斷市況。",
+    "回測期間（約 2024-08~2026-08）這幾個幣多為下跌，對網格有利；引用時必須連同期間一起講，不能單獨拿數字當通則。"
+  ]
+}

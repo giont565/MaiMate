@@ -30,3 +30,8 @@ smoke_*.png
 *.webm
 *_frames/
 *.mov
+
+# 隊內文件不進公開 repo（repo 依題目要求已 PUBLIC，主辦與評審點得進來）：
+# 評審攻防教戰、風險盤點、資料檢定圖表——這些是給自己人看的，寫法不適合對外。
+# 放 Drive「黑客松/MaiMate_隊內」，repo 只留產生它們的程式。
+docs/_internal/
