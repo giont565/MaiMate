@@ -130,7 +130,7 @@ flowchart TB
 > ⚠️ **Sonnet 的 ID 必須帶日期。** 短別名 `us.anthropic.claude-sonnet-4-5-v1:0` 在 us-east-1
 > 與 us-west-2 都是 ValidationException（`list-inference-profiles` 查無此 ID），結果是所有
 > 深度意圖問題（為什麼／分析／歸因…）走到這裡 `/chat` 直接 500。08-01 決賽當天才抓到
-> （commit `24f41e4`）——`verify_live.py` 的 22 項沒有一句會觸發深度意圖，所以一直是綠的。
+> （commit `24f41e4`）——`verify_live.py` 沒有一項會觸發深度意圖，所以它一直是綠的。
 
 路由邏輯 `pick_model()` 在 `loop.py:60-67`：看**最後一則使用者訊息**是否命中
 `_DEEP_INTENT` 正則（`loop.py:12`）。`us.` 開頭是 cross-region inference profile，

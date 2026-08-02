@@ -183,7 +183,7 @@ curl "<ApiUrl>/market?market=btctwd&kind=ticker"        # 應回 MAX 行情
 - 全新 stack 的 **ApiUrl 與前端網址都會換**：`API_BASE` 三個檔要改、對外連結要換。
   舊的 `*.s3-website-*.amazonaws.com` 在 PR #40 之後已永久失效（bucket 轉私有）
 - 全新環境的金鑰**一定**是空的（模板不含金鑰），這步無法省
-- 驗收用 `python3 scripts/verify_live.py --base <ApiUrl>`，22 項自動判定
+- 驗收用 `python3 scripts/verify_live.py --base <ApiUrl>`（判定項數以它印出的統計列為準）
 - ⚠️ **最容易踩的坑不在指令，在工作目錄**：本次演練有兩次差點在舊的
   `~/Downloads/MaiMate-main` 快照裡執行（停在 7/28、缺全部修正）。
   每一行都先 `cd` 到正式 repo，或直接把舊快照改名

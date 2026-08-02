@@ -111,7 +111,7 @@
 
 - [ ] 15. 🤖 把演練發現的坑改進 `docs/DEPLOY.md`，commit 推上去（不另開文件）
 - [ ] 16. 👤 Kiro 證據截圖存 Drive（不含金鑰／CSV／個資）：
-  - Specs 面板展開 `.kiro/specs/`（六份 spec 三件套）
+  - Specs 面板展開 `.kiro/specs/`（八份 spec，每份三件套）
   - **本 spec 的 task 逐項勾選過程**（最有說服力的一張）
   - MCP 設定（`.kiro/settings/mcp.json` 在 Kiro 介面中的樣子）
   - steering 自動載入（`workflow.md` 生效）

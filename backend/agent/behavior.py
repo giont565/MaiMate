@@ -140,6 +140,8 @@ def build_report(only=None, max_pages=None, bounded=True):
         "資料來源：你自己的 MAX 帳戶成交紀錄（Private API），不是命題方的示範資料集。",
         ("⚠ 這是**有界**報告：每個市場只取最近 " + str(max_private_page()) + " 筆成交，"
          "不是完整一年。期間欄位是這批資料的實際起訖，不代表帳戶的開戶到今天。"
+         "已實現損益在有界模式下不計算——移動平均成本法要從第一筆買入算起，"
+         "截斷歷史會算出看似具體、實則無意義的賺賠。追高指數與機會成本不受影響。"
          "完整重建需要分批抓取與快取，尚未實作。") if bounded else
         "涵蓋範圍：依 from_id 逐頁往前抓，上限 20 頁／市場。",
         "機會成本的基準是「賣出價 vs 當下市價」＝賣掉之後到現在少賺多少，"
@@ -161,7 +163,11 @@ def build_report(only=None, max_pages=None, bounded=True):
                                                                 key=lambda kv: -kv[1]) if v},
         "chase_index": pre.chase_index(rows) if _enough_for_chase(rows, pre) else None,
         "opportunity_cost": opportunity_cost_to_now(rows, prices),
-        "realized_pnl": pre.realized_pnl(rows),
+        # 有界模式**不出**已實現損益：移動平均成本法要從第一筆買入算起，
+        # 截斷歷史等於拿不知道的成本基準算賺賠，數字會看起來很具體但沒有意義。
+        # 追高指數不受影響（7 筆均線自己會暖機）；機會成本也不受影響（賣價 vs 現價，
+        # 不需要成本基準）。
+        "realized_pnl": None if bounded else pre.realized_pnl(rows),
         "activity_profile": pre.activity_profile(rows),
         "data_notes": notes,
     }
