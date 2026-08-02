@@ -66,7 +66,14 @@ TOOLS = [
     }},
     {"toolSpec": {
         "name": "get_account_balance",
-        "description": "查使用者 MAX 帳戶目前各幣別餘額（Private API, Read）。",
+        "description": (
+            "查使用者 MAX 帳戶目前的持倉：各幣別數量、**台幣市值、佔總資產比例**，"
+            "依市值由大到小排序，並附 key_findings（最大部位、前兩大合計、總資產、現金佔比）。"
+            "「我的持倉集中嗎」「最大部位是哪個」「現金佔多少」一律用本工具回答，"
+            "**不要再逐幣呼叫 get_market_data 自行換算**——市值已經算好了。"
+            "⚠ 集中度看的是 pct_of_account（市值佔比），**不是 amount（幣的數量）**："
+            "幣價差好幾個數量級，比數量會得到相反的結論。"
+        ),
         "inputSchema": {"json": {"type": "object", "properties": {}}},
     }},
     {"toolSpec": {
@@ -246,8 +253,8 @@ def get_account_balance():
         demo = demo_account.holdings_view()
         if demo is not None:
             return demo
-    from ..integrations import max_private
-    return max_private.balances()
+    from . import holdings
+    return holdings.valued_holdings()
 
 
 def calculate_trade_scenarios(market, side, fraction=1.0, amount_twd=None):

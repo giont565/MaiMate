@@ -15,6 +15,7 @@ from pathlib import Path
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from backend.agent import holdings  # noqa: E402
 from backend.handlers import chat, portfolio  # noqa: E402
 from backend.integrations import max_private, max_public  # noqa: E402
 
@@ -23,7 +24,7 @@ class LiveHoldingsTest(unittest.TestCase):
     def _run(self, accounts, prices):
         with mock.patch.object(max_private, "balances", lambda: accounts), \
                 mock.patch.object(max_public, "twd_prices", lambda: prices):
-            return portfolio._live_holdings()
+            return holdings.valued_holdings()
 
     def test_佔比只算可動用餘額且加總為百(self):
         out = self._run([{"currency": "twd", "balance": "5827.47"},
@@ -78,6 +79,24 @@ class RouteDispatchTest(unittest.TestCase):
         event = {"requestContext": {"http": {"method": "GET", "path": "/portfolio"}}}
         with mock.patch.object(portfolio, "handler", lambda e, c: {"statusCode": 299}):
             self.assertEqual(chat.handler(event, None)["statusCode"], 299)
+
+
+class AccountBalanceToolTest(unittest.TestCase):
+    """模型只看得到工具回傳。回原始數量就只能比數量——2026-08-02 對話實測：
+    「GRT 53,192 顆是你最大的單一部位」，市值其實只有 BTC 的五分之一。"""
+
+    def test_工具回市值與佔比而不是只有數量(self):
+        from backend.agent import tools
+        accounts = [{"currency": "grt", "balance": "53192.28"},
+                    {"currency": "btc", "balance": "0.0722"}]
+        with mock.patch.object(max_private, "balances", lambda: accounts), \
+                mock.patch.object(max_private, "has_keys", lambda: True), \
+                mock.patch.object(max_public, "twd_prices", lambda: {"grt": 0.515, "btc": 2042455.0}):
+            out = tools.get_account_balance()
+        # 數量最多的是 GRT，市值最大的是 BTC——排序必須照市值
+        self.assertEqual(out["holdings"][0]["currency"], "BTC")
+        self.assertIn("最大部位是 BTC", out["key_findings"][0])
+        self.assertTrue(any("不是 amount" in n or "不是幣的數量" in n for n in out["data_notes"]))
 
 
 if __name__ == "__main__":

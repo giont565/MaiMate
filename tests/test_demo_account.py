@@ -123,9 +123,21 @@ class LiveAccountUntouchedTests(unittest.TestCase):
         for scenario in result["scenarios"]:
             self.assertNotIn("account_source", scenario)
 
-    def test_live_balance_tool_returns_max_response_verbatim(self):
-        with with_keys(), patch.object(max_private, "balances", return_value=LIVE_BALANCES):
-            self.assertEqual(tools.get_account_balance(), LIVE_BALANCES)
+    def test_live_balance_tool_is_valued_and_carries_no_demo_marking(self):
+        """2026-08-02 起這支回的是估值後的持倉（市值＋佔比），不再是 MAX 的原始回應。
+
+        原因：只回數量的話模型只能比數量，實測答出「GRT 53,192 顆是你最大的單一部位」
+        （市值其實不到 BTC 的五分之一）。本項要守的仍是同一件事——**有金鑰時示範資料
+        不得漏進來**——所以改成驗「沒有任何示範標記，且數量原封不動來自 MAX」。
+        """
+        with with_keys(), market(), patch.object(max_private, "balances",
+                                                 return_value=LIVE_BALANCES):
+            out = tools.get_account_balance()
+        self.assertEqual(out["account_source"], "max_private")
+        self.assertNotIn("account_notice", out)
+        amounts = {h["currency"].lower(): h["amount"] for h in out["holdings"]}
+        for row in LIVE_BALANCES:
+            self.assertEqual(amounts[row["currency"]], float(row["balance"]))
 
 
 class DemoConversionTests(unittest.TestCase):
