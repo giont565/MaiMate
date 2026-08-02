@@ -150,11 +150,11 @@ function collectKeys(value, target) {
     assert(!pageErrors.length, `首頁載入錯誤：${pageErrors.join("；")}`);
 
     const greeting = await page.locator("#home-greeting-title").innerText();
-    assert(greeting.includes("早安") && greeting.includes("壹踢"), `上午 Greeting 錯誤：${greeting}`);
+    assert(greeting.includes("早安") && greeting.includes("Leon"), `上午 Greeting 錯誤：${greeting}`);
     const periods = await page.evaluate(() => ({
-      morning: MM_HOME_CORE.buildGreeting("壹踢", new Date("2026-07-27T09:00:00+08:00")).period,
-      afternoon: MM_HOME_CORE.buildGreeting("壹踢", new Date("2026-07-27T14:00:00+08:00")).period,
-      evening: MM_HOME_CORE.buildGreeting("壹踢", new Date("2026-07-27T20:00:00+08:00")).period,
+      morning: MM_HOME_CORE.buildGreeting("Leon", new Date("2026-07-27T09:00:00+08:00")).period,
+      afternoon: MM_HOME_CORE.buildGreeting("Leon", new Date("2026-07-27T14:00:00+08:00")).period,
+      evening: MM_HOME_CORE.buildGreeting("Leon", new Date("2026-07-27T20:00:00+08:00")).period,
     }));
     assert(periods.morning === "morning" && periods.afternoon === "afternoon" && periods.evening === "evening",
       `Greeting 時段錯誤：${JSON.stringify(periods)}`);

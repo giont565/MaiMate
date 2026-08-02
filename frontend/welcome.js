@@ -23,7 +23,7 @@ function track(name) {
 
 /* ── Mock Data（離線保險；正式 API 回傳同 schema 即可無縫替換）── */
 const MOCK_ENTRY = {
-  user: { id: "demo-user-001", displayName: "壹踢", accountStatus: "ACTIVE" },
+  user: { id: "demo-user-001", displayName: "Leon", accountStatus: "ACTIVE" },
   maimate: {
     eligible: true,
     onboardingStatus: "NOT_STARTED",
