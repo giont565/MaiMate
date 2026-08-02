@@ -38,18 +38,34 @@ AWS 帳號 ID 與資源名稱已移出版控（`docs/_internal/`，未進 git）
 
 ## Q6 Demo 影片連結
 
-🟡 **成片已剪好，只差旁白／字幕**：`~/Documents/MaiMate_決賽交付/主片_v2_真單版_無旁白_88秒.mp4`
-（780×1688、88.1 秒）。結構與時間軸見 `docs/DEMO_SCRIPT.md` 文末〈v2 真單版成片〉。
-含 15:40 那筆 USDT NT$500 真單全程（確認 → 已成交 #20727214652 → 軌跡自動展開）。
+✅ **已上傳並設為公開**（2026-08-02）：
 
-燒合成旁白：`bash scripts/narrate_master.sh <無旁白.mp4> <輸出.mp4>`；人聲配音則照
-`docs/DEMO_SUBTITLES.srt` 的時間念。輸出後檔名改成 `F_MaiCoin：智慧理財_第五名.mp4`，
-上傳雲端設公開、留存至 2026/12/31。
+```
+https://drive.google.com/file/d/1YeRwUQPWU3RSVSO3cXk66HcBzBF4BTWJ/view?usp=drive_link
+```
+
+檔案 `F_MaiCoin：智慧理財_第五名.mp4`——780×1688 直式、**71.1 秒**、H.264 + AAC
+（旁白已合成，非無聲版）、6.6 MB。內容即 `主片_v3_合成旁白_71秒.mp4`（雜湊相同）。
+含 USDT NT$500 真單全程（確認 → 已成交 #20727214652 → 軌跡自動展開）。
+結構與時間軸見 `docs/DEMO_SCRIPT.md`。
+
+**已用匿名連線驗過**（模擬評審沒登入 Google）：range 請求回 `HTTP 206`、
+`content-type: video/mp4`、檔頭 `ftypisom`。**不會出現「要求存取權」**。
+
+⚠️ 兩件事別忘：
+- 題目要求**留存至 2026/12/31**，這段期間不要改權限、不要搬動或改名（Drive 改名不影響
+  連結，但移到別人的共用碟或刪除會斷）。
+- 同一個資料夾裡有 `F_MaiCoin：智慧理財_第五名_勿用_佔比錯誤_87秒.mp4`，
+  檔名開頭與正式檔相同。**只分享單一檔案，不要分享整個資料夾**。
+
+重製流程（要重出時用）：`bash scripts/narrate_master.sh <無旁白.mp4> <輸出.mp4>` 燒合成旁白，
+人聲配音則照 `docs/DEMO_SUBTITLES.srt` 的時間念。
 
 ## Q8 提案簡報 PDF
 
 ✅ **已產出**：`~/Documents/MaiMate_決賽交付/F_MaiCoin：智慧理財_第五名.pdf`
-（20 頁、2.7MB、1280×720pt，與 `MaiMate_提案簡報_20260731.pptx` 同 20 頁同源）。
+（20 頁、2.7MB、960×540pt 的 16:9 版面，與 `MaiMate_提案簡報_20260731.pptx` 同 20 頁同源）。
+已掃過檔案內容確認**不含 Canva／Google 共編連結**（題目明訂禁止那條）。
 
 這台 Mac **沒有 Keynote／PowerPoint／LibreOffice**，pptx 匯不出 PDF；改用同源的
 `docs/MaiMate_提案簡報.html` 走 Chromium 列印：`node scripts/build_deck_pdf.js <輸出.pdf>`。
