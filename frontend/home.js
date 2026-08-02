@@ -649,11 +649,19 @@
       section.append(create("p", "health-insight tone-" + item.tone, item.text));
     });
 
-    /* 資料是真是假必須寫在卡上。這條線的起點就是「畫面全都正常但資料是假的」。 */
+    /* 資料是真是假必須寫在卡上。這條線的起點就是「畫面全都正常但資料是假的」。
+     *
+     * ⚠ `source === "live"` 只代表**連得上 /health**，不代表這是使用者自己的帳戶。
+     * /health 回的是 data/health_report.json＝命題方提供的一年份紀錄（2025 全年）；
+     * 使用者自己連上的 MAX 帳戶在 /portfolio 與 /behavior，不在這裡。
+     * 原本寫「你的帳戶分析報告」，把兩個帳戶講成同一個——Screen 8 的 18 處已經改掉，
+     * 這是同一個問題漏掉的最後一處，而且它就在首屏最顯眼的地方。 */
     section.append(create(
       "p",
       "health-source",
-      payload.source === "live" ? "資料來源：你的帳戶分析報告（/health）" : "示範資料（未連線後端）"
+      payload.source === "live"
+        ? "資料來源：示範資料集（命題方提供的 2025 全年紀錄，/health）"
+        : "示範資料（未連線後端）"
     ));
 
     const action = getAction(module, (item) => item.type === "openChat");
