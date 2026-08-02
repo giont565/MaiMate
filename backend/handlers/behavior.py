@@ -16,9 +16,18 @@ def handler(event, context):
                        "GET /health 是命題方提供的示範資料集，不是你的帳戶。",
         })
 
+    # 診斷用參數：一次抓十幾個市場會撞到 60 秒上限，要能單獨量測。
+    #   ?markets=eth,btc  只抓指定市場   ?pages=1  每個市場只翻一頁
+    q = event.get("queryStringParameters") or {}
+    only = [c.strip().lower() for c in (q.get("markets") or "").split(",") if c.strip()]
+    try:
+        pages = max(1, min(int(q.get("pages") or 0), 20)) if q.get("pages") else None
+    except ValueError:
+        pages = None
+
     from ..agent import behavior
     try:
-        return _resp(200, behavior.build_report())
+        return _resp(200, behavior.build_report(only=only or None, max_pages=pages))
     except Exception as exc:  # noqa: BLE001 — 連不上或翻頁失敗要說實話，不退回示範資料
         return _resp(503, {"code": "history_unavailable", "retryable": True,
                            "message": f"取不到成交紀錄：{exc}"})

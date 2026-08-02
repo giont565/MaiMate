@@ -44,50 +44,50 @@ mockup HTML 在 `docs/mockups/`＝C 包前端起點，畫面中所有數字皆�
 
 ### 時間軸（原則：賽前做完，決賽 30 小時只上架）
 
-| 階段 | 日期 | 目標 |
-|---|---|---|
-| 定案與就位 | ～7/22 | 全員 KYC(#3)、Kiro 設定、選包、**AWS 帳號定案**、#1 #2 開工 |
-| 核心構建週 | 7/23–27 | Golden Path 全鏈路＋RAG＋手機版；**7/27 晚自家 AWS 跑通全程** |
-| 整合排練週 | 7/28–30 | E2E、離線備援、預錄影片 v1、簡報定稿、pitch 兩輪 |
-| 凍結日 | 7/31 | code freeze、DEPLOY.md 定稿、從零部署演練、早睡 |
-| 決賽 | 8/1–8/2 | 官方環境重部署(1hr)、現場調整、最終錄影、上台 |
+| 階段 | 日期 | 目標 | 實際 |
+|---|---|---|---|
+| 定案與就位 | ～7/22 | 全員 KYC(#3)、Kiro 設定、選包、AWS 帳號定案 | 達成 |
+| 核心構建週 | 7/23–27 | Golden Path 全鏈路＋RAG＋手機版 | 達成 |
+| 整合排練週 | 7/28–30 | E2E、離線備援、預錄影片 v1、簡報定稿 | 達成；**#4 真實成交在 7/29–31 打通**（六個坑，見 §4.5） |
+| 凍結日 | 7/31 | code freeze、DEPLOY.md 定稿、從零部署演練 | 演練實測 **46 分鐘** |
+| 決賽 | 8/1–8/2 | 官方環境重部署、現場調整、最終錄影、上台 | 官方環境已部署；前端改版後 8/2 重錄主片 |
 
-### 四個工作包 × 完整未完成工項對應（31 條全數入包，無漏接）
+### 四個工作包 × 實際交付
 
-標記：🔨待做｜🧪寫好待測。自選先搶先贏；每包獨佔目錄，git 不打架。
+標記：✅ 已交付且有實測證據｜⬜ 未完成（原因寫在後面，不留白）。每包獨佔目錄，git 不打架。
 
-**A｜Agent 與方案引擎**（地盤 `backend/agent/`，估 4.5 天）
-- 🧪 **Bedrock 迴圈首跑（全案最優先——唯一沒碰過真模型的核心路徑）**
-- 🧪 tools dispatch／程式層護欄 單元測試
-- 🧪 prepare/execute 分離單元驗證（E2E 歸 D）
-- 🔨 #1 confirm 卡帶出前端｜🔨 #5 Haiku/Sonnet 路由＋prompt caching
-- 🔨 #10 Profile 引擎（徽章 UI 歸 C）｜🔨 #11 三方案計算（卡片渲染歸 C）
-- 🔨 註冊 B 交付的 query_knowledge／掛 D 建好的 Guardrails／loop 埋 audit 點
+**A｜Agent 與方案引擎**（地盤 `backend/agent/`）
+- ✅ Bedrock Converse 工具迴圈（8 輪上限、Haiku/Sonnet 意圖路由）
+- ✅ tools dispatch／程式層護欄／prepare-execute 分離 單元測試
+- ✅ #1 confirm 卡帶出前端｜✅ #10 Profile 引擎｜✅ #11 三方案計算
+- ✅ 進場方式比較（`compare_entry_strategies`，回測資料源獨立於命題 CSV）
+- ✅ 註冊 B 交付的 `query_knowledge`／loop 埋 audit 點
+- ⬜ 掛載 Bedrock Guardrails（#6，見 §4.9 說明為何刻意不啟用）
 
-**B｜資料服務與 RAG**（地盤 `backend/integrations/` `analysis/` 語料，估 4 天）
-- 🔨 #9 RAG 語料蒐集（防詐公開資源＋教材；不進 git）
-- 🔨 #9 Bedrock KB＋S3 Vectors 建置｜🔨 #9 query_knowledge 函式（交 A 註冊）
-- 🔨 #12 audit.py＋GET /audit endpoint（A 埋點、C 面板）
-- 🧪 #2 max_public 三 endpoint 實測（ticker/kline/depth 對官方文件核對）
-- 🧪 max_private 簽章實作對照 max-mcp-server 源碼核對（真下單 E2E 歸 D）
-- ✅ thirdparty CMC 冒煙（07/29 無金鑰略過＋BTC/TWD 真實 API 驗證；重跑見 `scripts/verify_cmc_smoke.py`）
+**B｜資料服務與 RAG**（地盤 `backend/integrations/` `analysis/` 語料）
+- ✅ #9 RAG 語料蒐集（防詐公開資源＋教材；不進 git）
+- ✅ #9 Bedrock KB＋S3 Vectors 建置｜✅ #9 `query_knowledge` 函式
+- ✅ #12 `audit.py`＋`GET /audit` endpoint（A 埋點、C 面板）
+- ✅ #2 max_public 三 endpoint 實測（ticker/kline/depth 對官方文件核對＋正規化）
+- ✅ max_private 簽章實作（真實成交兩筆為證，見 §4.5）
+- ✅ thirdparty CMC 冒煙（BTC/TWD 真實 API 驗證；重跑見 `scripts/verify_cmc_smoke.py`）
 
-**C｜前端與品牌**（地盤 `frontend/` `docs/mockups/` `docs/brand/`，估 4 天）
-- 🔨 #13 手機版 RWD 改版（照 mockups 三畫面實作）
-- 🔨 三方案卡渲染（吃 §3 scenarios schema）｜🔨 模式徽章＋Demo 切換（吃 #10）
-- 🔨 決策軌跡面板（吃 §3 /audit schema）｜🔨 麥麥視覺整合（成交切 BULLISH）
-- 🧪 SPA 瀏覽器全流程走查（現在的桌機版先走一遍）
-- 🧪 離線 mock 拔網路實測（fallback＋UI 離線標示）
+**C｜前端與品牌**（地盤 `frontend/` `docs/mockups/` `docs/brand/`）
+- ✅ #13 手機版 RWD（照 mockups 三畫面實作）｜✅ #26 健康分 hero 卡
+- ✅ 三方案卡渲染｜✅ 模式徽章＋Demo 切換｜✅ 決策軌跡面板｜✅ 成交切 BULLISH
+- ✅ #28 Onboarding 五屏｜✅ 離線 mock 拔網路實測（fallback＋UI 離線標示）
+- ✅ 12 組煙測腳本（`scripts/smoke_*.js`，CI 每次 push 跑）
 
-**D｜整合部署與交付**（地盤 `infra/` `docs/`，估 4 天，多為測試/設定短項）
-- 🔨 **AWS 帳號＋Bedrock 開通（多條線的前置，第一件做）**
-- 🧪 SAM 首次部署＋Lambda×5 冒煙（/health /market /chat /order /audit）
-- 🔨 #6 Bedrock Guardrails 建立（A 掛載）｜🔨 #14 從零部署演練＋DEPLOY.md（<1hr）
-- 🔬 #4 Private API E2E 最小額度真實成交｜🔬 憑證過期/重放 410｜🔬 雙層護欄攔截測試
-- 🔬 E2E Golden Path 主導（全員配合）｜🔬 從零部署計時
-- 🔨 #8 預錄影片｜🔨 #15 整合簡報修正＋Kiro 證據彙整
+**D｜整合部署與交付**（地盤 `infra/` `docs/`）
+- ✅ AWS 帳號＋Bedrock 開通｜✅ SAM 部署＋Lambda×5 冒煙
+- ✅ #14 從零部署演練＋DEPLOY.md（**實測 46 分鐘**，目標 <60 分）
+- ✅ #4 Private API E2E 最小額度真實成交｜✅ 憑證過期/重放 410
+- ✅ E2E Golden Path｜✅ 官方環境重部署（Lambda 金鑰待補，issue #70）
+- 🟡 #8 Demo 錄影：08-02 前端改版後主片鏡 1–5／7／8 已重錄，尚有四項待決（issue #75）
+- ⬜ #6 Guardrails 主控台建置（同 A 包最後一項）
+- ⬜ #15 Kiro 證據截圖 F–J：需要 Kiro IDE 介面存取，只能由人代截（issue #42）
 
-**全員共同**（不算包內工時）：#3 自己的 Lv2 KYC＋API Key、Kiro 設定、過程截圖存 Drive、每天合回 main。
+**全員共同**：#3 自己的 Lv2 KYC＋API Key、Kiro 設定、過程截圖存 Drive、每天合回 main。
 
 ### 交棒地圖：哪個工項完成，交付給誰
 

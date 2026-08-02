@@ -61,7 +61,7 @@ def rows_from_trades(raw, currency):
     return rows
 
 
-def collect_rows():
+def collect_rows(only=None, max_pages=None):
     """把帳戶碰過的每個 TWD 市場的成交紀錄抓回來，合併後依時間排序。
 
     市場來自 balances()——MAX 會把餘額為 0 的幣別也列出來，所以已經全部賣光的幣仍抓得到。
@@ -73,13 +73,14 @@ def collect_rows():
     currencies = []
     for account in max_private.balances() or []:
         cur = str(account.get("currency") or "").lower()
-        if cur and cur != "twd" and cur in prices:
+        if cur and cur != "twd" and cur in prices and (not only or cur in only):
             currencies.append(cur)
 
     rows, per_currency, failed = [], {}, []
     for cur in currencies:
         try:
-            raw = max_private.trades(f"{cur}twd")
+            raw = (max_private.trades(f"{cur}twd", max_pages=max_pages) if max_pages
+                   else max_private.trades(f"{cur}twd"))
         except Exception:  # noqa: BLE001 — 單一市場失敗不該讓整份報告掛掉，但要講出來
             failed.append(cur.upper())
             continue
@@ -111,9 +112,9 @@ def opportunity_cost_to_now(rows, prices):
             "basis": "賣出價 vs 當下市價"}
 
 
-def build_report():
+def build_report(only=None, max_pages=None):
     pre = _precompute()
-    rows, per_currency, failed, prices = collect_rows()
+    rows, per_currency, failed, prices = collect_rows(only=only, max_pages=max_pages)
     if not rows:
         return {"account_source": "max_private", "available": False,
                 "message": "這個帳戶沒有查到任何成交紀錄，無法做行為健檢。",
