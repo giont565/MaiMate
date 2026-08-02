@@ -322,7 +322,7 @@ precache 清單由 `npm run build:sw` 產出（`sw-assets.js`，版本＝所有�
 |---|---|---|---|
 | 1 | ~~`template.yaml` 未宣告 `GUARDRAIL_ID`~~ 已補（`template.yaml:53`，`KB_ID` 在 L51）。**`ENABLE_PROMPT_CACHE` 仍未宣告**，但 `loop.py:18` 讀它 | prompt caching 目前等於永遠關著——主控台手動設了也會被下一次 `sam deploy` 清掉。不影響正確性，只影響成本與延遲 | D／infra（issue #43 內容已過期） |
 | 2 | ~~README §3 的 API 範例寫 `"tool":"get_portfolio"`，實際工具叫 `get_account_balance`~~ | ✅ 已修（2026-07-31）。§3 是套件間交接的唯一依據，照著接會接錯 | 已修 |
-| 3 | 根目錄 `profile_engine.py` 未被 `backend/` 任何檔案 import | 疑似棄用或示範檔。**不要拿它當「上線中的合規邏輯」的證據** | 待確認 |
+| 3 | ~~根目錄 `profile_engine.py` 未被引用~~ | **已於 08-02 刪除**（連同另外四個沒人引用的根目錄重複檔）。上線中的是 `backend/agent/profile.py` | 已解決 |
 
 前兩項已知歸屬明確；第 3 項在確認前不刪（可能是別的包還在用）。
 

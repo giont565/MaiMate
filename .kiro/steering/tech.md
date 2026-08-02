@@ -20,9 +20,10 @@
 ## 程式風格
 
 - Python：標準函式庫優先，重依賴（pandas 等）只用在離線分析，Lambda 內不用。
-- 每個 Lambda handler 單一職責，**五支**：`/chat` `/health` `/market` `/order` `/audit`
-  （`infra/template.yaml` 的 ChatFunction／HealthFunction／MarketFunction／
-  OrderFunction／AuditFunction）。
+- Lambda **五支**（`infra/template.yaml`）：ChatFunction／HealthFunction／MarketFunction／
+  OrderFunction／AuditFunction，共 **7 條路由**——`/chat` `/health` `/market` `/order` `/audit`
+  ＋掛在 ChatFunction 上的 `/portfolio` 與 `/behavior`（這兩條要 MAX 金鑰，
+  掛在已經有金鑰的那支，不另開函式）。
 - 錯誤回應一律結構化 JSON（code / message / retryable）。
 - 前端**零建置**：純 HTML + vanilla JS，不得引入打包器或框架，`node_modules` 不進 production
   （node 只用於煙測與簡報產生器）。

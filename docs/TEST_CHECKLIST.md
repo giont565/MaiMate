@@ -53,9 +53,9 @@ python3 scripts/verify_live.py --base https://<本次 ApiUrl>   # 決賽換環�
 | A1 | health_report 重跑 | `python3 analysis/precompute.py` | 產出 JSON，無 exception |
 | A2 | realized_pnl 有值（#27） | `grep -o '"realized_pnl"' data/health_report.json` | 有；且含 `worst_single_loss` |
 | A3 | 三聚合值有值（#29） | 同檔 grep `holdings_snapshot`／`change_attribution`／`holding_period_distribution` | 三個都在，pct 合理（0–100、加總≈100） |
-| A4 | 後端邏輯測試 | `python3 scripts/test_backend.py` | 46 項全綠 |
+| A4 | 後端邏輯測試 | `python3 scripts/test_backend.py` | 47 項全綠 |
 | A5 | Python 單元測試 | `python3 -m unittest discover -s tests` | OK |
-| A6 | 前端四組煙測 | `npm run smoke`／`smoke:welcome`／`smoke:onboarding`／`smoke:analysis` | 四組皆「全部通過 ✅」 |
+| A6 | 前端煙測 | `npm test`（含 `npm run smoke`）；單頁可跑 `npm run smoke:<頁面>` | 每組都印「全部通過 ✅」 |
 | A7 | SAM 模板 | `npm run validate:sam && npm run build:sam` | 五個函式建置成功 |
 
 > A1–A3 需要官方 CSV（Drive 下載到 `data/`，不進 git）。**A2/A3 沒過的話**，
@@ -69,7 +69,7 @@ python3 scripts/verify_live.py --base https://<本次 ApiUrl>   # 決賽換環�
 | B2 | ChatFunction 環境變數 | `MAX_API_KEY`／`MAX_API_SECRET` 已設（漏設 → 查持倉會答「帳戶 API 未設定」） |
 | B3 | OrderFunction 環境變數 | 同上兩把金鑰（兩支 Lambda 都要，07/21 實測踩過） |
 | B4 | KB_ID 已設 | ChatFunction 有 `KB_ID`（RAG 問答才會通）＋`bedrock:Retrieve` 權限 |
-| B5 | 三個 API_BASE 都改了 | index.html／welcome.html／onboarding.html 各一份，全指向本次 ApiUrl |
+| B5 | 所有 API_BASE 都改了 | `grep -oh 'window.API_BASE = "[^"]*"' frontend/*.html \| sort -u` **只輸出一行**（頁數會一直長，別記數字） |
 | B6 | S3 同步完成 | 手機 Safari（含隱私瀏覽）開 HTTPS FrontendUrl，根路徑與頂欄麥麥 logo 正常 |
 
 ## C. 後端 API 冒煙（curl，5 分）
@@ -139,7 +139,7 @@ python3 scripts/verify_live.py --base https://<本次 ApiUrl>   # 決賽換環�
 | G1 | 從零部署計時（#14） | 乾淨環境走完 DEPLOY.md < 60 分鐘，把實測時間填回 DEPLOY.md 末行 |
 | G2 | Demo 錄影（#8） | 照 DEMO_SCRIPT.md 八鏡錄完，存 Drive |
 | G3 | 真實成交 E2E（#4） | **需 Lv2 KYC**；最小額度、本人帳戶，只在驗證日跑一次 |
-| G4 | 雙層護欄（#6） | Bedrock Guardrails 主控台建好並設 `GUARDRAIL_ID` 後，F1/F2 兩層各自單獨可擋 |
+| G4 | 第五層護欄（#6） | Bedrock Guardrails 主控台建好並設 `GUARDRAIL_ID` 後，F1/F2 在關掉程式層攔截時仍擋得住（**目前刻意不啟用**，見下） |
 
 ---
 
