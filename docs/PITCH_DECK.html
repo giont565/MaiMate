@@ -1079,8 +1079,9 @@
   let i = 0;
   const stage = document.getElementById('stage');
 
-  // 預設顯示實機截圖；docs/demo/ 裡有對應影片才換成影片播放
-  document.querySelectorAll('img.media[data-video]').forEach(img => {
+  // 預設顯示實機截圖；docs/demo/ 裡有對應影片才換成影片播放。
+  // 印 PDF 時整段跳過——PDF 播不了影片，換成 <video> 只會印出一格空白。
+  if (!window.__PRINT__) document.querySelectorAll('img.media[data-video]').forEach(img => {
     const v = document.createElement('video');
     v.src = img.dataset.video;
     v.muted = true; v.loop = true; v.playsInline = true; v.className = 'media';
