@@ -146,6 +146,11 @@ body{
   .cap h1{font-size:23px}
   .cap p{font-size:12px;line-height:1.62}
 }
+/* 6.7 吋機嵌在 WebView 裡是 430×881，麥麥上緣落在 322px，離「02 / 09」那列有 212px
+   空白，看起來偏空。試過把麥麥上移放大，但基準值是刻意讓「最低那顆泡泡的底部」與
+   「麥麥頭頂」切齊的（兩者在 881 高時都是 322），一動就讓 04／08 幕的泡泡壓到天線；
+   泡泡也沒有往上讓的空間——它頂端 115，上面 110 就是進度列。
+   要消掉這塊空白得重排泡泡堆，不是換個百分比能解決的，所以先留著。 */
 .bot .float{position:absolute;inset:0;animation:breathe 3.6s ease-in-out infinite}
 .bot img{width:100%;height:100%;display:block;object-fit:contain}
 @keyframes breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
@@ -367,6 +372,11 @@ body{
 /* ── 常駐標示：用了真 logo 就不能拿掉（見 brand/README.md）── */
 .disc{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);
   z-index:33;text-align:center;font-size:10px;letter-spacing:.02em;color:#AEB6C6}
+/* 嵌在 host-app 的 WebView 裡時隱藏這一行——不是拿掉標示，是宿主底條已經寫了同一句
+   （host-app.html 那條是唯一的區隔，更不能動），兩個一起出現會上下疊成兩行。
+   桌機看不到這個問題：.disc 靠 safe-area 定位，桌機 inset 為 0 會被宿主底條蓋住；
+   真機有 home indicator（inset≈34px）才會被頂出來露臉。獨立開 intro.html 時照常顯示。 */
+html.framed .disc{display:none}
 
 /* ── 開場載入態：等圖解碼完才起跑 ───────────────────────── */
 .boot{position:absolute;inset:0;z-index:60;display:grid;place-items:center;background:var(--stage);
@@ -648,6 +658,10 @@ body{
      mm_intro_hide=今天日期  → 整段跳過，直接進 welcome.html
    ?full=1 蓋過上面全部，現場要重播時用。
    ══════════════════════════════════════════════════════════════ */
+
+// 嵌在 host-app 的 WebView 裡（跨頁同源，讀 window.top 不會丟例外；真的丟就當沒嵌）
+try { if (window.self !== window.top) document.documentElement.classList.add("framed"); }
+catch (e) { }
 
 var Q = new URLSearchParams(location.search);
 var NEXT_PAGE = Q.get("from") || "welcome.html";
