@@ -878,6 +878,46 @@ function mmHomeRuleNarrative(facts) {
   };
 }
 
+/* 首屏那句話的三種講法。
+ *
+ * 原本三個版面只差在「藏掉幾個元素、字級差 0.5px」——實測模組區字數 1506／1252／1606，
+ * 句子一字不改，所以看起來就是同一頁。這裡讓三個版面用不同的方式講同一件事。
+ *
+ * 只換說法，不換事實：topLabel／topRatio／marketRatio 三個版面完全相同，
+ * 差別在要不要先安撫、要不要展開名詞、數字放前面還是後面。
+ * 數字若跟著版面變，那是三份不同的真相，比沒有差異化嚴重得多。
+ *
+ * guided 一律沿用既有那句（不管它來自規則模板還是 AI 結構化輸出）——
+ * 那是預設版面，也是煙測與 chat context 取用的文字，不能因為這個功能而改動。
+ * 另外兩句由事實現組，所以兩條敘事來源都吃得到。 */
+function mmHomeStyleVariants(narrative, portfolio, primaryMarket) {
+  const base = (narrative && narrative.todayRelevant) || {};
+  const topLabel = mmHomeTopLabel(portfolio);
+  const topRatio = mmHomeRatio(portfolio.topAssetRatio);
+  const symbol = primaryMarket.symbol;
+  const marketRatio = mmHomePercent(primaryMarket.changeRatio, 1);
+  const cash = portfolio.topAssetIsCash;
+  return {
+    headlineByStyle: {
+      guided: base.headline || "",
+      concise: cash
+        ? topLabel + "占 " + topRatio + "，今天的市場變動跟你關係不大。"
+        : topLabel + "（" + topRatio + "）主導今天的帳戶變化。",
+      analytical: cash
+        ? "最大持有 " + topLabel + " " + topRatio + "；" + symbol + " 今日 " + marketRatio +
+          "，對帳戶淨值的傳導有限。"
+        : "變化來源：" + topLabel + "，權重 " + topRatio + "；" + symbol + " 今日 " + marketRatio + "。",
+    },
+    explanationByStyle: {
+      guided: base.explanation || "",
+      concise: symbol + " 今日 " + marketRatio + "；你的" + topLabel + "占 " + topRatio +
+        "，帳戶跟著動的幅度有限。",
+      analytical: symbol + " 今日變動 " + marketRatio + "｜最大持有 " + topLabel + " " + topRatio +
+        "｜行情為示範資料，非真實報價。占比取自月底快照，與行情不同時點，僅供關聯對照。",
+    },
+  };
+}
+
 function mmHomeNarrative(facts) {
   try {
     return {
@@ -1113,6 +1153,9 @@ function mmHomeBuildResponse(state) {
       title: "今天，什麼和你有關？",
       headline: narrative.value.todayRelevant.headline,
       explanation: narrative.value.todayRelevant.explanation,
+      /* 三種版面的講法。在這裡組而不是在 narrative 裡，是因為示範資料走的是
+         aiStructuredOutput 那條路，寫在規則模板裡對 Demo 完全不生效（實測三句一模一樣）。 */
+      ...mmHomeStyleVariants(narrative.value, portfolio, primaryMarket),
       relatedAssets: [portfolio.topAsset],
       impactLevels: {
         market: primaryMarket.impactLevel,
