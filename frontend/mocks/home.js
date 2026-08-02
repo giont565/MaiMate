@@ -53,7 +53,7 @@ window.MM_HOME_MOCK = Object.freeze({
   nextRefreshAt: "2025-12-31T16:30:00+08:00",
   user: {
     userId: "demo-user-001",
-    displayName: "壹踢",
+    displayName: "Leon",
     demoMode: true,
   },
   snapshots: {
