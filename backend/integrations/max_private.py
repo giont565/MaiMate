@@ -106,7 +106,7 @@ TRADES_PAGE = 1000
 TRADES_MAX_PAGES = 20  # 保險絲：Lambda 只有 60 秒，翻不完就如實說翻不完，不無限迴圈
 
 
-def trades(market, start_ms=None, max_pages=TRADES_MAX_PAGES):
+def trades(market, start_ms=None, max_pages=TRADES_MAX_PAGES, newest=False):
     """查**自己**的成交紀錄（Read），依 id 遞增翻頁。
 
     /api/v3/trades 是逐市場查詢——帳戶有幾個幣就要打幾次，這是 MAX 的介面形狀，
@@ -114,6 +114,14 @@ def trades(market, start_ms=None, max_pages=TRADES_MAX_PAGES):
 
     翻頁用 from_id 而不是 timestamp：同一毫秒可能有多筆成交，用時間當游標會漏或重複。
     """
+    # newest=True：只要「最近 N 筆」，用 desc 拿一頁再反轉成時序。
+    # 不能靠 asc 的第一頁充當最近——那是最舊的一頁，語意剛好相反（實測 GRT 的
+    # asc 首頁落在 06-01～08-01，ETH 卻全在今天，用猜的必錯一邊）。
+    if newest:
+        page = _signed_request("GET", "/api/v3/trades",
+                               {"market": market, "limit": TRADES_PAGE, "order_by": "desc"}) or []
+        return list(reversed(page))
+
     out, from_id = [], None
     for _ in range(max_pages):
         params = {"market": market, "limit": TRADES_PAGE, "order_by": "asc"}

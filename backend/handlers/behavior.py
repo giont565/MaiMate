@@ -25,9 +25,15 @@ def handler(event, context):
     except ValueError:
         pages = None
 
+    # 預設**有界**：每個市場只取最近一頁（1000 筆）。完整一年連單一幣種都塞不進
+    # 60 秒的 Lambda（實測 5 頁就逾時），要完整重建得先做分批抓取＋快取。
+    # ?full=1 走原本的逐頁往前抓，僅供賽後驗證用，正常請求不要開。
+    bounded = q.get("full") != "1"
+
     from ..agent import behavior
     try:
-        return _resp(200, behavior.build_report(only=only or None, max_pages=pages))
+        return _resp(200, behavior.build_report(only=only or None, max_pages=pages,
+                                                bounded=bounded))
     except Exception as exc:  # noqa: BLE001 — 連不上或翻頁失敗要說實話，不退回示範資料
         return _resp(503, {"code": "history_unavailable", "retryable": True,
                            "message": f"取不到成交紀錄：{exc}"})

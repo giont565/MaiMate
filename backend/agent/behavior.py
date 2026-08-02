@@ -25,6 +25,11 @@ _TAIPEI = timezone(timedelta(hours=8))
 _ROOT = Path(__file__).resolve().parents[2]
 
 
+def max_private_page():
+    from ..integrations import max_private
+    return max_private.TRADES_PAGE
+
+
 def _precompute():
     """analysis/precompute.py 隨 CodeUri 一起打包，但不在 package 路徑上。"""
     if str(_ROOT) not in sys.path:
@@ -61,7 +66,7 @@ def rows_from_trades(raw, currency):
     return rows
 
 
-def collect_rows(only=None, max_pages=None):
+def collect_rows(only=None, max_pages=None, bounded=True):
     """把帳戶碰過的每個 TWD 市場的成交紀錄抓回來，合併後依時間排序。
 
     市場來自 balances()——MAX 會把餘額為 0 的幣別也列出來，所以已經全部賣光的幣仍抓得到。
@@ -79,8 +84,8 @@ def collect_rows(only=None, max_pages=None):
     rows, per_currency, failed = [], {}, []
     for cur in currencies:
         try:
-            raw = (max_private.trades(f"{cur}twd", max_pages=max_pages) if max_pages
-                   else max_private.trades(f"{cur}twd"))
+            raw = (max_private.trades(f"{cur}twd", newest=True) if bounded
+                   else max_private.trades(f"{cur}twd", max_pages=max_pages or None))
         except Exception:  # noqa: BLE001 — 單一市場失敗不該讓整份報告掛掉，但要講出來
             failed.append(cur.upper())
             continue
@@ -112,9 +117,9 @@ def opportunity_cost_to_now(rows, prices):
             "basis": "賣出價 vs 當下市價"}
 
 
-def build_report(only=None, max_pages=None):
+def build_report(only=None, max_pages=None, bounded=True):
     pre = _precompute()
-    rows, per_currency, failed, prices = collect_rows(only=only, max_pages=max_pages)
+    rows, per_currency, failed, prices = collect_rows(only=only, max_pages=max_pages, bounded=bounded)
     if not rows:
         return {"account_source": "max_private", "available": False,
                 "message": "這個帳戶沒有查到任何成交紀錄，無法做行為健檢。",
@@ -122,6 +127,10 @@ def build_report(only=None, max_pages=None):
 
     notes = [
         "資料來源：你自己的 MAX 帳戶成交紀錄（Private API），不是命題方的示範資料集。",
+        ("⚠ 這是**有界**報告：每個市場只取最近 " + str(max_private_page()) + " 筆成交，"
+         "不是完整一年。期間欄位是這批資料的實際起訖，不代表帳戶的開戶到今天。"
+         "完整重建需要分批抓取與快取，尚未實作。") if bounded else
+        "涵蓋範圍：依 from_id 逐頁往前抓，上限 20 頁／市場。",
         "機會成本的基準是「賣出價 vs 當下市價」＝賣掉之後到現在少賺多少，"
         "與示範資料集用的「年末價」不同，兩者不可直接比較。",
         "集中度與持倉分布不在本報告裡——那兩項用即時餘額算（GET /portfolio）。",

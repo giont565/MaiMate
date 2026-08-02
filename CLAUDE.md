@@ -49,46 +49,23 @@ cd docs/brand && python3 render_pixel_bot.py   # 重出麥麥像素吉祥物
   **07/28 新增**：已實現損益 **+117,482**（981勝/493負）、最痛真實虧損僅 **963**（2025-10-01 USDT）
   —— 「你以為在虧錢，其實賺了十一萬；真正虧的只有 963，少賺卻有兩千六百萬」是最強敘事
 
-## 線上環境（2026-07-28 部署完成）
+## 線上環境
 
-| 項目 | 值 |
-|---|---|
-| AWS 帳號／區域 | `525237381533` / us-east-1 |
-| Stack | `maimate`（**沿用此名，換名會開出第二套環境**） |
-| ApiUrl | `https://ywm2d396r8.execute-api.us-east-1.amazonaws.com` |
-| FrontendUrl | `http://maimate-frontendbucket-39yr2d3jy0yz.s3-website-us-east-1.amazonaws.com`（**只支援 http**） |
-| ChatFunction | `maimate-ChatFunction-uyN5hgOddqPe`（5 個環境變數，含 MAX 金鑰） |
-| OrderFunction | `maimate-OrderFunction-CorZvWA9xVI7`（3 個環境變數，含 MAX 金鑰） |
+**repo 是公開的：AWS 帳號 ID、bucket／function／distribution 名稱一律不寫進版控。**
+實際值在 `docs/_internal/ENVIRONMENTS.md`（已 gitignore，另存 Drive），
+部署指令與參數取得方式在 `docs/DEPLOY.md`。
 
-已驗證：`/health` 為 07-28 資料含 realized_pnl／`/market` 含 fetched_at_taipei／`/audit` 不回 404／
-前端健康分卡圓環正常、顯示 +NT$117,482。**驗收清單 D1–D4 已過，D5–D18 未測。**
+**兩套環境都是活的，用途不同**：隊長帳號是錄影與備援，官方環境是比賽平台。
+Stack 名兩邊都沿用 `maimate`（**換名會開出第二套環境**）。
+官方環境憑證是主辦發的臨時憑證（會過期，過期就回主辦端重拿），存成 `--profile hackathon` 使用。
+RAG 重建用 `scripts/setup_rag_kb.py`——KB 是「帳號＋region」範圍的資源，**換帳號一定要重建**。
 
-## 交接（2026-08-01 04:00，決賽當天）
+🎬 **錄影前必讀**：`DEMO_SCRIPT.md` 鏡 7 用的決策軌跡**只存在於產生它的那套環境**的 DynamoDB；
+另一套查同一個 session_id 回 0 列。要在該環境重現得再下一次真單。
 
-**兩套環境都是活的，用途不同**：舊環境是錄影與備援，官方環境是比賽平台。
-前端 `frontend/*.html` 的 `API_BASE` 目前指向**官方環境**。
-
-| 資源 | 隊長帳號 525237381533／us-east-1（錄影用） | **官方環境 234472092814／us-west-2** |
-|---|---|---|
-| 前端 | https://d1ttogc25b56n5.cloudfront.net | **https://d1z0776b4u2tmf.cloudfront.net** |
-| ApiUrl | `https://hwgog76s3a.execute-api.us-east-1.amazonaws.com` | **`https://10n5xyf7i4.execute-api.us-west-2.amazonaws.com`** |
-| FrontendBucket / DistributionId | `maimate-frontendbucket-tdpftef0y2d6` / `ECJ9UVQF1D5O3` | `maimate-frontendbucket-c6ydvtulu9fc` / `E2OC6B03DVGXWI` |
-| Knowledge Base | `PDEGDAUUH9`（13 篇） | **`ZGBLEOY7CR`**（9 段） |
-| Guardrail | `6v38f3jue77y` v1，**刻意停用**（`GuardrailId=off`） | 未建，同樣 `GuardrailId=off` |
-| ChatFunction | `maimate-ChatFunction-gJoISvAx91RA` | `maimate-ChatFunction-flPz0wdpoqyq` |
-| OrderFunction | `maimate-OrderFunction-OtPA9sr4MOWp` | `maimate-OrderFunction-iGtkHLYQJyLF` |
-
-官方環境憑證是主辦發的**臨時憑證**（`ASIA` 開頭＋session token），會過期，過期就回主辦端重拿，
-存成 `--profile hackathon` 使用。部署與驗收指令、金鑰補回步驟全在 `docs/DEPLOY.md`；
-RAG 重建用 `scripts/setup_rag_kb.py`。
-
-🎬 **錄影前必讀**：`DEMO_SCRIPT.md` 鏡 7 用的決策軌跡（`d3e6e6f9-…`，13 列含兩筆成交）
-**只存在於 us-east-1 的 DynamoDB**；官方環境查同一個 session_id 回 0 列。要在官方環境重現
-得再下一次真單。**所以錄影用舊環境（線上站目前就是），錄完再切官方。**
-
-⚠️ 連帶影響：`verify_live_ui.js` 的 **L2.1 會報「線上檔案與本地不一致」**，因為 git 裡的
-`API_BASE` 指官方環境、線上站還是舊的。它的提示會叫你清 CloudFront 快取——**那是誤導**，
-差異不是快取而是 API 指向。錄影期間這條紅字可以忽略；真要切環境時再 sync＋invalidate。
+⚠️ `verify_live_ui.js` 的 **L2.1「線上檔案與本地不一致」**：只要 git 裡的 `API_BASE`
+與線上站指的環境不同就必定紅字。它會叫你清 CloudFront 快取——**那是誤導**，
+差異不是快取而是 API 指向。真要切環境時再 sync＋invalidate。
 
 決賽表單的現成答案（提案大綱 297 字、模型清單、Lv.2 Email、repo 公開指令）在 `docs/SUBMISSION.md`。
 
@@ -99,14 +76,15 @@ RAG 重建用 `scripts/setup_rag_kb.py`。
   讀錯 key／憑證沒進 DynamoDB／三方案低於交易所下限／貼齊門檻被四捨五入／確認鈕連按）
 - **#9 RAG**：自建 KB（語料在 Drive「黑客松/MaiMate_RAG語料」＋隊友的 chunks.jsonl 已合併）
 - **#14 G1 演練**：砍掉整套 stack 從零重建，實測 46 分鐘
-- 驗收：後端 22 項通過 21、前端完整性 13/13、Python 50 項、九組煙測
+- 驗收：`scripts/test_backend.py` 47 項、`tests/` Python 112 項、前端煙測 12 組、
+  線上自動驗收 `scripts/verify_live.py`（C 段 7＋D 段對話項＋F 段 6；實際項數看它跑完印的統計列）
 - 手機實機：離線劇本、行情保留舊值、PWA 加到主畫面（standalone ＋ 斷網可開）
 
 ### 08-01 凌晨補修（兩個都會在評審面前出事）
 
 1. **深度意圖問題一律 500**：`MODEL_SONNET` 用了不存在的短別名，任何含「為什麼／分析／歸因／
    比較」的問題都掛掉。改成帶日期的 `us.anthropic.claude-sonnet-4-5-20250929-v1:0`，兩套環境都已部署驗過。
-   **`verify_live.py` 的 22 項沒有一句會觸發深度意圖**，所以一直是綠的——賽後補一項進去。
+   **`verify_live.py` 沒有一項會觸發深度意圖**，所以它一直是綠的——賽後補一項進去。
 2. **LLM 自行標「✓ 推薦全部賣出」**（約 1/6 機率）：與 UI 金框推薦互相矛盾，也踩「不報明牌」。
    修在 `loop.py` SYSTEM 規則 4（三方案對等呈現）。不走 `guardrails.py`——護欄一命中會把整段
    回覆換成 `SAFE_FALLBACK` 罐頭語，反問敘事會整個消失，比原問題更糟。

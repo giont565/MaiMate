@@ -20,6 +20,7 @@
 | 部署完驗收 | [docs/TEST_CHECKLIST.md](docs/TEST_CHECKLIST.md)＋`npm run verify:ui -- --base <網址>` |
 | 演 Demo | [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) |
 | 只有人能做的交付項（截圖、KYC） | [docs/CAPTAIN_TODO.md](docs/CAPTAIN_TODO.md) |
+| **看每個功能的規格怎麼定的**（Kiro spec-driven） | [`.kiro/`](.kiro/)：steering×5＋specs×8 |
 | **改介面**（跨包契約） | 本檔 §3 —— 改前先在 #dev 廣播 |
 
 > 三份技術文件（ARCHITECTURE／COMPLIANCE／ONBOARDING）的每一條主張都附 `檔案:行號`，
@@ -135,12 +136,28 @@ flowchart LR
 
 文字版四大交接（背這四條就夠）：**B→A** 函式交付｜**A→C** schema（§3 已定義，C 可先用假資料）｜
 **D→A** Guardrails ID｜**A→D** 可測版本 tag（E2E 開跑訊號）。
+其中 **Guardrails 這條最後沒有交付**——原因寫在 §4.9，不是忘了。
 
 **不打架五規則**：①地盤制（動別人目錄→開 issue）②介面契約先行（見 §3，C 包用假資料平行開發）
 ③共用檔單一 owner（tools.py/loop.py 歸 A、infra 歸 D）④每日 pull --rebase 合回 main ⑤改介面先在 #dev 廣播。
 
-**Kiro 紀律**：credit 2000/人只發一次——練習≤300／開發~1000／決賽保底≥700；Autopilot 只在跑定義好的 task 時開；
-過程截圖（Specs 面板/task 執行/MCP）存 Drive 當 +5% 證據。
+### Kiro：spec 先行的開發方式
+
+每個功能都走同一條路，**規格先於程式碼**：
+
+```
+.kiro/specs/<feature>/
+  requirements.md   User Story ＋ EARS 格式驗收條件（WHEN…THEN…SHALL）
+  design.md         架構、元件、關鍵取捨與為什麼這樣選
+  tasks.md          可逐項勾選的任務；沒實際跑過的不准打勾
+```
+
+`.kiro/steering/` 的五份約定（product／tech／structure／workflow／data-schema）**每次對話自動載入**——
+所以「永不報明牌」「`execute_order` 不進工具清單」這些紅線不是靠人記得，
+而是每一次生成都被餵進去。用其他 AI 工具開發時，把 `workflow.md` 連同任務一起餵給它，紀律一致。
+
+**credit 紀律**：2000/人只發一次——練習≤300／開發~1000／決賽保底≥700；
+Autopilot 只在跑定義好的 task 時開；過程截圖（Specs 面板／task 執行／MCP）存 Drive 當 +5% 證據。
 
 ---
 
@@ -265,55 +282,87 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 
 ## 4. 完整驗收項目
 
-### 4.1 行為分析引擎（behavior-engine）｜B 地盤 — ✅ 全數通過（2026-07-19 真實資料驗證）
+### 4.1 行為分析引擎（behavior-engine）｜B 地盤 — ✅ 全數通過（真實資料驗證）
 - [x] 10,000 筆全數解析（欄位尾端空白 strip）
-- [x] 追高 65.0%／殺低 34.1%
+- [x] 追高 65.0%（2,350 筆買入）／殺低 34.1%（2,304 筆賣出）
 - [x] 機會成本總額 NT$26,598,877；最痛單筆 2025-01-08 DOGE NT$312,924
-- [x] 峰值集中 2025-12 twd 98.6%；提領僅 14.2% 於下跌後
+- [x] 峰值集中 2025-12 twd 98.6%（最大持有是**現金**，文案須講明）；提領僅 14.2% 於下跌後
+- [x] 已實現損益 **+117,482**（981 勝／493 負）；最痛真實虧損僅 **963**（2025-10-01 USDT）
+- [x] 對外標示為「命題方提供的示範帳戶」，不是使用者本人的帳戶
+- [ ] 分年度投資報酬率（issue #47）：CSV 缺年初市值與出入金脈絡，硬算會誤導，因此不先出數字
 
-### 4.2 對話 Agent（chat-agent）｜主責 A（E2E 驗證：D）
-- [ ] 個人問題必先呼叫 query_user_history 且回答引用具體數字；資料不足如實說明
-- [ ] 行情問題必呼叫 get_market_data 且附資料時間；個人×市場交叉引用
-- [ ] 要求明牌時給脈絡與數據、不給建議（紅線）
-- [ ] 下單意圖只呼叫 prepare_order；chat 回應以 confirm 欄位帶出確認卡（#1）
-- [ ] execute_order 不在 LLM 工具清單（架構已隔離，待 E2E 驗證）
-- [ ] 輸入 PII 先清洗；輸出命中明牌句式走安全回覆；迴圈 ≤8 輪
-- [ ] Haiku/Sonnet 意圖路由＋prompt caching（#5）
+### 4.2 對話 Agent（chat-agent）｜主責 A（E2E 驗證：D）— ✅ 線上實測通過，兩項未完
+- [x] 個人問題必先呼叫 query_user_history 且回答引用具體數字（D7／D11）
+- [x] 回答明確區分「真實虧損」與「少賺（機會成本）」——問「去年虧最多」不得答成機會成本（D7）
+- [x] 工具鏈對使用者可見（訊息上方 chips）（D8）
+- [x] 要求明牌時給脈絡與數據、不給建議（F1／F2）
+- [x] 下單意圖只呼叫 prepare_order；chat 回應以 confirm 欄位帶出確認卡（#1）（D12）
+- [x] execute_order 不在 LLM 工具清單、也不在 dispatch 表（單元測試＋F6 線上驗）
+- [x] 輸入 PII 先清洗；輸出命中明牌句式走安全回覆（F5）；迴圈 ≤8 輪（程式常數）
+- [x] Haiku/Sonnet 意圖路由（#5）——08/01 修掉 modelId 短別名導致深度意圖問題全 500 的問題
+- [ ] prompt caching 實際命中率量測（#5 的後半，未量）
+- [ ] 模式語氣切換人工驗收（D16）
 
 ### 4.2b 進場方式比較（compare_entry_strategies）｜主責 A — 🧪 已實作＋單元驗證（08/01，7 項），對話實測待部署
 - [x] 三種方式在三情境下對等呈現，輸出不含推薦字樣（紅線 1）
 - [x] 金額切 10 份後低於交易所單筆下限時擋下並給最低總額（同 4.3 的 min order 事故防線）
 - [x] 行情取不到時 `feasibility` 回 `unknown`，不猜門檻
 - [x] 不得推薦進場方式：SYSTEM 規則 10 ＋ guardrails `_ADVICE_PATTERNS`／`_REDLINE_INDEXES`（08/01 補）
-- [x] 私人環境已部署並驗證（08/01 23:xx）；官方環境待部署（金鑰已撤，S5 會自動跳過）
 - [x] 對話劇本實測：`npm run verify:strategy` **S1–S5 各 3 次共 15/15 全過**（08/01 私人環境）
+- [ ] 官方環境重部署後重跑劇本：SYSTEM 規則 10 與護欄補丁目前**只在 repo**，
+      未重部署前不在 Demo 主線示範這個功能
 - [ ] `risk_mode` 未帶時由 profile engine 推斷值填入（目前預設 growth）
 
-### 4.3 三方案引擎（trade-scenarios，#11）｜主責 A（卡片渲染：C）— 🧪 已實作＋單元驗證（07/21），整合測試待部署
-- [ ] 交易意圖 → 三方案（保守/原意圖/暫停），數字全由程式計算
-- [ ] 每方案含預估金額、手續費（MAX 公告費率＋來源註記）、執行後集中度、個人行為註記
-- [ ] 標的不在持倉 → 明確錯誤；暫停版不產生訂單；方案欄位相容 prepare_order
-- [ ] 滑價聲明標注
+### 4.3 三方案引擎（trade-scenarios，#11）｜主責 A（卡片渲染：C）— ✅ 線上實測通過
+- [x] 交易意圖 → 三方案（保守/原意圖/暫停），數字全由程式計算（D9）
+- [x] 每方案含預估金額、手續費（MAX 公告費率＋來源註記）、執行後集中度、個人行為註記
+- [x] 數字可還原驗算：手續費 ≈ 金額×0.16%、全賣後集中度 0%（D10）
+- [x] 標的不在持倉 → 明確錯誤；暫停版不產生訂單；方案欄位相容 prepare_order
+- [x] 金額低於交易所單筆下限時擋下（`tests/test_scenarios_min_order.py`）
+- [x] 滑價聲明標注
+- [x] 三方案對等呈現，模型不得自標「✓ 推薦」（08/01 修，實測約 1/6 機率會自己加）
+- ⚠ 已知不穩定：「ETH 跌太多幫我全部賣掉」7 次觀察中 1 次改為反問而非直接出卡，
+  成因未確認；`DEMO_SCRIPT.md` 因此不把這句寫成必然結果
 
-### 4.4 Profile Engine（profile-engine，#10）｜主責 A（徽章與切換 UI：C）— 🧪 已實作＋單元驗證（07/21），三模式實測劇本待部署
-- [ ] 從 health_report 確定性規則分類三模式（cautious/growth/pro）＋附判定依據
-- [ ] 模式注入 system prompt 改變語氣與提醒強度；安全機制三模式一致
-- [ ] Demo 可切換模式：同一句「幫我全賣」三種回應肉眼可辨
+### 4.4 Profile Engine（profile-engine，#10）｜主責 A（徽章與切換 UI：C）— 🧪 已實作＋單元驗證，三模式對話實測未跑
+- [x] 從 health_report 確定性規則分類三模式（cautious/growth/pro）＋附判定依據
+- [x] 模式注入 system prompt；`/chat` 支援 mode 覆寫；安全機制三模式一致
+- [x] 前端模式徽章與 Demo 切換下拉
+- [ ] 同一句「幫我全賣」跑三模式、肉眼可辨（D16）——**沒跑過就不打勾**
 
-### 4.5 授權下單流（order-flow，#4）｜主責 D（單元驗證：A；Key 設定：全員）
-- [ ] 憑證 60 秒單次有效存 DynamoDB；過期/重放回 410 不重試
-- [ ] API Key 只開「讀取＋交易」不開「提領」（人工設定，Demo 前檢查）
-- [ ] 金鑰只從環境變數/Secrets Manager 讀（已實作，待驗證）
-- [ ] 最小額度真實成交一次 E2E
+### 4.5 授權下單流（order-flow，#4）｜主責 D（單元驗證：A；Key 設定：全員）— ✅ 真錢驗證完成
+- [x] 憑證 60 秒單次有效存 DynamoDB；過期/重放回 410 不重試
+- [x] 連按防護：1.7 秒內連按三次確認，只成交一次、其餘 410
+- [x] API Key 只開「讀取＋交易」不開「提領」；07/29 實測 `/api/v3/info` 回 `level: 2`
+- [x] 金鑰只從環境變數/Secrets Manager 讀
+- [x] **最小額度真實成交 E2E**：MAX 實際成交兩筆（`#20720919534`／`#20721028463`），
+      交易所 App 推播與帳戶餘額變動為證
+- [x] 沒有 MAX 金鑰的環境走示範帳戶，並以四道畫面標示避免誤認為真帳戶
+- [ ] D14 人工驗收：確認卡停 61 秒後**真的按下確認**看到 410（自動化測不了執行路徑）
 
-### 4.6 RAG 知識庫（#9）｜主責 B（工具註冊：A）— ✅ 07/23 關單驗收（B 包建置＋實測）
+> 這條路上修掉六個各自足以讓下單失敗的問題：簽章 2014／volume 讀錯 key／憑證沒寫進
+> DynamoDB／三方案金額低於交易所下限／貼齊門檻時被四捨五入／確認鈕連按。
+> **共同特徵：單元測試全綠，只有真的送一次單才會發現。**
+
+### 4.6 RAG 知識庫（#9）｜主責 B（工具註冊：A）— ✅ 建置完成，但**換環境必重建**
 - [x] 語料：防詐（公開資源）＋教材＋工作坊資料（僅競賽用、不進 git、放 S3）
-- [x] Bedrock KB + S3 Vectors 建置（DSIYBVI1IX 入 SAM 參數）；query_knowledge 回答附出處
-- [x] 「什麼是定期定額」「這是不是詐騙話術」能引用語料回答（護欄誤判修正 PR #20/#23 即實測證據）
+- [x] Bedrock KB + S3 Vectors 建置；`query_knowledge` 回答附出處
+- [x] 「什麼是定期定額」「這是不是詐騙話術」能引用語料回答（F3／F4；
+      護欄誤判修正 PR #20/#23 即實測證據）
+- [x] 一鍵重建腳本 `scripts/setup_rag_kb.py`（冪等；`--check` 先看現況）
 
-### 4.7 Audit Log（#12）｜主責 B（loop 埋點：A；面板：C）— 🧪 已實作＋單元驗證（07/21），DynamoDB 路徑與 Golden Path 驗收待部署
-- [ ] 每次工具呼叫留痕（摘要不含 PII）；訂單生命週期 draft→confirmed/expired→executed
-- [ ] GET /audit 可還原完整軌跡；前端「決策軌跡」面板；append-only
+> 🚨 **這裡踩過兩次，都是「安靜地壞掉」**（issue #34）：`infra/template.yaml` 只**引用**
+> `KnowledgeBaseId`，不會建立 KB。KB ID 是「帳號＋region」範圍的資源，**換帳號一定要重建**。
+> 沒重建時部署會「成功」、畫面正常、回答還算像樣，只是「附出處」這個賣點消失——
+> 不跑 F3 就發現不了。模板裡的預設值是舊 ID，`sam deploy` 一定要帶 `--parameter-overrides`。
+
+### 4.7 Audit Log（#12）｜主責 B（loop 埋點：A；面板：C）— ✅ 線上實測通過
+- [x] 每次工具呼叫留痕（摘要不含 PII）；訂單生命週期 draft→confirmed/expired→executed
+- [x] GET /audit 可還原完整軌跡；前端「決策軌跡」面板；append-only（C5／D15）
+- [x] 實測軌跡 13 列、含兩筆真實成交
+
+> ⚠ 軌跡存在**產生它的那套環境**的 DynamoDB。換環境查同一個 `session_id` 會回空陣列——
+> 不是壞掉，是那套環境沒跑過那段對話。要重現得在該環境重跑一次 Golden Path。
 
 ### 4.8 前端（#13）｜主責 C — 🧪 已實作＋smoke／瀏覽器走查通過（07/24，PR #26）
 - [x] 手機版 RWD：對話主畫面、健檢卡收合、確認卡放大（照 docs/mockups/ 三畫面實作）
@@ -323,10 +372,14 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 - 待資料：hero 已實現損益需 health_report 重跑補 realized_pnl（見 #27）
 
 ### 4.9 安全與法遵｜主責 D（Guardrails 掛載：A）（上台講法：「合規不是免責聲明，是系統設計」）
-- [ ] 不報明牌＝三層護欄（prompt＋正則＋Bedrock Guardrails #6，任一層可獨立擋住）
-- [ ] 不代操＝LLM 碰不到 execute_order＋逐筆確認
-- [ ] 不碰保管提領＝資產留在 MAX（已洗防登記）＋API 權限鎖死
-- [ ] 可問責＝Audit 全程留痕
+- [x] 不報明牌＝**目前兩層**護欄：SYSTEM prompt 規則＋程式層正則（`guardrails.py`），
+      各自可獨立擋住（F1／F2 線上實測）
+- [ ] 第三層 Bedrock Guardrails（#6）**刻意未啟用**：要正確運作需對 input／output
+      套用不同政策，賽程內來不及調校；誤攔的代價是整段回覆被換成安全罐頭語，
+      比原問題更糟。程式接點已就緒，設 `GUARDRAIL_ID` 即生效
+- [x] 不代操＝LLM 碰不到 execute_order（不在工具清單也不在 dispatch 表）＋逐筆確認
+- [x] 不碰保管提領＝資產留在 MAX（已洗防登記）＋API 權限只開讀取與交易
+- [x] 可問責＝Audit 全程留痕（六種事件）
 - 競賽 Demo 合規：本人帳戶/本人資金/最小額度 ✓｜官方資料僅競賽用不進 git ✓｜兌換碼僅本人 ✓
 - 金管會 AI 指引六原則逐條有對應（治理問責/以人為本/隱私/穩健/透明可解釋/永續）
 - 本節為工程自查非法律意見；虛擬資產專法立法中，商業化前過正式法遵
@@ -336,9 +389,11 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 > 費率無官方連結、成本是估算非實測等）。**上台前先讀那一節**——被問到時要答得出來。
 
 ### 4.10 部署與交付（#14、#8、#15）｜主責 D
-- [ ] 從零部署演練 <1 小時＋DEPLOY.md（含 Bedrock use case 開通步驟）
-- [ ] E2E Golden Path 全線通過；預錄影片 v1（7/30 前）＋決賽 final
-- [ ] 決賽交付：提案簡報／Live Demo 網址／錄影連結／GitHub／Lv2 證明／Kiro 證據截圖
+- [x] 從零部署演練＋DEPLOY.md（含 Bedrock use case 開通步驟）——**實測 46 分鐘**
+- [x] E2E Golden Path 全線通過（含真實成交）
+- [x] 官方環境重部署完成（Lambda 的 MAX 金鑰待補，issue #70）
+- [ ] Demo 錄影 final：08-02 前端改版後鏡 1–5／7／8 已重錄，四項待決（issue #75）
+- [ ] Kiro 證據截圖 F–J：需 Kiro IDE 介面存取，只能由人代截（issue #42）
 
 ---
 
@@ -346,14 +401,24 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 
 **已驗證的真實數據洞察**（`analysis/precompute.py` → `data/health_report.json`）：
 追高 65%（2,350 筆買入）｜殺低僅 34.1%（非恐慌型）｜年度機會成本 NT$26,598,877｜
-最痛單筆 1/8 DOGE 少賺 NT$312,924｜下跌後出金僅 14.2%｜最活躍 2025-05/08（各 416 筆）
+最痛單筆 1/8 DOGE 少賺 NT$312,924｜下跌後出金僅 14.2%｜已實現損益 +117,482（981 勝／493 負）
+
+> 這組數字合起來才是完整敘事：**帳面上其實賺了十一萬，真正虧的只有 963，
+> 少賺的卻有兩千六百萬。** 單獨拿任何一個出來講都會誤導。
 
 **已完成的資產**：
-- 程式骨架：Agent 迴圈/工具/護欄、Lambda×5（含 /audit）、MAX 整合（簽章待驗）、前端 SPA、SAM 模板
-- `.kiro/`：steering×3＋specs×6（chat-agent/profile/scenarios 含 Kiro 三件套）＋MCP 設定
+- 後端：Agent 迴圈／7 個 LLM 工具／兩層護欄、Lambda×5（含 `/audit`）、
+  MAX Public＋Private 整合（**真實成交兩筆為證**）、SAM 模板
+- 前端：零建置多頁 vanilla JS（首頁／問麥麥／洞察／設定／Onboarding 五屏／宿主 App 示意），
+  離線劇本、PWA
+- `.kiro/`：steering×5（product／tech／structure／workflow／data-schema）
+  ＋specs×8（每份都是 requirements／design／tasks 三件套）＋MCP 設定
+- 測試：後端 47 項（`scripts/test_backend.py`）＋Python 112 項（`tests/`）＋
+  12 組前端煙測，CI 於 PR 與推 main 時全跑
 - 設計：三張 Demo 畫面（HTML＋截圖）＋麥麥像素吉祥物三態
-- 簡報成品（`docs/`）：`MaiMate_提案簡報.pptx`（評審版 18 頁）＋`工作項目狀態.pptx`（18 頁，含 Kiro 教學）＋`設計與分工.pptx`（3 頁）
-- 團隊環境：repo＋Issues×15＋Slack＋Drive＋`scripts/setup.sh` 一鍵檢查
+- 簡報成品（`docs/`）：`MaiMate_提案簡報.pptx`（`node docs/build_deck.js` 重出）、
+  `MaiMate_開發手冊.pptx`（`node docs/build_handbook.js`）、`PITCH_DECK.html`、`PITCH_6MIN.md`
+- 團隊環境：repo＋Issues＋Slack＋Drive＋`scripts/setup.sh` 一鍵檢查
 
 ## 6. 快速開始與紅線
 
@@ -364,7 +429,7 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 ```bash
 bash scripts/setup.sh                 # 環境檢查（缺什麼它會說）
 python3 -m http.server 8791 --directory frontend   # 前端零建置，開 /welcome.html 即可玩
-npm i && npm test                     # 後端單元＋Python 64 項＋前端主煙測（全離線可跑）
+npm i && npm test                     # 後端 47 項＋Python 112 項＋前端煙測（全離線可跑）
 python3 analysis/precompute.py        # CSV → health_report.json（需官方 CSV）
 python3 analysis/strategy_compare.py  # MAX 公開日線 → strategy_report.json（免金鑰；--offline 用快取）
 cd infra && sam build && sam deploy --guided       # 部署見 docs/DEPLOY.md
