@@ -142,6 +142,19 @@ def trades(market, start_ms=None, max_pages=TRADES_MAX_PAGES, newest=False):
     return out
 
 
+def withdrawals(currency="twd", limit=1000):
+    """查提領紀錄（Read）。出金習慣那項要的就是這個——`cash_flow_behavior` 只看
+    TWD 提領，並用帳戶自己的 BTC 成交價當市場代理，判斷提領是不是集中在下跌之後。
+
+    只翻一頁：這項指標看的是比例不是總量，最近 1000 筆足夠，而且 API Gateway
+    只給 30 秒。抓不滿代表帳戶提領本來就少，不影響比例的意義。
+    """
+    params = {"limit": limit}
+    if currency:
+        params["currency"] = currency
+    return _signed_request("GET", "/api/v3/withdrawals", params)
+
+
 def resolve_volume(order):
     """把確認卡的 volume_twd 換算成 MAX 要的下單量（base currency）。
 

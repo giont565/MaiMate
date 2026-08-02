@@ -67,6 +67,31 @@ def rows_from_trades(raw, currency):
     return rows
 
 
+def rows_from_withdrawals(raw):
+    """提領紀錄 → precompute 要的形狀。`cash_flow_behavior` 只認
+    currency=="twd" 且 action=="withdrawal" 這兩個欄位，price 對 twd 列不會被用到。
+
+    只收**已完成**的提領：申請中或被取消的還不算行為（使用者可能自己撤回）。
+    """
+    rows = []
+    for w in raw or []:
+        state = str(w.get("state") or "").lower()
+        if state not in ("done", "confirmed", "completed", "ok"):
+            continue
+        try:
+            amount = float(w.get("amount") or 0)
+            ts = int(w.get("created_at") or 0)
+        except (TypeError, ValueError):
+            continue
+        if ts <= 0 or amount <= 0:
+            continue
+        if ts < 10_000_000_000:
+            ts *= 1000
+        rows.append({"ts": ts, "currency": "twd", "price": 0.0,
+                     "action": "withdrawal", "change": -amount})
+    return rows
+
+
 def collect_rows(only=None, max_pages=None, bounded=True):
     """把帳戶碰過的每個 TWD 市場的成交紀錄抓回來，合併後依時間排序。
 
@@ -103,6 +128,15 @@ def collect_rows(only=None, max_pages=None, bounded=True):
                 continue
             per_currency[cur] = len(got)
             rows.extend(got)
+    # 提領：與成交併成同一份 rows，cash_flow_behavior 才算得出「下跌後出金比例」。
+    # 失敗不影響其餘指標——那一項會回 None，畫面顯示資料不足。
+    withdrawal_rows = []
+    try:
+        withdrawal_rows = rows_from_withdrawals(max_private.withdrawals("twd"))
+    except Exception:  # noqa: BLE001
+        failed.append("TWD 提領紀錄")
+    rows.extend(withdrawal_rows)
+
     rows.sort(key=lambda r: r["ts"])
     return rows, per_currency, failed, prices
 
@@ -147,7 +181,8 @@ def build_report(only=None, max_pages=None, bounded=True):
         "機會成本的基準是「賣出價 vs 當下市價」＝賣掉之後到現在少賺多少，"
         "與示範資料集用的「年末價」不同，兩者不可直接比較。",
         "集中度與持倉分布不在本報告裡——那兩項用即時餘額算（GET /portfolio）。",
-        "出金習慣需要出入金紀錄，本報告未涵蓋。",
+        "出金習慣取最近 1000 筆 TWD 提領；市場漲跌以帳戶自己的 BTC 成交價為代理，"
+        "落在 BTC 成交紀錄涵蓋範圍外的提領不計入比例。",
     ]
     if failed:
         notes.append("這些市場查詢失敗、未計入：" + "、".join(failed))
@@ -169,6 +204,9 @@ def build_report(only=None, max_pages=None, bounded=True):
         # 不需要成本基準）。
         "realized_pnl": None if bounded else pre.realized_pnl(rows),
         "activity_profile": pre.activity_profile(rows),
+        # 出金習慣：比例型指標，只翻一頁提領也算得準；BTC 價格用帳戶自己的成交價當代理，
+        # 所以提領要落在 BTC 成交紀錄涵蓋得到的區間內才會被計入（函式自己會判斷）。
+        "cash_flow_behavior": pre.cash_flow_behavior(rows),
         "data_notes": notes,
     }
 
