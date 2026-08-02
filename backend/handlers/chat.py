@@ -15,6 +15,17 @@ _ACCOUNT_TOOLS = {"get_account_balance", "calculate_trade_scenarios", "prepare_o
 
 
 def handler(event, context):
+    """POST /chat；另外兼服務 GET /portfolio。
+
+    為什麼擠在同一支函式：MAX_API_KEY／SECRET 刻意不進版控，是部署後由人在 Lambda
+    主控台加上去的（DEPLOY.md §2）。另開一支 PortfolioFunction 就得再手動加一次金鑰，
+    漏了會安靜地拿不到餘額；ChatFunction 已經有金鑰了。分流放在最前面，不碰下面的對話流程。
+    """
+    route = (event.get("requestContext") or {}).get("http") or {}
+    if route.get("method") == "GET" and str(route.get("path") or "").rstrip("/").endswith("/portfolio"):
+        from . import portfolio
+        return portfolio.handler(event, context)
+
     body = json.loads(event.get("body") or "{}")
     messages = body.get("messages") or []
     if not messages:

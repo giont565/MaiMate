@@ -315,7 +315,13 @@
       kind: "personal",
       title: "你的資金目前放在哪裡？",
       question: "你的資金目前放在哪裡？",
-      source: ev("src_cash", "資料來源", "你的帳戶健檢報告（" + portfolio.asOfMonth + " 快照）", "持倉摘要", generatedAt()),
+      /* 兩種來源要講清楚是哪一種：真帳戶是「此刻餘額」，報告是「2025-12 快照」。
+         兩者可以完全相反（報告 98.6% 現金 vs 真帳戶 96.9% ETH），寫成同一句話
+         就是把兩個帳戶混成一個講。 */
+      source: portfolio.accountSource === "max_private"
+        ? ev("src_cash", "資料來源", "你的 MAX 帳戶即時餘額", "持倉",
+          String(portfolio.snapshotAsOf || "").replace("T", " ").slice(0, 16))
+        : ev("src_cash", "資料來源", "你的帳戶健檢報告（" + portfolio.asOfMonth + " 快照）", "持倉摘要", generatedAt()),
       hero: {
         conclusion: "你的資金主要停在" + topLabel + "，約占 " + topPct + "。",
         primaryMetric: {

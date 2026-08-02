@@ -560,6 +560,11 @@
     if (homeServices && typeof homeServices.ensureHealth === "function") {
       try { await homeServices.ensureHealth(); } catch (_) { /* 取不到就用示範資料 */ }
     }
+    /* 真實帳戶持倉。「你的資金放在哪裡」問的是此刻的餘額，不是 2025-12 的報告快照——
+       兩者可以完全相反。同樣要在渲染前 await：這頁不重畫，晚到的資料等於沒到。 */
+    if (homeServices && typeof homeServices.ensurePortfolio === "function") {
+      try { await homeServices.ensurePortfolio(); } catch (_) { /* 沒金鑰或連不上就用報告 */ }
+    }
     const envelope = navigation ? navigation.consumeContext("insight") : null;
     const restored = restoreView();
     if (restored) {

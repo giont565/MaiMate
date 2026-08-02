@@ -31,6 +31,12 @@ const mmHomeRuntime = {
   health: null,
   healthPromise: null,
   healthNotified: false,
+  /* GET /portfolio 的結果＝**真實 MAX 帳戶的即時持倉**（私人／錄影環境才有金鑰）。
+     與 health 是兩份不同的東西，不要混：health 是 2025 全年交易紀錄算出來的行為健檢，
+     portfolio 是此刻帳戶裡有什麼。「你的資金放在哪裡」問的是後者，先前卻拿前者回答，
+     於是真帳戶幾乎全是幣、畫面卻說 98.6% 在現金。 */
+  portfolio: null,
+  portfolioPromise: null,
 };
 const MM_HOME_SESSION_CACHE_KEY = "mm_home_cache";
 const MM_HOME_SAFE_EVENT_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$/;
@@ -212,9 +218,40 @@ const PortfolioAdapter = Object.freeze({
      * 這一層換掉，上面所有吃 PortfolioAdapter 的東西一起變真——首頁模組、
      * chat.html 的結構化回答（chat-service.js 的工具全部呼叫這些 Adapter）、
      * 歸因與集中度敘事。回傳形狀刻意與 demoPortfolio 相同，下游一行都不用改。 */
+    /* 真實帳戶優先。/portfolio 拿得到就用它——那才是「你的資金現在放在哪裡」的答案；
+       /health 的 holdings_snapshot 是 2025-12 的報告快照，兩者可以完全相反（實測：
+       報告說 98.6% 在現金，真帳戶其實 96.9% 在 ETH）。
+       權重用市值現算、不用後端四捨五入過的 pct：那個 pct 只到小數一位，幣種一多
+       加總就對不回 1，會撞上下面的 INVALID_PORTFOLIO_WEIGHTS 斷言。 */
+    const livePortfolio = mmHomeRuntime.portfolio;
+    const liveHoldings = livePortfolio && Array.isArray(livePortfolio.holdings)
+      ? livePortfolio.holdings.filter((h) => Number(h.value_twd) > 0)
+      : [];
+    const liveTotal = liveHoldings.reduce((sum, h) => sum + Number(h.value_twd), 0);
+
     const report = mmHomeLiveReport();
     const live = report ? window.MM_HEALTH_CORE.holdings(report) : null;
-    const source = live && live.ok
+    const source = liveTotal > 0
+      ? {
+        assets: liveHoldings.map((h) => {
+          const symbol = String(h.currency).toUpperCase();
+          return {
+            symbol,
+            label: symbol === "TWD" ? "現金（TWD）" : symbol,
+            isCash: symbol === "TWD",
+            weight: Number(h.value_twd) / liveTotal,
+          };
+        }),
+        breakdownAvailable: true,
+        asOfMonth: String(livePortfolio.as_of || "").slice(0, 7),
+        snapshotAsOf: livePortfolio.as_of,
+        snapshotMethod: livePortfolio.valuation_method || "MAX 即時報價",
+        // 即時餘額沒有「前期快照」可比，留白而不是自行推估
+        previousAsOfMonth: null,
+        previousTopWeight: null,
+        accountSource: livePortfolio.account_source || "max_private",
+      }
+      : live && live.ok
       ? {
         assets: live.assets,
         breakdownAvailable: live.breakdownAvailable,
@@ -262,6 +299,9 @@ const PortfolioAdapter = Object.freeze({
       asOfMonth: source && source.asOfMonth,
       snapshotAsOf: (source && source.snapshotAsOf) || null,
       snapshotMethod: (source && source.snapshotMethod) || null,
+      /* 這份持倉從哪來："max_private"＝真帳戶即時餘額；null＝2025-12 報告快照。
+         畫面的「資料來源」那行要照它講，不能兩種都寫成「你的帳戶健檢報告」。 */
+      accountSource: (source && source.accountSource) || null,
       /* 前期快照：Screen 8 的期間對照要用，報告沒有就是 null（不得由前端推估）。 */
       previousAsOfMonth: (source && source.previousAsOfMonth) || null,
       previousTopAssetRatio: Number.isFinite(Number(source && source.previousTopWeight))
@@ -1860,6 +1900,34 @@ async function mmHomeFetchHealth() {
  * 讓另外八個模組陪著等一趟網路往返是錯的——場地網路不穩時使用者會盯著骨架畫面。
  * 所以：先用示範資料把畫面畫出來，真資料回來了再走既有的背景更新路徑換上去
  * （和 getHome() 拿快取後回頭 refresh 的作法同一套）。 */
+/* GET /portfolio：真實帳戶的即時持倉。逾時與 no-store 的理由同 mmHomeFetchHealth，
+ * 不重複；取不到就回 null，由 PortfolioAdapter 退回 /health 的 holdings_snapshot。
+ * **絕不**把報告快照冒充成即時餘額——兩者可以差到「98.6% 現金」對「96.9% ETH」。 */
+async function mmHomeFetchPortfolio() {
+  if (!window.API_BASE) return null;
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), 2500);
+  try {
+    const data = await mmHomeFetchJson("/portfolio", { signal: abort.signal, cache: "no-store" });
+    const holdings = data && Array.isArray(data.holdings) ? data.holdings : null;
+    // 空持倉與「拿不到」要分開：空陣列代表帳戶真的沒有部位，畫面該說沒有，不是退回報告
+    return holdings ? data : null;
+  } catch (_) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function mmHomeStartPortfolioLoad() {
+  if (mmHomeRuntime.portfolioPromise) return mmHomeRuntime.portfolioPromise;
+  mmHomeRuntime.portfolioPromise = mmHomeFetchPortfolio().then((data) => {
+    mmHomeRuntime.portfolio = data;
+    return data;
+  });
+  return mmHomeRuntime.portfolioPromise;
+}
+
 function mmHomeStartHealthLoad() {
   if (mmHomeRuntime.healthPromise) return mmHomeRuntime.healthPromise;
   mmHomeRuntime.healthPromise = mmHomeFetchHealth().then((result) => {
@@ -1912,6 +1980,7 @@ const MockMaiMateHomeService = {
     if (mmHomeRuntime.failRequests) throw mmHomeError("HOME_LOAD_FAILED");
     const prepared = await mmHomeEvaluatePreparedAccess();
     mmHomeStartHealthLoad();   // 不 await：首次用示範資料先畫，真資料回來再背景換上
+    mmHomeStartPortfolioLoad();  // 同上；沒有 /portfolio 或沒金鑰就靜靜退回報告快照
     let response;
     try {
       response = prepared.access.status === "limited"
@@ -2057,6 +2126,10 @@ window.MM_HOME_SERVICES = Object.freeze({
    * 不經過 refreshHome，沒有人叫它就永遠是示範資料——而且畫面完全正常，看不出來。
    * 記憶化＋2.5 秒逾時都在 mmHomeStartHealthLoad 裡，重複呼叫只會打一次 API。 */
   ensureHealth() { return mmHomeStartHealthLoad(); },
+  /* 真實帳戶持倉。與 ensureHealth 同樣記憶化＋2.5 秒逾時；取不到回 null，
+     PortfolioAdapter 自動退回報告快照。Screen 8 渲染前要 await，否則第一次畫出來的
+     是報告數字，而且不會再重畫。 */
+  ensurePortfolio() { return mmHomeStartPortfolioLoad(); },
   /* 資料來源與時間，給畫面誠實標示用。 */
   healthProvenance() {
     const state = mmHomeRuntime.health;

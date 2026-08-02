@@ -80,6 +80,9 @@ Resources:
         - DynamoDBCrudPolicy: { TableName: !Ref SessionTable }
       Events:
         Post: { Type: HttpApi, Properties: { ApiId: !Ref Api, Path: /chat, Method: POST } }
+        # /portfolio 掛這支而不是另開函式：MAX 金鑰是部署後人工加的，新函式會拿不到。
+        # 只加 Events、不動 Environment，所以這次部署不會清掉已設的金鑰（CLAUDE.md 坑 #2）。
+        Portfolio: { Type: HttpApi, Properties: { ApiId: !Ref Api, Path: /portfolio, Method: GET } }
 
   HealthFunction:
     Type: AWS::Serverless::Function
