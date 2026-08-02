@@ -29,6 +29,17 @@ const AT = 0.55;
  * 中段是散開的零件——要等變形完成才看得懂，所以抽 92%。 */
 const AT_OVERRIDE = { 'brand/intro/intro-shot1-3.mp4': 0.92 };
 
+/* 這幾格改用使用者自己在 iPhone 上拍的實機截圖（docs/pitch_shots/real/），
+ * 比從影片抽幀清楚、而且是真的手機畫面。本腳本要跳過它們——
+ * 不跳過的話，任何人重跑一次就會把實機截圖蓋回抽幀版，而且不會有任何提示。 */
+const SKIP = new Set([
+  'demo/01_entry.webm',            // 第 6 頁　投資人不必再多裝一個 App
+  'brand/intro/intro-shot1-3.mp4', // 第 7 頁　它的臉，是兩個品牌長出來的
+  'demo/02_intro.webm',            // 第 8 頁　八秒鐘，先講清楚它是誰
+  'demo/03_consent.webm',          // 第 9 頁　在讀你的資料以前
+  'demo/04_welcome.webm',          // 第 10 頁 一分鐘的對答
+]);
+
 (async () => {
   const { chromium } = require('playwright');
   fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -43,6 +54,7 @@ const AT_OVERRIDE = { 'brand/intro/intro-shot1-3.mp4': 0.92 };
   const done = [];
 
   for (const { video } of uniq) {
+    if (SKIP.has(video)) { console.log(`   – ${video} 用實機截圖，跳過`); continue; }
     const name = path.basename(video).replace(/\.[^.]+$/, '');
     fs.writeFileSync(PROBE,
       `<body style="margin:0;background:#000"><video id=v src="${video}" muted></video>`);
