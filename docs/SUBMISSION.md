@@ -32,14 +32,9 @@ Amazon Bedrock：
 
 `https://github.com/giont565/MaiMate`
 
-⚠️ **目前是 PRIVATE，題目要求公開。** 已掃過 git 歷史：沒有 CSV、沒有語料、沒有明文金鑰，
-追蹤中的資料只有 `data/health_report.json`（聚合統計），可安全公開。
-
-```bash
-gh repo edit giont565/MaiMate --visibility public --accept-visibility-change-consequences
-```
-
-不可逆，由隊長自行執行。
+✅ **已公開**（2026-08-02 確認 `visibility: public`）。掃過 git 歷史：沒有 CSV、沒有語料、
+沒有明文金鑰；追蹤中的資料只有 `data/health_report.json`（聚合統計）。
+AWS 帳號 ID 與資源名稱已移出版控（`docs/_internal/`，未進 git）。
 
 ## Q6 Demo 影片連結
 
@@ -64,3 +59,23 @@ gh repo edit giont565/MaiMate --visibility public --accept-visibility-change-con
 ## Q9 MAX Lv.2 帳號 Email（加分項）
 
 `giont565@gmail.com`——`/api/v3/info` 實測回 `level: 2`。
+
+## Kiro 加分（+5）證據——**送出前要確認的三件事**
+
+證據本身已齊：F Specs 面板／G task 執行／H MCP 設定／I steering 生效／J credit 用量，
+2026-08-02 由 chaocongyang 拍齊並關掉 issue #42，存於 Drive。
+
+**但證據存在 ≠ 拿得到分**，送出前逐項確認：
+
+- [ ] **表單哪一題收 Kiro 證據？** 本文件記到 Q9（Lv2 Email）為止，Kiro 沒有對應欄位。
+      表單有第 10 題且**送出後不可修改**——先看清楚題目再填。
+- [ ] **Drive 權限**：目前只開給四位隊員。評審點開會是「要求存取」，等於沒交。
+      要改成「知道連結的人可檢視」，或改附在簡報 PDF 附錄。
+- [ ] **J 含完整 Gmail**，不可公開。要公開就先遮蔽或重拍一張只留 User ID 與日期的版本。
+
+repo 這一側不需要額外動作，評審可自行覆核：`.kiro/` 有 8 份 spec（每份 requirements／
+design／tasks 三件套）、5 份 steering、`settings/mcp.json`（金鑰走 `${env:...}` 佔位，
+未含任何實際憑證）。
+
+⚠️ **口頭別報 spec 份數**：F 是 08/02 10:30 拍的（7 個 spec、4 份 steering），
+之後 repo 各多一份。講「每個功能一份 spec、三件套齊全」才和證據一致。

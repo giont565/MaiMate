@@ -86,7 +86,7 @@ mockup HTML 在 `docs/mockups/`＝C 包前端起點，畫面中所有數字皆�
 - ✅ E2E Golden Path｜✅ 官方環境重部署（Lambda 金鑰待補，issue #70）
 - 🟡 #8 Demo 錄影：08-02 前端改版後主片鏡 1–5／7／8 已重錄，尚有四項待決（issue #75）
 - ⬜ #6 Guardrails 主控台建置（同 A 包最後一項）
-- ⬜ #15 Kiro 證據截圖 F–J：需要 Kiro IDE 介面存取，只能由人代截（issue #42）
+- ✅ #15 Kiro 證據截圖 F–J：08/02 由隊友以 Kiro IDE 拍齊，存受限 Drive（issue #42 已關）
 
 **全員共同**：#3 自己的 Lv2 KYC＋API Key、Kiro 設定、過程截圖存 Drive、每天合回 main。
 
@@ -271,6 +271,16 @@ ticker 的 `data` 為 MAX 原始回應；kline 的 `data` 已由程式正規化�
 depth 的 `data` 已正規化（asks 低→高、bids 高→低）並附確定性計算欄位：
 `best_ask`/`best_bid`/`spread_twd`/`spread_pct`——價差由程式算好，LLM 不得自行計算。
 
+### GET /behavior（用**使用者自己的**成交紀錄算行為健檢）
+`/health` 那份是命題方提供的示範帳戶；本端點改用 MAX Private 的真實成交紀錄重算
+`chase_index`／`opportunity_cost`／`activity_profile`（同一套算術，重用 `analysis/precompute.py`）。
+- 機會成本改以**當下市價**為基準（語意是「賣掉之後到現在少賺多少」），與 `/health` 的年末價基準不同，`data_notes` 會講明
+- 預設**有界**：每個市場只取最近一頁（1000 筆）；此模式**不出已實現損益**——
+  移動平均成本法要從第一筆買入算起，截斷歷史會產出看起來具體、實則無意義的數字
+- 沒有 MAX 金鑰的環境回 **409**（`no_account_keys`）並指向 `/health`，
+  **不拿示範資料冒充真帳戶**；取不到紀錄回 503
+- 診斷參數：`?markets=eth,btc`、`?pages=N`、`?full=1`（僅賽後驗證用）
+
 ### POST /order
 Request：`{ "confirm_token","session_id" }`。成功：`{ "ok":true,"order","exchange_response" }`；
 失敗 HTTP 410：`{ "ok":false,"code":"token_expired","message","retryable":false }`
@@ -372,9 +382,9 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 - 待資料：hero 已實現損益需 health_report 重跑補 realized_pnl（見 #27）
 
 ### 4.9 安全與法遵｜主責 D（Guardrails 掛載：A）（上台講法：「合規不是免責聲明，是系統設計」）
-- [x] 不報明牌＝**目前兩層**護欄：SYSTEM prompt 規則＋程式層正則（`guardrails.py`），
-      各自可獨立擋住（F1／F2 線上實測）
-- [ ] 第三層 Bedrock Guardrails（#6）**刻意未啟用**：要正確運作需對 input／output
+- [x] 不報明牌＝**四層攔截**（任一層可獨立擋住，逐層位置見 COMPLIANCE §2）：
+      ①系統提示詞 ②後端正則 ③後端執行點命中即整段換掉 ④前端字典；F1／F2 線上實測
+- [ ] 第五層 Bedrock Guardrails（#6）**刻意未啟用**：要正確運作需對 input／output
       套用不同政策，賽程內來不及調校；誤攔的代價是整段回覆被換成安全罐頭語，
       比原問題更糟。程式接點已就緒，設 `GUARDRAIL_ID` 即生效
 - [x] 不代操＝LLM 碰不到 execute_order（不在工具清單也不在 dispatch 表）＋逐筆確認
@@ -393,7 +403,11 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 - [x] E2E Golden Path 全線通過（含真實成交）
 - [x] 官方環境重部署完成（Lambda 的 MAX 金鑰待補，issue #70）
 - [ ] Demo 錄影 final：08-02 前端改版後鏡 1–5／7／8 已重錄，四項待決（issue #75）
-- [ ] Kiro 證據截圖 F–J：需 Kiro IDE 介面存取，只能由人代截（issue #42）
+- [x] Kiro 證據截圖 F–J：08/02 拍齊（Specs 面板／task 執行／MCP／steering 生效／credit 用量），
+      存受限 Drive（#42 已關）
+- ⚠ 那組截圖拍的是當下的 repo：F 顯示 7 個 spec、I 顯示 4 份 steering。之後補的
+      `entry-strategies` spec 與 `steering/structure.md` 不在畫面裡——**對外不要報份數**，
+      報結構（每個功能一份 spec、三件套齊全）才不會跟證據對不起來
 
 ---
 

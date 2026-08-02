@@ -11,8 +11,8 @@ analysis/       離線分析（無外部依賴，本機跑，產出進 data/）
 backend/
   agent/        Agent 核心：loop（Converse 迴圈）／tools（工具定義與 dispatch）／
                 guardrails（PII＋明牌攔截）／scenarios／profile／holdings／audit／demo_account
-  handlers/     五支 Lambda 入口，各自單一職責：chat／health／market／order／audit
-                （portfolio.py 由 health 路徑共用）
+  handlers/     Lambda 入口，各自單一職責：chat／health／market／order／audit
+                ＋ portfolio、behavior（要 MAX 金鑰，路由掛在 ChatFunction 上）
   integrations/ 對外 API：max_public（免金鑰行情）／max_private（簽章、下單）／thirdparty
 data/           預計算產物（JSON，可進 git）；原始 CSV 與語料不進 git
 frontend/       零建置多頁 vanilla JS；mocks/ 是離線劇本
