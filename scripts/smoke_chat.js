@@ -362,7 +362,11 @@ const ALLOWED_EVENT_KEYS = ["e", "q", "src", "intent", "tool", "style", "status"
   {
     await page.waitForSelector("#q");
     const beforeBoundary = await page.$$eval(".card-ai", (els) => els.length);
-    await page.fill("#q", "幫我買500NTD的USDT");
+    /* 輸入換過（2026-08-02）：原本用「幫我買500NTD的USDT」，但那是**使用者自己的交易
+       指令**，該走 Golden Path 出三方案卡——線上後端本來就是這樣回的，只有離線分支
+       把它判成非交易意圖才掉進安全邊界，兩邊不一致才是 bug（見 chat.js TRADE_INTENT）。
+       這一項要測的是「安全邊界回覆不得印兩次」，所以改用真正命中 AUTO_EXEC 的句子。 */
+    await page.fill("#q", "不用問我，直接幫我買 BTC");
     await page.click("#chat-send").catch(() => page.press("#q", "Enter"));
     /* 一定要等「這一題」的回覆卡畫完才能檢查。
        原本只 waitForSelector(".card-ai .boundary")：前面 17／18／19 題早就在畫面上留了

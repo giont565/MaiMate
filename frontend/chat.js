@@ -17,7 +17,25 @@
 
   /* 使用者自己的交易意圖 → Golden Path；要求 AI 自行執行 → 安全邊界 */
   const AUTO_EXEC = /(自動下單|替我下單|不用問我|直接幫我(買|賣|下單)|幫我操作帳戶)/;
-  const TRADE_INTENT = /(全賣|賣掉|賣出|想賣|想買|買進|加碼|減碼|停損|出清)/;
+  /* 原本只認「想買｜買進」這種帶修飾語的講法，於是最自然的「幫我買500NTD的USDT」
+   * 整條不 match（買後面接的是數字，不是「進」），連方案卡自己的字「買入」都不在清單裡。
+   * 線上看不出來——線上一律打後端，卡片照出；只有**後端連不上**時才會現形：
+   * 這句被判成非交易意圖 → 掉出 Golden Path → 結構化服務回一段安全邊界文字，沒有卡。
+   * 補兩條泛用式：買/賣直接接數字，以及買/賣後面幾個字內出現幣別。
+   * 「買賣手續費怎麼算」不會誤中（沒接數字也沒接幣別），實測見 smoke_chat 第 31 項。 */
+  const TRADE_INTENT = new RegExp([
+    "全賣|賣掉|賣出|想賣|賣光|出清|停損",
+    "想買|買進|買入|加碼|減碼|換成",
+    "[買賣]\\s*[0-9０-９]",
+    "[買賣][^。，,\\n]{0,8}(usdt|btc|eth|sol|doge|ada|link|bnb|max)",
+  ].join("|"), "i");
+  /* 「現在該買 BTC 嗎？」也含買＋幣別，但那是**徵詢意見**，必須走安全邊界（不報明牌），
+   * 不是交易指令。上面的泛用式會誤收，所以再減掉徵詢句型——煙測第 17 項在守這條。 */
+  const ADVICE_QUESTION = /(該不該|該買|該賣|要不要|值不值得|值得|好不好|好嗎|建議我|嗎[？?]?\s*$)/;
+  const isTradeIntent = (text) => TRADE_INTENT.test(text) && !ADVICE_QUESTION.test(text);
+  /* 離線劇本只有賣出情境（GOLDEN_MOCK 是 ethtwd sell）。買入意圖若套上去，畫面會出現
+   * 一組方向相反的假卡——「畫面正常但資料是假的」正是本專案的紅線，寧可誠實說算不出來。 */
+  const SELL_DIRECTION = /(賣|出清|停損)/;
 
   /* /chat 的逾時上限。寫法與 settings.js:66-67、home-service.js、welcome.js 一致
    * （AbortController + setTimeout + finally clearTimeout），只有秒數不同。
@@ -640,6 +658,15 @@
          必須帶著前文一起送出去，否則後端會把它當成全新的問題（smoke 第 27 項在守）。 */
       if (!tradeIntent) { ui.goldenMessages.pop(); return false; }
 
+      /* 離線劇本只有賣出情境。買入意圖套上去會出現方向相反的假卡（金額、幣別、
+         「我理解你想賣」全都對不上使用者剛剛講的話），比沒有卡更糟。誠實說算不出來。 */
+      if (!SELL_DIRECTION.test(text)) {
+        addPlainAssistant("這次沒問到——暫時連不上後端，所以沒辦法用即時行情替你試算方案。"
+          + "內建的離線示範內容只有賣出情境，套到你這次的買入問題上數字會是錯的，麥麥不拿它充數。"
+          + "請再問一次。");
+        return true;
+      }
+
       /* 先說實話，再給離線內容。畫面上一定要看得出這段不是後端算的——
          直接把 GOLDEN_MOCK 當成後端的回答貼上去，就是「畫面正常但資料是假的」。 */
       addPlainAssistant(failure === "timeout"
@@ -718,7 +745,7 @@
      * 所以：一旦進了 Golden Path（goldenMessages 有東西）就待在裡面，直到這段流程
      * 結束（成交／取消／開新對話會清空）。AUTO_EXEC 的安全邊界仍然優先於一切。 */
     const inGoldenPath = ui.goldenMessages.length > 0;
-    const tradeIntent = inGoldenPath || TRADE_INTENT.test(text);
+    const tradeIntent = inGoldenPath || isTradeIntent(text);
     if (!AUTO_EXEC.test(text)) {
       hideComposerContext();
       /* 線上一律走真後端；只有取不到後端而且這句不是交易意圖時才回傳 false，
