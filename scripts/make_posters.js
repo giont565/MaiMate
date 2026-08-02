@@ -24,6 +24,11 @@ const PROBE = path.join(DOCS, '_probe.html');   // 必須放在 docs/ 底下才�
 
 const AT = 0.55;
 
+/* 少數影片 55% 剛好落在轉場中間，抽出來是一團看不懂的東西。
+ * intro-shot1-3 全長只有 4 秒、整支都在做兩個 logo 變形合體，
+ * 中段是散開的零件——要等變形完成才看得懂，所以抽 92%。 */
+const AT_OVERRIDE = { 'brand/intro/intro-shot1-3.mp4': 0.92 };
+
 (async () => {
   const { chromium } = require('playwright');
   fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -56,7 +61,7 @@ const AT = 0.55;
       await new Promise(r => { v.onseeked = () => r(); v.currentTime = v.duration * at; });
       await new Promise(r => setTimeout(r, 250));
       return { w: v.videoWidth, h: v.videoHeight, t: +(v.currentTime).toFixed(2) };
-    }, AT);
+    }, AT_OVERRIDE[video] ?? AT);
 
     if (!ok) { console.log(`   ✗ ${video} 抽不到幀，維持原本的 poster`); continue; }
 
