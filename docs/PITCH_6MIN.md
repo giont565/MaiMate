@@ -49,9 +49,13 @@
 > **第 6–15 頁是同一套版型**：左 42% 情境標題／使用者價值／**三個證據點**／評分標籤，
 > 右 58% 畫面。**左邊那三條就算評審沒在看影片也讀得到**——這是最重要的保險。
 >
-> 第 4–8 頁右側是**真的螢幕錄影**（`docs/demo/*.webm`，Playwright 錄的，各 9–20 秒，自動循環）。
-> 第 9–12 頁還是實機截圖；錄好存成 `06_chat_tools` `07_chat_context` `08_chat_scenarios`
-> `09_chat_execute`（`.webm`）就會自動接管，**不用改任何程式**。
+> 右側**全部都是真的螢幕錄影**（Playwright 錄的，各 9–32 秒，自動循環）：
+> 第 6–11 頁走入口動線（`demo/01_entry` → `05_health`），第 12–15 頁是 Golden Path
+> （`demo/02_tools` `03_context` `04_scenarios` `05_execute`，780×1688），第 17 頁循環播 `02_intro`。
+>
+> ⚠ 換素材要改 `PITCH_DECK.html` 裡那一格的 `data-video`，**不是**丟檔進 `docs/demo/` 就會自動接管。
+> 舊版這裡寫「存成 `06_chat_*.webm` 就會自動接管、不用改程式」是錯的——那組檔名沒有任何地方引用，
+> 照做只會多出四支沒人播的孤兒檔（已於本次清掉）。改完用 `node scripts/verify_deck_videos.js` 驗。
 
 ```bash
 node scripts/record_demo.js      # 重錄前端各頁

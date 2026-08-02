@@ -20,6 +20,7 @@
     "smoke:regressions": "node --check frontend/settings.js && node --check frontend/welcome.js && node scripts/smoke_regressions.js",
     "smoke:hostapp": "node scripts/smoke_hostapp.js",
     "verify:ui": "node scripts/verify_live_ui.js",
+    "verify:deck": "node scripts/verify_deck_videos.js",
     "pitch": "node docs/build_pitch.js",
     "handbook": "node docs/build_handbook.js"
   },
