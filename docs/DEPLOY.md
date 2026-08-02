@@ -59,7 +59,7 @@ aws lambda get-function-configuration --function-name <ChatFunction> --region <r
 
 🚨 `infra/template.yaml` 只**引用** `KnowledgeBaseId`，不會建立 Bedrock KB、S3 Vectors
 與語料 bucket。**KB 不存在時部署仍會顯示成功，RAG 靜默失效**——畫面不壞、回答還算像樣，
-只是「附出處」這個賣點安靜消失，F3 失敗。已踩過兩次（#34：KB 在隊員帳號 022289351970；
+只是「附出處」這個賣點安靜消失，F3 失敗。已踩過兩次（#34：KB 其實在另一個隊員的帳號；
 07/31：隊長帳號砍掉重建後同樣沒有）。KB ID 是帳號＋region 範圍資源，**別的帳號的 ID 不能沿用**。
 
 ```bash
@@ -70,12 +70,16 @@ python3 scripts/setup_rag_kb.py --corpus <repo外的語料檔路徑>   # 沒有�
 腳本冪等（可重跑）、會印出新的 KB ID 與對應的 `sam deploy` 指令，並拒絕 repo 內的語料路徑（鐵則 1）。
 完整說明看腳本開頭的 docstring。**語料 `chunks.jsonl` 只在 Drive／S3，不進 git**。
 
-| | 隊長帳號 525237381533 / us-east-1 | **官方環境 234472092814 / us-west-2** |
+| | 隊長帳號 / us-east-1 | **官方環境 / us-west-2** |
 |---|---|---|
-| Knowledge Base | `PDEGDAUUH9` | **`ZGBLEOY7CR`** |
-| 語料 bucket | `maimate-rag-corpus-525237381533` | `maimate-rag-corpus-234472092814` |
+| Knowledge Base | 見 `scripts/deploy.sh` 的環境對照表 | 同左 |
+| 語料 bucket | `maimate-rag-corpus-<帳號 ID>` | `maimate-rag-corpus-<帳號 ID>` |
 | 語料 | 13 篇（隊長 4 篇 md ＋隊友 chunks.jsonl 9 段） | **9 段**（`chunks.jsonl`，08-01 灌入，檢索煙測過） |
 | F3 附出處 | 通過 | 通過 |
+
+> **repo 是公開的**：帳號 ID 與資源名稱不寫進版控，實際值在
+> `docs/_internal/ENVIRONMENTS.md`（已 gitignore，另存 Drive）。
+> 帳號 ID 用 `aws sts get-caller-identity --query Account --output text` 現查即可。
 
 兩邊都是 `maimate-rag-kb`／Titan Embed V2 1024 維／`maimate-rag-vectors`＋`maimate-kb-index`
 （FLOAT32 cosine）／IAM role `MaiMateRagKbRole`。語料檔在 Drive「黑客松／MaiMate_RAG_語料」，
@@ -108,8 +112,11 @@ python3 scripts/setup_rag_kb.py --corpus <repo外的語料檔路徑>   # 沒有�
       `GUARDRAIL=`（私人帳號已有 READY 的 `MaiMateRedLine`；比賽帳號沒建，`off` 是唯一正確值）。
       腳本每次部署都會把本次採用的值印出來，讓「不掛護欄」變成看得見的決定。
 
-> **不用手動設的**（模板已自動帶入，PR #21 之後）：`KB_ID`（參數 `KnowledgeBaseId`，
-> 預設 `DSIYBVI1IX`，RAG 部署完即通）、`BEDROCK_REGION`（跟隨部署 region）、`TABLE_NAME`。
+> **不用手動設的**（模板已自動帶入，PR #21 之後）：`KB_ID`（參數 `KnowledgeBaseId`）、
+> `BEDROCK_REGION`（跟隨部署 region）、`TABLE_NAME`。
+> ⚠ `KnowledgeBaseId` 的**模板預設值是早期那顆已不存在的 KB**——它在別的隊員帳號裡，
+> 誰都不該沿用。每次 `sam deploy` 都要明寫 `--parameter-overrides KnowledgeBaseId=<本帳號的 KB>`，
+> 漏寫就會靜默洗成預設值、RAG 無聲失效。
 
 ## 3. 前端部署｜預估 10 分
 
@@ -159,7 +166,7 @@ curl "<ApiUrl>/market?market=btctwd&kind=ticker"        # 應回 MAX 行情
 | 某一頁全走離線 mock（其他頁正常） | 那頁的 API_BASE 忘了改——回 §3 跑 `sort -u` 驗證 |
 | RAG 問答退化成一般回答 | `KB_ID` 被 CLI `--environment` 洗掉了（見 §2 警告） |
 | /chat 500 | Bedrock model access 未開通／region 不符 → 開通或設 BEDROCK_REGION |
-| /chat 只有「為什麼／分析／歸因」類問題 500 | 那類問題會路由到 Sonnet（`loop.py` `pick_model`）。推論設定檔 ID **必須帶日期**：`us.anthropic.claude-sonnet-4-5-20250929-v1:0`。短別名 `...-sonnet-4-5-v1:0` 兩個 region 都是 ValidationException。08-01 決賽當天才抓到，因為 `verify_live.py` 22 項沒有一句會觸發深度意圖 |
+| /chat 只有「為什麼／分析／歸因」類問題 500 | 那類問題會路由到 Sonnet（`loop.py` `pick_model`）。推論設定檔 ID **必須帶日期**：`us.anthropic.claude-sonnet-4-5-20250929-v1:0`。短別名 `...-sonnet-4-5-v1:0` 兩個 region 都是 ValidationException。08-01 決賽當天才抓到，因為 `verify_live.py` 沒有一項會觸發深度意圖 |
 | 換 region 後不確定模型 ID | `aws bedrock list-inference-profiles --region <region>` 查 ACTIVE 的完整 ID，別用記憶中的別名 |
 | /chat ValidationException | ENABLE_PROMPT_CACHE 先關掉再查 |
 | /order 一直 410 | 憑證 60 秒過期＝正常；重新對話產生新確認卡 |

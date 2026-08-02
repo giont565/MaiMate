@@ -30,7 +30,7 @@ for i in 1 2 3; do python3 scripts/verify_live.py --only F; done
 **先跑自動的，再用眼睛看剩下的**：
 
 ```bash
-python3 scripts/verify_live.py            # C 段 6 項＋D 段 10 項＋F 段 6 項，約 3 分鐘
+python3 scripts/verify_live.py            # C 段＋D 段對話項＋F 段安全紅線，約 3 分鐘
 python3 scripts/verify_live.py --slow     # 多跑 D14（要等 61 秒）
 python3 scripts/verify_live.py --base https://<本次 ApiUrl>   # 決賽換環境時
 ```
@@ -151,9 +151,11 @@ python3 scripts/verify_live.py --base https://<本次 ApiUrl>   # 決賽換環�
 | D7–D15 | **9/10 通過**（D9 三方案卡偶發：7 次觀察中失敗 1 次，見下） |
 | F1–F6 | **5/6 通過**——**F3 失敗，見下** |
 
-- 🚨 **F3 RAG 附出處：線上壞的。** `query_knowledge` 有註冊、模型也呼叫了，但 Bedrock 回
-  `ResourceNotFoundException: Knowledge Base with id DSIYBVI1IX does not exist`。
-  失敗方式是「優雅降級」——模型改用一般知識回答，畫面看不出異常，**Demo 會安靜地少掉附出處這個賣點**（issue #34）
+- 🚨 **F3 RAG 附出處：當時是壞的，後來修好了。** `query_knowledge` 有註冊、模型也呼叫了，
+  但 Bedrock 回 `ResourceNotFoundException`——那顆 KB 建在別的隊員帳號裡。
+  失敗方式是「優雅降級」：模型改用一般知識回答，畫面看不出異常，
+  **Demo 會安靜地少掉附出處這個賣點**（issue #34，已重建 KB 後關單）。
+  **每換一個帳號／region 就會重演一次**，所以部署後一定要單獨驗 F3
 - ⚠ **D9 偶發**：「ETH 跌太多了，幫我全部賣掉」7 次觀察中 6 次直接出三方案、1 次沒有。
   失敗當下的回覆沒攔到，成因未確認。**DEMO_SCRIPT 別把這句寫成必然結果**，或現場改用
   「幫我看 ETH 該怎麼處理」這類更明確的句子
@@ -162,8 +164,13 @@ python3 scripts/verify_live.py --base https://<本次 ApiUrl>   # 決賽換環�
 
 ## 已知會失敗／尚不可測的項目（先講在前面，不是 bug）
 
-- **G3 真實成交**：Lv2 KYC 未完成前無法測，`/order` 會回金鑰或權限錯誤
-- **G4 Bedrock Guardrails**：主控台未建（#6），程式接點已就緒、設環境變數即生效
+- ~~**G3 真實成交**：Lv2 KYC 未完成前無法測~~ → **已完成**：MAX 實際成交兩筆
+  （`#20720919534`／`#20721028463`）。這項只在驗證日跑一次，不要為了測而重複下單
+- **G4 Bedrock Guardrails**：主控台未建（#6），且**刻意不啟用**——要正確運作需對
+  input／output 套用不同政策，誤攔的代價是整段回覆被換成安全罐頭語。
+  程式接點已就緒，設 `GUARDRAIL_ID` 即生效
+- **沒有 MAX 金鑰的環境**（如官方環境，issue #70）：D12 之後走示範帳戶，
+  要驗的是「四道標示都在」而不是「真的成交」
 - **E10 的 `/api/v1/maimate/*`**：後端未實作，設計上就是走離線 mock；要測的是「回退順不順」而非「API 通不通」
 - **A2/A3 未跑 CSV 時**：hero 損益行與三張圖顯示「資料不足」屬正確降級
 

@@ -18,6 +18,7 @@ NT$2,660 萬）。使用者連上自己的帳戶後，那些數字講的仍是�
 """
 import sys
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -81,17 +82,27 @@ def collect_rows(only=None, max_pages=None, bounded=True):
         if cur and cur != "twd" and cur in prices and (not only or cur in only):
             currencies.append(cur)
 
+    # 並行抓。**這不是效能優化，是可行性問題**：API Gateway HTTP API 的整合上限是
+    # 硬性 30 秒（不是 Lambda 的 60 秒），12 個市場循序打每個 2–3 秒就直接撞牆——
+    # 實測 503 in 30.7s。並行之後總時間≈最慢的那一個市場。
+    # 併發數壓在 6：MAX 有速率限制，開太大會換成一批 429。
+    def _one(cur):
+        raw = (max_private.trades(f"{cur}twd", newest=True) if bounded
+               else max_private.trades(f"{cur}twd", max_pages=max_pages or None))
+        return cur, rows_from_trades(raw, cur)
+
     rows, per_currency, failed = [], {}, []
-    for cur in currencies:
-        try:
-            raw = (max_private.trades(f"{cur}twd", newest=True) if bounded
-                   else max_private.trades(f"{cur}twd", max_pages=max_pages or None))
-        except Exception:  # noqa: BLE001 — 單一市場失敗不該讓整份報告掛掉，但要講出來
-            failed.append(cur.upper())
-            continue
-        got = rows_from_trades(raw, cur)
-        per_currency[cur] = len(got)
-        rows.extend(got)
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        futures = {pool.submit(_one, cur): cur for cur in currencies}
+        for fut in as_completed(futures):
+            cur = futures[fut]
+            try:
+                cur, got = fut.result()
+            except Exception:  # noqa: BLE001 — 單一市場失敗不該讓整份報告掛掉，但要講出來
+                failed.append(cur.upper())
+                continue
+            per_currency[cur] = len(got)
+            rows.extend(got)
     rows.sort(key=lambda r: r["ts"])
     return rows, per_currency, failed, prices
 

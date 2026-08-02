@@ -35,18 +35,19 @@ cd docs/mockups && node shot.js      # 重截三張 Demo 畫面（Playwright 390
 cd docs/brand && python3 render_pixel_bot.py   # 重出麥麥像素吉祥物
 ```
 
-簡報改版流程：改 build_*.js → node 重跑 → `python3 /root/.claude/skills/pptx/scripts/office/validate.py <檔>`
-（本環境 LibreOffice 渲染壞的，視覺 QA 只能靠使用者本機開）。pptx 建完記得刪 node_modules 再 commit。
+簡報改版流程：改 `build_*.js` → node 重跑 → 用 pptx 技能的 `office/validate.py` 驗檔
+（路徑隨環境不同，先確認存在再用；本機沒有就跳過驗檔，改用開檔目視）。
+**視覺 QA 只能靠使用者本機開**。pptx 建完記得刪 node_modules 再 commit。
 
-## 團隊與分工現況（2026-07-28 更新）
+## 團隊與分工現況（2026-08-02 更新）
 
-- **B 包：chaocongyang-oss**（#2/#9 關單；kline/depth 正規化、RAG KB=DSIYBVI1IX、護欄誤判修正兩輪）
-- **C 包：haoting777**（#26 hero 卡＋#28 Onboarding 五屏已 merge；**PR #32 open**＝Screen 6–8＋
-  全站改用真實帳戶，11k 行 42 檔，隊長尚未決定是否在 code freeze 前納入）
-- **A 包核心＋部署除錯：Claude**（四引擎、新前端、離線劇本、CI、驗收清單、deploy-drill spec）
-- Issues 15 張 open；PR #19/#25/#26/#28/#30/#31 皆已 merge，**PR #32/#33 open**
+- **B 包：chaocongyang-oss**（#2/#9 關單；kline/depth 正規化、RAG KB 建置、護欄誤判修正兩輪）
+- **C 包：haoting777**（#26 hero 卡、#28 Onboarding 五屏、Screen 6–8、Demo 素材重錄）
+- **A 包核心＋部署除錯：隊長以 Kiro／Claude Code 協作**（四引擎、新前端、離線劇本、CI、
+  驗收清單、deploy-drill spec）
+- 開著的 issue 與 PR 直接看 GitHub（`gh issue list` / `gh pr list`），不在這裡抄一份會過期的
 - 真實數據已驗證：追高 65%、機會成本 NT$26,598,877、最痛少賺 DOGE NT$312,924；
-  **07/28 新增**：已實現損益 **+117,482**（981勝/493負）、最痛真實虧損僅 **963**（2025-10-01 USDT）
+  已實現損益 **+117,482**（981勝/493負）、最痛真實虧損僅 **963**（2025-10-01 USDT）
   —— 「你以為在虧錢，其實賺了十一萬；真正虧的只有 963，少賺卻有兩千六百萬」是最強敘事
 
 ## 線上環境
@@ -99,15 +100,16 @@ RAG 重建用 `scripts/setup_rag_kb.py`——KB 是「帳號＋region」範圍�
       注意這次**有**走 `guardrails.py`，與上面第 2 點的決定相反——差別在 pattern 強制帶「你／您」，
       只攔祈使句、放行中性比較與教育敘述，`tests/test_guardrails.py::EntryMethodAdviceTests`
       有一半的案例就在守「不誤攔」。誤攔的代價仍然是整段被換成 `SAFE_FALLBACK`，改 pattern 前先看那些測試。
-- [ ] **#8 Demo 錄影**（最重要，環境目前是好的；提詞卡 `docs/DEMO_SCRIPT.md` 已對線上實況改寫）
+- [ ] **#8 Demo 錄影收尾**：08-02 前端改版後鏡 1–5／7／8 已重錄（分支 `docs/demo-footage-20260802`），
+      尚有四項待決，見 issue #75；提詞卡 `docs/DEMO_SCRIPT.md` 已對線上實況改寫
 - [ ] 場地網路每 5 次連線掉 1 次（實測 API Gateway、CloudFront、github 都一樣，`ping` 不掉但
       TLS 被 reset）。**`verify_live.py` 紅字要先懷疑網路**：失敗率與該項要打幾次 API 成正比，
       多步驟的 D9/D12/D13/D15 最常紅。判斷方式是直接單獨探測那條路徑
 - [ ] TEST_CHECKLIST D14（憑證 61 秒過期）、D16（語氣切換）、E5–E10
 - [ ] 簡報「RAG 附出處尚未穩定」那條已不成立，可改寫（`docs/build_pitch.js` 誠實頁）
 - [ ] #6 Guardrail 要正確啟用需對 input／output 套用不同政策——賽後做
-- [ ] 根目錄有一批沒人引用的重複檔（`test_backend.py`／`navigation-context.js`／
-      `bedrock_client.py`／`profile_engine.py`／`strategy_calculator.py`），賽後清掉
+- [x] 根目錄那批沒人引用的重複檔已清掉（`test_backend.py`／`navigation-context.js`／
+      `bedrock_client.py`／`profile_engine.py`／`strategy_calculator.py`）
 
 ### 踩過的坑（會再犯，先讀）
 
