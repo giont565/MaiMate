@@ -190,13 +190,31 @@
     const section = moduleCard(module, "today-card");
     section.id = "today-relevant-card";
     section.append(create("div", "module-eyebrow", payload.title || "今天，什麼和你有關？"));
-    const headline = create("h2", "", payload.headline || "今天的個人化摘要暫時沒有整理完成。");
-    headline.id = "today-relevant-headline";
-    section.append(headline);
+    /* 三種版面各有講法時，三句全部進 DOM，用 body[data-home-style] 挑一句顯示。
+       不在切換時重畫的理由：徽章只改 body 的 dataset，整個模組堆是渲染一次就不動的，
+       要在那裡插一次重新渲染，會連帶動到捲動位置與展開狀態。CSS 切換即時且無副作用。
+       只有一種講法（AI 結構化輸出那條路）時維持原本的單一節點。 */
+    const styled = (tag, cls, id, byStyle, fallback) => {
+      if (!byStyle) {
+        const node = create(tag, cls, fallback || "");
+        node.id = id;
+        section.append(node);
+        return;
+      }
+      ["guided", "concise", "analytical"].forEach((style) => {
+        const node = create(tag, cls, byStyle[style] || fallback || "");
+        node.dataset.styleVariant = style;
+        /* id 給第一個就好——smoke 與 chat 的 context 都靠 id 取這段文字，
+           三個節點同 id 會讓 getElementById 只拿到第一個，行為不可預期。 */
+        if (style === "guided") node.id = id;
+        section.append(node);
+      });
+    };
 
-    const explanation = create("p", "today-explanation", payload.explanation || "");
-    explanation.id = "today-relevant-explanation";
-    section.append(explanation);
+    styled("h2", "", "today-relevant-headline", payload.headlineByStyle,
+      payload.headline || "今天的個人化摘要暫時沒有整理完成。");
+    styled("p", "today-explanation", "today-relevant-explanation", payload.explanationByStyle,
+      payload.explanation || "");
 
     const meta = create("div", "today-meta");
     if (payload.generatedBy === "fallbackTemplate") meta.append(create("span", "", "依規則模板整理"));

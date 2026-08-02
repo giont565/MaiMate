@@ -98,6 +98,18 @@
   body[data-home-style="analytical"] .module-copy{font-size:12.5px;line-height:1.7}
   body[data-home-style="analytical"] .evidence-list{display:flex}
 
+  /* 首屏那句話的三種講法：同一組數字、不同說法，只顯示當前版面的那一句。
+     預設（body 還沒掛 data-home-style，或值不在三者之內）顯示 guided，
+     否則第一次繪製到 applyStyle 執行之間會出現三句話疊在一起。 */
+  [data-style-variant]{display:none}
+  [data-style-variant="guided"]{display:block}
+  body[data-home-style="concise"] [data-style-variant="guided"],
+  body[data-home-style="analytical"] [data-style-variant="guided"]{display:none}
+  body[data-home-style="concise"] [data-style-variant="concise"]{display:block}
+  body[data-home-style="analytical"] [data-style-variant="analytical"]{display:block}
+  /* 成長陪跑本來就藏掉 today-explanation（只留結論），上面那條不該把它救回來。 */
+  body[data-home-style="concise"] .today-explanation[data-style-variant]{display:none}
+
   .module-stack{display:flex;flex-direction:column;gap:14px}
   .module-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:17px 15px}
 
