@@ -51,6 +51,10 @@ docs/PITCH_DECK.standalone.html
 # 範圍刻意收窄成 01–05：只有簡報真的吃的那五格進版控。其餘錄影產出（完整動線、
 # 四頁籤巡覽、入口動畫等）維持只留 Drive，免得 repo 被每次重錄的素材撐大。
 !docs/demo/0[1-5]_*.mp4
+# 兩套劇本的備援：第 5–8 頁有 ETH 全賣與 USDT 買入兩版（簡報標題目前是 ETH，
+# docs/DEMO_SCRIPT.md 主線是 USDT，兩邊尚未對齊，所以都留著）。
+# 用 docs/demo/use_scenario.sh eth|usdt 切換——它換的是檔案不是 HTML。
+!docs/demo/scenarios/*/0[1-5]_*.mp4
 
 # 隊內文件不進公開 repo（repo 依題目要求已 PUBLIC，主辦與評審點得進來）：
 # 評審攻防教戰、風險盤點、資料檢定圖表——這些是給自己人看的，寫法不適合對外。
