@@ -192,6 +192,12 @@
   .s-table h2{font-size:52px} .s-table table{font-size:21px}
   .s-table th,.s-table td{padding:14px 18px 14px 0} .s-table th{font-size:17px}
   .s-table .lede{font-size:26px;margin-bottom:26px!important} .s-table .note{font-size:20px}
+  /* 命題對照那頁：六條要一次看完，行距壓緊一點 */
+  .fit{font-size:21px}
+  .fit th,.fit td{padding:13px 18px 13px 0}
+  .fit td.grp{font-size:17px;font-weight:800;letter-spacing:.1em;color:#E64A4D;
+              padding:18px 0 8px;border-bottom:0}
+  .fit tr:first-child td.grp{padding-top:6px}
   .qa{display:flex;gap:56px;flex:1;min-height:0}
   .qa dt{font-size:23px;font-weight:900;color:#0F172A;margin-top:22px;line-height:1.4}
   .qa dt:first-child{margin-top:0}
@@ -650,21 +656,57 @@
 
 <!-- ═══ 11 願景（7:35–8:00）═══ -->
 <section class="slide stage spot" data-n="15">
-  <img class="bob" src="brand/mascot.png" alt="麥麥" style="height:300px;margin-bottom:44px;
+  <img class="bob" src="brand/mascot.png" alt="麥麥" style="height:196px;margin-bottom:24px;
        filter:drop-shadow(0 34px 50px rgba(0,0,0,.55))">
-  <h3 class="grad" style="font-size:46px;margin-bottom:34px;letter-spacing:.02em">
+  <h3 class="grad" style="font-size:36px;margin-bottom:22px;letter-spacing:.02em">
     安心白話　→　成長陪跑　→　專業效率
   </h3>
-  <h1 style="font-size:74px;line-height:1.3">麥麥不是要讓人永遠依賴 AI。<br>
+  <h1 style="font-size:60px;line-height:1.28">麥麥不是要讓人永遠依賴 AI。<br>
     是陪一個人，慢慢長成<br><span class="grad">能為自己做決定的人</span>。</h1>
-  <p class="lede" style="margin-top:46px;font-size:34px">
-    市場一直在變。<span style="color:#F5F5F7;font-weight:700">麥麥一直陪你。</span>
+  <p class="lede" style="margin-top:30px;font-size:28px">
+    MaiCoin 說，數位資產是<span style="color:#F5F5F7;font-weight:700">實現理想生活的選擇權</span>。<br>
+    我們把那句話，做成了<span style="color:#F5F5F7;font-weight:700">三條看得懂的路</span>。
   </p>
+  <h3 class="grad" style="font-size:40px;margin-top:26px;margin-bottom:34px;letter-spacing:.01em">
+    未來，由你定義　｜　Own Your Future
+  </h3>
   <div class="foot">謝謝大家 ｜ https://d1z0776b4u2tmf.cloudfront.net ｜ 問答時可現場開站實測</div>
 </section>
 
-<!-- ═══ 附錄 0 信任邊界 ═══ -->
-<section class="slide appendix m-risk" data-n="附錄 1" style="padding-bottom:0">
+<!-- ═══ 附錄 · 命題對照（引用 MaiCoin 工作坊說明 p.28 的六條期望用途）═══ -->
+<section class="slide appendix m-idle" data-n="附錄 1" style="padding:64px 92px 44px">
+  <div class="eyebrow" style="margin-bottom:14px">命題對照</div>
+  <h2 style="font-size:42px;margin-bottom:10px">命題方列了六條期望用途。<span style="color:#E64A4D">六條我們都做了。</span></h2>
+  <p style="font-size:20px;color:#6E6E73;margin-bottom:26px">
+    引自 MaiCoin《AWS AI 黑客松工作坊－命題說明》第 28 頁「模擬資料集參考用法」
+  </p>
+  <table class="fit">
+    <thead><tr><th style="width:26%">MaiCoin 期望的用途</th><th>麥麥做到什麼</th></tr></thead>
+    <tbody>
+      <tr><td class="grp" colspan="2">分析用途</td></tr>
+      <tr><td>資產價值變化</td>
+          <td>帳戶變化歸因：2025-12 的變化 <b>99.7% 來自出入金淨額</b>、0.3% 來自市價波動</td></tr>
+      <tr><td>操作習慣</td>
+          <td>追高指數 <b>65.0%</b>、殺低 34.1%、出金紀律 14.2%、月均 389.5 筆</td></tr>
+      <tr><td>改善建議</td>
+          <td>三方案<b>對等呈現</b>＋暫停冷靜期——給建議，但不報明牌</td></tr>
+      <tr><td>與外部資訊連結</td>
+          <td>MAX ticker／kline／depth ＋ RAG 知識庫，回答附出處</td></tr>
+      <tr><td class="grp" colspan="2">呈現用途</td></tr>
+      <tr><td>視覺化重要資訊</td>
+          <td>投資健康分 <b>60</b>（加權公開）、行為卡、工具鏈 chips</td></tr>
+      <tr><td>查詢工具</td>
+          <td>對話式查詢，LLM 手上<b>六個工具</b>，每次呼叫都在畫面上亮一個 chip</td></tr>
+    </tbody>
+  </table>
+  <p class="lede" style="margin-top:24px;font-size:26px;color:#1D1D1F">
+    說明的最後一句是「<b>僅供參考，期望大家發揮創意</b>」——
+    我們的創意是：分析完之後，<b>把決定權還回去</b>。
+  </p>
+</section>
+
+<!-- ═══ 附錄 · 信任邊界 ═══ -->
+<section class="slide appendix m-risk" data-n="附錄 2" style="padding-bottom:0">
   <div class="eyebrow">安全邊界</div>
   <h2 style="margin-bottom:40px">「AI 會不會亂花我的錢？」</h2>
   <div class="two">
@@ -694,7 +736,7 @@
 </section>
 
 <!-- ═══ 附錄 1 架構 ═══ -->
-<section class="slide appendix m-idle" data-n="附錄 2">
+<section class="slide appendix m-idle" data-n="附錄 3">
   <div class="eyebrow">技術架構</div>
   <h2 style="margin-bottom:44px">五支 Lambda，一個工具迴圈，<br>一條被架構切斷的下單路徑</h2>
   <div class="cols">
@@ -720,7 +762,7 @@
 </section>
 
 <!-- ═══ 附錄 2 合規 ═══ -->
-<section class="slide ink appendix m-idle s-table" data-n="附錄 3">
+<section class="slide ink appendix m-idle s-table" data-n="附錄 4">
   <div class="eyebrow">安全與法遵</div>
   <h2 style="color:#fff;margin-bottom:20px">合規不是免責聲明，<span class="grad">是系統設計</span></h2>
   <p class="lede" style="margin-bottom:38px">
@@ -739,7 +781,7 @@
 </section>
 
 <!-- ═══ 附錄 3 商業 ═══ -->
-<section class="slide appendix s-table" data-n="附錄 4">
+<section class="slide appendix s-table" data-n="附錄 5">
   <div class="eyebrow">商業模式</div>
   <h2 style="margin-bottom:16px">這不是幫客戶省錢的工具——<br>它是<span class="grad">手續費放大器</span></h2>
   <p class="note" style="margin-bottom:24px">交易所的收入核心是成交手續費（MAX 現貨基礎：掛單 0.08%／吃單 0.16%，2026-07 查證）。</p>
@@ -762,7 +804,7 @@
 </section>
 
 <!-- ═══ 附錄 4 成本 ═══ -->
-<section class="slide appendix m-idle" data-n="附錄 5">
+<section class="slide appendix m-idle" data-n="附錄 6">
   <div class="eyebrow">成本與可行性</div>
   <h2 style="margin-bottom:50px">省錢是<span class="grad">設計</span>出來的，不是省出來的</h2>
   <div class="row" style="align-items:stretch">
@@ -800,7 +842,7 @@
 </section>
 
 <!-- ═══ 附錄 5 完成度 ═══ -->
-<section class="slide appendix m-idle" data-n="附錄 6">
+<section class="slide appendix m-idle" data-n="附錄 7">
   <div class="eyebrow">完成度 · Lv2 Private API · Kiro</div>
   <h2 style="margin-bottom:52px">不是 demo 影片，<span class="grad">是線上服務</span></h2>
   <div class="cols">
@@ -831,19 +873,19 @@
 </section>
 
 <!-- ═══ 附錄 6 品牌形象 ═══ -->
-<section class="slide appendix m-idle" data-n="附錄 7" style="padding:70px 70px 40px">
+<section class="slide appendix m-idle" data-n="附錄 8" style="padding:70px 70px 40px">
   <div class="eyebrow" style="margin-bottom:18px">品牌形象規範</div>
   <img class="kvfull" src="brand/brandsheet.png" alt="MaiMate 品牌形象規範">
 </section>
 
 <!-- ═══ 附錄 7 入口動畫 ═══ -->
-<section class="slide appendix m-idle" data-n="附錄 8" style="padding:70px 70px 40px">
+<section class="slide appendix m-idle" data-n="附錄 9" style="padding:70px 70px 40px">
   <div class="eyebrow" style="margin-bottom:18px">入口動畫分鏡（約 8–10 秒）</div>
   <img class="kvfull" src="brand/storyboard.png" alt="麥麥入口動畫分鏡腳本">
 </section>
 
 <!-- ═══ 附錄 9 入口動畫定格 ═══ -->
-<section class="slide appendix m-idle" data-n="附錄 9" style="padding:70px 90px 46px">
+<section class="slide appendix m-idle" data-n="附錄 10" style="padding:70px 90px 46px">
   <div class="eyebrow" style="margin-bottom:14px">入口動畫實機定格</div>
   <h2 style="font-size:40px;margin-bottom:30px">九幕裡的三幕，就把整個產品講完了。</h2>
   <div class="frames">
@@ -863,7 +905,7 @@
 </section>
 
 <!-- ═══ 附錄 · 預期問答（一）═══ -->
-<section class="slide appendix m-idle" data-n="附錄 10">
+<section class="slide appendix m-idle" data-n="附錄 11">
   <div class="eyebrow">評審可能會問的 — 產品與商業</div>
   <div class="qa">
     <div class="col">
@@ -909,7 +951,7 @@
 </section>
 
 <!-- ═══ 附錄 · 預期問答（二）誠實清單 ═══ -->
-<section class="slide ink appendix m-risk" data-n="附錄 11">
+<section class="slide ink appendix m-risk" data-n="附錄 12">
   <div class="eyebrow">評審可能會問的 — 我們還沒做到的</div>
   <h2 style="color:#fff;font-size:54px;margin-bottom:16px">這一節存在的理由：<br>上面每一條都有證據，<span class="grad">這一節才可信</span>。</h2>
   <div class="qa" style="margin-top:20px">
