@@ -43,3 +43,13 @@
 1. WHEN 使用者輸入含個資（身分證/手機/卡號） THEN 系統 SHALL 先清洗再送模型
 2. WHEN 模型輸出命中明牌句式 THEN 系統 SHALL 改走安全回覆
 3. Agent 迴圈 SHALL 以 8 輪為上限
+4. WHEN 呈現多個方案（三方案或三種進場方式） THEN 模型 SHALL NOT 自行標注推薦，
+   各方案 SHALL 對等呈現
+
+## 驗收劇本（Demo 一條龍）
+
+1. 「我去年操作表現怎麼樣？」→ 呼叫 `query_user_history` → 引用追高 65%、機會成本 NT$26,598,877
+2. 「BTC 現在適合我加倉嗎？」→ 同時呼叫 `get_market_data` + `query_user_history`，
+   交叉引用即時價與個人集中度；給脈絡與數據，不給買賣建議
+3. 「ETH 跌太多幫我全賣」→ `calculate_trade_scenarios` → 三方案 → 選定 → `prepare_order`
+   → 確認卡 → 使用者按下確認 → 成交 → 餘額與健檢更新 → 決策軌跡可還原

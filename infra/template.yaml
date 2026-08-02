@@ -83,6 +83,8 @@ Resources:
         # /portfolio 掛這支而不是另開函式：MAX 金鑰是部署後人工加的，新函式會拿不到。
         # 只加 Events、不動 Environment，所以這次部署不會清掉已設的金鑰（CLAUDE.md 坑 #2）。
         Portfolio: { Type: HttpApi, Properties: { ApiId: !Ref Api, Path: /portfolio, Method: GET } }
+        # /behavior 同理——要 MAX 金鑰，所以掛在已經有金鑰的這支。
+        Behavior: { Type: HttpApi, Properties: { ApiId: !Ref Api, Path: /behavior, Method: GET } }
 
   HealthFunction:
     Type: AWS::Serverless::Function

@@ -101,6 +101,39 @@ def balances():
     return _signed_request("GET", "/api/v3/wallet/spot/accounts")
 
 
+# 一頁最多 1000 筆（MAX 上限）；再多就靠 from_id 往下翻。
+TRADES_PAGE = 1000
+TRADES_MAX_PAGES = 20  # 保險絲：Lambda 只有 60 秒，翻不完就如實說翻不完，不無限迴圈
+
+
+def trades(market, start_ms=None, max_pages=TRADES_MAX_PAGES):
+    """查**自己**的成交紀錄（Read），依 id 遞增翻頁。
+
+    /api/v3/trades 是逐市場查詢——帳戶有幾個幣就要打幾次，這是 MAX 的介面形狀，
+    不是這裡可以省的。回傳原始列，轉換交給 agent/behavior.py（那裡才知道要什麼欄位）。
+
+    翻頁用 from_id 而不是 timestamp：同一毫秒可能有多筆成交，用時間當游標會漏或重複。
+    """
+    out, from_id = [], None
+    for _ in range(max_pages):
+        params = {"market": market, "limit": TRADES_PAGE, "order_by": "asc"}
+        if from_id is not None:
+            params["from_id"] = from_id
+        elif start_ms is not None:
+            params["timestamp"] = int(start_ms)
+        page = _signed_request("GET", "/api/v3/trades", params) or []
+        if not page:
+            break
+        out.extend(page)
+        if len(page) < TRADES_PAGE:
+            break
+        last_id = page[-1].get("id")
+        if last_id is None:
+            break          # 沒有 id 就無法安全翻頁，停在這裡比重複抓好
+        from_id = last_id + 1
+    return out
+
+
 def resolve_volume(order):
     """把確認卡的 volume_twd 換算成 MAX 要的下單量（base currency）。
 

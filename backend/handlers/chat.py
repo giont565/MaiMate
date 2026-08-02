@@ -22,9 +22,13 @@ def handler(event, context):
     漏了會安靜地拿不到餘額；ChatFunction 已經有金鑰了。分流放在最前面，不碰下面的對話流程。
     """
     route = (event.get("requestContext") or {}).get("http") or {}
-    if route.get("method") == "GET" and str(route.get("path") or "").rstrip("/").endswith("/portfolio"):
+    path = str(route.get("path") or "").rstrip("/")
+    if route.get("method") == "GET" and path.endswith("/portfolio"):
         from . import portfolio
         return portfolio.handler(event, context)
+    if route.get("method") == "GET" and path.endswith("/behavior"):
+        from . import behavior
+        return behavior.handler(event, context)
 
     body = json.loads(event.get("body") or "{}")
     messages = body.get("messages") or []
