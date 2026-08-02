@@ -1,7 +1,11 @@
 # MaiMate 前端交接小抄
 
-更新：2026-07-28。分支 `feat/frontend-screen6-home`（最新 commit `b836101`）。
-接手前把本檔讀完；有疑問先看 `docs/` 下的三份 Screen 7 討論文件。
+> ⚠️ **這份是 2026-07-28 的前端交接快照，已成歷史文件。**
+> 當時的分支 `feat/frontend-screen6-home` 早已合併，Screen 6–8 也已上線。
+> **現況一律以 [README.md](README.md) 與 [`.kiro/`](.kiro/) 為準**；本檔只保留當時的
+> 前端約定（零建置、Service／Adapter 分層、`mm_events` 白名單）供回溯。
+
+更新：2026-07-28。接手前把本檔讀完；有疑問先看 `docs/` 下的三份 Screen 7 討論文件。
 
 ## 0. 工作位置與 Git
 

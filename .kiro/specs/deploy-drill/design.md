@@ -45,7 +45,7 @@ CSV(Drive) ─→ precompute.py ─→ health_report.json ─┐
 | 變數 | 誰設 | 備註 |
 |---|---|---|
 | `TABLE_NAME` | 模板 Globals | 自動 |
-| `KB_ID` | 模板參數 `KnowledgeBaseId`（預設 `DSIYBVI1IX`） | 自動，RAG 即通 |
+| `KB_ID` | 模板參數 `KnowledgeBaseId` | ⚠ **預設值是早期那顆已不存在的 KB（在別人帳號裡）**，用到預設值＝RAG 靜默失效。每次部署都要明寫 `--parameter-overrides KnowledgeBaseId=<本帳號的 KB>` |
 | `BEDROCK_REGION` | 模板 `!Ref AWS::Region` | 自動 |
 | `MAX_API_KEY` / `MAX_API_SECRET` | 👤 主控台 | **ChatFunction 與 OrderFunction 都要** |
 | `GUARDRAIL_ID` | 👤 主控台（#6 建好後） | 選配，設了才掛載 |
