@@ -252,6 +252,14 @@
   .jscore{margin-top:26px;padding-top:18px;border-top:1px solid #26262A;
           font-size:17px;line-height:1.7;color:#86868B;font-weight:600}
   .stackline{font-size:20px;color:#5A5A5F;text-align:center;margin-top:32px;letter-spacing:.06em}
+  /* 入口動畫定格：三支手機並排。高度給 flex:1 自己算，寫死 px 換一台投影機就爆版 */
+  .frames{display:flex;gap:40px;width:100%;flex:1;min-height:0;align-items:stretch}
+  .frames figure{flex:1;display:flex;flex-direction:column;gap:16px;min-height:0}
+  .frames img{flex:1;min-height:0;width:100%;object-fit:contain;object-position:top;
+              border-radius:22px}
+  .light .frames img{box-shadow:0 18px 40px rgba(15,23,42,.16)}
+  .frames figcaption{font-size:18px;line-height:1.5;color:#6E6E73;text-align:center}
+  .frames figcaption b{color:#1D1D1F;font-weight:700}
   .slide.on .jst{animation:rise .85s cubic-bezier(.22,1,.36,1) both;
                  animation-delay:calc(var(--j,0) * 150ms + 450ms)}
   .slide.on .gp li{animation:rise .8s cubic-bezier(.22,1,.36,1) both;
@@ -487,8 +495,8 @@
       <div class="tags"><em class="hot">創意度 25%</em><em>主題切合度 10%</em></div>
     </div>
     <div class="right">
-      <div class="vbox"><img class="media" data-video="demo/02_intro.webm" src="brand/kv_meet.png" alt=""></div>
-      <div class="vcap">兩個 logo 合成一個夥伴 → 它會做什麼、不會做什麼</div>
+      <div class="vbox"><img class="media" data-video="brand/intro/intro-shot1-3.mp4" src="brand/intro/shot2.jpg" alt=""></div>
+      <div class="vcap">紅色的 MaiCoin、藍色的 MAX——合成一個夥伴</div>
     </div>
   </div>
 </section>
@@ -834,8 +842,28 @@
   <img class="kvfull" src="brand/storyboard.png" alt="麥麥入口動畫分鏡腳本">
 </section>
 
+<!-- ═══ 附錄 9 入口動畫定格 ═══ -->
+<section class="slide appendix m-idle" data-n="附錄 9" style="padding:70px 90px 46px">
+  <div class="eyebrow" style="margin-bottom:14px">入口動畫實機定格</div>
+  <h2 style="font-size:40px;margin-bottom:30px">九幕裡的三幕，就把整個產品講完了。</h2>
+  <div class="frames">
+    <figure>
+      <img src="brand/intro/shot5.jpg" alt="看懂市場">
+      <figcaption><b>看懂市場</b>　K 線、新聞、ETF、BTC——換成你聽得懂的一句話</figcaption>
+    </figure>
+    <figure>
+      <img src="brand/intro/shot7.jpg" alt="陪伴成長">
+      <figcaption><b>陪伴成長</b>　健康分 60、已實現損益 +117,482，都是真實值</figcaption>
+    </figure>
+    <figure>
+      <img src="brand/intro/shot9.jpg" alt="開始使用">
+      <figcaption><b>開始使用</b>　先講清楚界線，再開始</figcaption>
+    </figure>
+  </div>
+</section>
+
 <!-- ═══ 附錄 · 預期問答（一）═══ -->
-<section class="slide appendix m-idle" data-n="附錄 9">
+<section class="slide appendix m-idle" data-n="附錄 10">
   <div class="eyebrow">評審可能會問的 — 產品與商業</div>
   <div class="qa">
     <div class="col">
@@ -881,7 +909,7 @@
 </section>
 
 <!-- ═══ 附錄 · 預期問答（二）誠實清單 ═══ -->
-<section class="slide ink appendix m-risk" data-n="附錄 10">
+<section class="slide ink appendix m-risk" data-n="附錄 11">
   <div class="eyebrow">評審可能會問的 — 我們還沒做到的</div>
   <h2 style="color:#fff;font-size:54px;margin-bottom:16px">這一節存在的理由：<br>上面每一條都有證據，<span class="grad">這一節才可信</span>。</h2>
   <div class="qa" style="margin-top:20px">
