@@ -23,7 +23,10 @@ const OUT_DIR = path.join(ROOT, 'docs', '繳交');
 const OUT = path.join(OUT_DIR, 'F_Maincoin：智慧理財_第五名.pdf');
 const WORK = path.join(ROOT, '.pdf_tmp');
 
-const LIMIT = 10 * 1024 * 1024;
+/* 主辦寫「10 MB 以下」，但沒說是 10^6 還是 2^20——兩種差 5%，剛好會卡在線上。
+ * 上傳表單的容量檢查多半用 10 進位，所以門檻取 9,500,000 bytes：
+ * 兩種算法都過，還留一點餘裕。寧可糊一點也不要在死線前被系統退件。 */
+const LIMIT = 9_500_000;
 /* 每一級：圖片最長邊 px ＋ JPEG 品質。
  * PNG 是無損的，Chromium 會原封不動嵌進 PDF——轉成 JPEG 位元組省下來的比縮圖多得多。
  * 檔名維持 .png：瀏覽器看內容判斷格式，不看副檔名。 */
@@ -34,8 +37,10 @@ const STEPS = [
   { px: 1100, q: 62 },
   { px: 950,  q: 55 },
   { px: 800,  q: 48 },
+  { px: 700,  q: 42 },
 ];
-const mb = n => (n / 1024 / 1024).toFixed(2) + ' MB';
+// 兩種算法都印出來，免得again踩同一個坑
+const mb = n => `${(n/1e6).toFixed(2)} MB(10進位) / ${(n/1048576).toFixed(2)} MiB`;
 
 function hasAlpha(p) {
   try { return /hasAlpha:\s*yes/.test(execFileSync('sips', ['-g', 'hasAlpha', p], { encoding: 'utf8' })); }
