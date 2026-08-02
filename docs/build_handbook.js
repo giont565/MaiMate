@@ -59,7 +59,7 @@ function statusTable(s, rows, y, colW, rowH) {
 {
   const s = pres.addSlide();
   s.background = { color: WHITE };
-  bigTitle(s, "總覽：下單鏈路已上線並自動驗過 21 項——但 RAG 知識庫在線上是掛的");
+  bigTitle(s, "總覽：下單鏈路已真錢驗過，RAG 附出處已回復——剩護欄第五層未啟用");
   const stats = [
     { n: "17", l: "已完成並驗證", c: GREEN, d: "行為分析、Bedrock迴圈、MAX 簽章、確認卡、決策軌跡、程式層護欄…" },
     { n: "12", l: "寫好但沒測過", c: GOLD, d: "Profile、路由、離線備援、RWD D5–D18、真實下單…" },
@@ -76,7 +76,7 @@ function statusTable(s, rows, y, colW, rowH) {
   card(s, M, 4.7, W - 2 * M, 1.0, "FDF0EF");
   s.addText([
     { text: "最大隱藏風險：", options: { bold: true, color: RED } },
-    { text: "RAG 知識庫在線上是掛的（#34）：Bedrock 回「KB DSIYBVI1IX 不存在」，模型改用一般知識回答——**畫面看不出異常，只是安靜地少掉「附出處」這個賣點**，而 F3 是評分紅線。這種「優雅降級」的壞法最危險：不跑驗收就發現不了。修法要 B 包重建 KB 再帶參數部署。距 7/31 code freeze 剩 2 天。", options: { color: INK } },
+    { text: "KB 是「帳號＋region」範圍的資源，模板管不到——換帳號不重建，RAG 就會**靜默失效**：畫面看不出異常，只是安靜地少掉「附出處」這個賣點，而 F3 是評分紅線。#34 踩過兩次後已重建並關單，並補了一鍵重建腳本 `scripts/setup_rag_kb.py`。這種「優雅降級」的壞法最危險：不跑驗收就發現不了。", options: { color: INK } },
   ], { x: M + 0.3, y: 4.85, w: W - 2 * M - 0.6, h: 0.7, fontFace: FONT, fontSize: 14, valign: "middle", margin: 0 });
   s.addText("本週原則：先讓 🧪 變 ✅（把寫好的測到能動），再開 🔨 新工。", {
     x: M, y: 6.0, w: W - 2 * M, h: 0.45, fontFace: FONT, fontSize: 15, bold: true, color: NAVY, margin: 0 });
@@ -111,8 +111,8 @@ function statusTable(s, rows, y, colW, rowH) {
     ["health_report.json", "done", "07/28 已用官方 CSV 重產並進 main：已實現損益 +117,482（981勝/493負）、最痛真虧僅 963；三聚合值齊全（#27/#29 已解）", "data/"],
     ["setup.sh 環境檢查", "done", "已實測", "scripts/"],
     ["RAG 語料蒐集", "code", "初版語料已入 KB（護欄誤判由實測發現）；完整度待 B 確認", "#9"],
-    ["Knowledge Base + S3 Vectors", "todo", "🚨 07/29 實測：KB DSIYBVI1IX 在帳號裡已不存在（Bedrock 回 ResourceNotFound）——07/22 建成後迴歸，需重建再帶 KnowledgeBaseId 部署（#34）", "#9"],
-    ["query_knowledge 工具", "code", "程式正確（有註冊、模型也會呼叫），但線上因 KB 不存在而每次 error；KB 一補回來即通", "#9"],
+    ["Knowledge Base + S3 Vectors", "done", "#34 已修並關單：KB 重建、附出處回復。KB 隨帳號＋region，換環境必重建（scripts/setup_rag_kb.py 一鍵）", "#9"],
+    ["query_knowledge 工具", "done", "線上實測可用（F3／F4 通過）；KB_ID 未設時自動不註冊，不會假裝有出處", "#9"],
     ["Lambda×5 handlers 全數上線", "done", "07/28 五支皆部署：/chat /health /market /audit 線上實測皆正常（/audit 不再 404）；/order 待真單", "handlers/"],
     ["MAX Public API（快取+退避）", "code", "ticker 已線上實測（任務6）；kline/depth 待對文件核驗", "#2"],
     ["MAX Private API 簽章（HMAC）", "done", "07/29 對真 API 實測通過（/api/v3/info 回 level:2）。2014 真因＝MAX 先比對「payload 解碼後 == request body」再驗簽章，GET 也必須送 body", "#4"],
