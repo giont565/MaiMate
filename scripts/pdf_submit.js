@@ -3,7 +3,7 @@
  * pdf_submit.js — 產出決賽要繳交的 PDF
  *
  *   node scripts/pdf_submit.js
- *   → docs/繳交/F_Maincoin：智慧理財_第五名.pdf
+ *   → docs/繳交/F_Maicoin：智慧理財_第五名.pdf
  *
  * 主辦要求：10 MB 以下、檔名固定。
  *
@@ -20,7 +20,7 @@ const { execFileSync } = require('child_process');
 const ROOT = path.join(__dirname, '..');
 const SRC = path.join(ROOT, 'docs', 'PITCH_DECK.html');
 const OUT_DIR = path.join(ROOT, 'docs', '繳交');
-const OUT = path.join(OUT_DIR, 'F_Maincoin：智慧理財_第五名.pdf');
+const OUT = path.join(OUT_DIR, 'F_Maicoin：智慧理財_第五名.pdf');
 const WORK = path.join(ROOT, '.pdf_tmp');
 
 /* 主辦寫「10 MB 以下」，但沒說是 10^6 還是 2^20——兩種差 5%，剛好會卡在線上。
