@@ -309,7 +309,11 @@
     byId("detail-root").hidden = false;
 
     byId("ins-title").textContent = detail.title;
-    byId("ins-subtitle").textContent = detail.kind === "knowledge" ? "名詞解釋" : "來自你的帳戶健檢報告";
+    /* 副標要跟著這一頁實際用的資料源走：持倉那頁已經是使用者的真帳戶（即時餘額），
+       其餘行為分析仍是命題方的示範資料集。一律寫「你的帳戶健檢報告」會把兩者混為一談。 */
+    const fromLiveAccount = Boolean(detail.source && /即時餘額/.test(String(detail.source.value || "")));
+    byId("ins-subtitle").textContent = detail.kind === "knowledge" ? "名詞解釋"
+      : fromLiveAccount ? "來自你的 MAX 帳戶" : "來自示範資料集（2025 全年）";
     document.title = detail.title + "｜MaiMate";
 
     if (detail.source) {

@@ -232,7 +232,18 @@ def query_user_history(section="all"):
             "被問『虧最多/最痛的一筆』時：如實說明「這是少賺（機會成本），不是實際虧損」，"
             "並直接給出 worst_single_sell 的日期、幣別、金額，不要只請使用者自行去平台查詢。"
         )
-    return {**data, "key_findings": findings, "data_notes": notes}
+    # 這份報告是命題方提供的一年份紀錄，不是使用者自己連上的 MAX 帳戶。
+    # 不講清楚的話模型會把它當成現況：實測對話裡它說「最新數據（12 月）顯示
+    # 單一資產（TWD 現金）佔 98.6%」，使用者當場反問「你這是 2025 的資料，
+    # 我現況帳號不是」。帳戶現況一律走 get_account_balance。
+    period = report.get("period") or {}
+    scope = (
+        f"⚠ 本報告的期間是 {period.get('start', '2025-01-01')} ～ {period.get('end', '2025-12-31')}，"
+        "來源是命題方提供的一年份交易紀錄，**不是使用者當前的 MAX 帳戶**。"
+        "回答時必須講明是這段期間的紀錄，不得說成「最新」「目前」「現在」。"
+        "被問「我現在的持倉／集中度」一律改用 get_account_balance。"
+    )
+    return {**data, "key_findings": findings, "data_notes": scope + " " + notes}
 
 
 def get_market_data(market, kind, period=None):

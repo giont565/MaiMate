@@ -31,6 +31,12 @@
   /* 金額一律取整數元並加千分位；報告給的就是整數，前端不做任何四捨五入以外的加工。 */
   const money = (value) => "NT$" + Math.round(Number(value)).toLocaleString("en-US");
   const section = (id, type, payload) => ({ id, type, payload });
+  /* ⚠ 這一頁有**兩種**資料源，措辭不能混用：
+   *   · 持倉分布 → GET /portfolio，使用者自己連上的真實 MAX 帳戶（即時餘額）
+   *   · 行為分析 → data/health_report.json，命題方提供的一年份紀錄（2025 全年）
+   * 原本每一處都寫「你的帳戶健檢報告」，把兩個帳戶講成同一個。實測對話裡模型也照著
+   * 說「最新數據（12 月）顯示 98.6%」，使用者當場反問「你這是 2025 的資料，我現況
+   * 帳號不是」。2026-08-02 起行為分析一律標「示範資料集」，持倉標「MAX 帳戶即時餘額」。 */
   const ev = (id, label, value, sourceLabel, updatedAt) =>
     ({ id, label, value: String(value), sourceLabel, updatedAt });
 
@@ -251,7 +257,7 @@
     const evidence = [
       ev("ev_top", topLabel + " 占比（" + portfolio.asOfMonth + "）", topPct, "持倉摘要", generatedAt()),
       ev("ev_other", otherLabel + " 占比（" + portfolio.asOfMonth + "）", otherPct, "持倉摘要", generatedAt()),
-      ev("ev_period", "資料期間", periodLabel(), "帳戶健檢報告", generatedAt()),
+      ev("ev_period", "資料期間", periodLabel(), "示範資料集", generatedAt()),
     ];
     if (detailed) {
       /* 圖上每一條的占比都會出現在畫面文字裡，逐項列進 evidence，
@@ -322,7 +328,7 @@
       source: portfolio.accountSource === "max_private"
         ? ev("src_cash", "資料來源", "你的 MAX 帳戶即時餘額", "持倉",
           String(portfolio.snapshotAsOf || "").replace("T", " ").slice(0, 16))
-        : ev("src_cash", "資料來源", "你的帳戶健檢報告（" + portfolio.asOfMonth + " 快照）", "持倉摘要", generatedAt()),
+        : ev("src_cash", "資料來源", "示範資料集：命題方提供的 2025 全年紀錄（" + portfolio.asOfMonth + " 快照）", "持倉摘要", generatedAt()),
       hero: {
         /* 最大持有是現金還是加密資產，講法完全不同——這一整段原本寫死成「停在現金」的
            語氣，接上真帳戶（最大持有是 ETH）之後就會說出「加密資產漲跌帶動帳戶的幅度
@@ -468,7 +474,7 @@
       kind: "personal",
       title: "你的交易節奏是什麼樣子？",
       question: "你的交易節奏是什麼樣子？",
-      source: ev("src_rhythm", "資料來源", "你的帳戶健檢報告（" + periodLabel() + "）", "交易紀錄", generatedAt()),
+      source: ev("src_rhythm", "資料來源", "示範資料集：命題方提供的 2025 全年紀錄（" + periodLabel() + "）", "交易紀錄", generatedAt()),
       hero: {
         conclusion: "這段期間你平均每月約 " + averageText + "；最近一個月（" + tx.recentPeriodLabel + "）是 " +
           recentText + "，" + (faster ? "比" : "比") + "前一個月（" + tx.previousPeriodLabel + "）的 " +
@@ -523,10 +529,10 @@
       ev("ev_sell_date", "賣出日期", sellDate, "交易紀錄（報告明細）", generatedAt()),
       ev("ev_sell_price", "賣出價", String(source.sellPrice), "交易紀錄（報告明細）", generatedAt()),
       ev("ev_eoy_price", "年末價格", String(source.endOfYearPrice), "交易紀錄（報告明細）", generatedAt()),
-      ev("ev_missed", "這筆賣出的機會成本", source.missedText, "帳戶健檢報告", generatedAt()),
+      ev("ev_missed", "這筆賣出的機會成本", source.missedText, "示範資料集", generatedAt()),
     ];
     if (source.priceChangeText) {
-      evidence.push(ev("ev_price_change", "賣出價到年末價格的變化", source.priceChangeText, "帳戶健檢報告", generatedAt()));
+      evidence.push(ev("ev_price_change", "賣出價到年末價格的變化", source.priceChangeText, "示範資料集", generatedAt()));
     }
     if (quantity) {
       evidence.push(ev("ev_qty", "賣出數量", quantity + " " + source.symbol, "交易紀錄（報告明細）", generatedAt()));
@@ -553,7 +559,7 @@
       kind: "personal",
       title: "2025 年 1 月那筆賣出，後來怎麼了？",
       question: "2025 年 1 月那筆賣出，後來怎麼了？",
-      source: ev("src_sell", "資料來源", "你的帳戶健檢報告（唯一附明細的一筆交易）", "交易紀錄", generatedAt()),
+      source: ev("src_sell", "資料來源", "示範資料集：命題方提供的 2025 全年紀錄（唯一附明細的一筆交易）", "交易紀錄", generatedAt()),
       hero: {
         conclusion: source.periodLabel + "你賣出了 " + source.symbol + "，成交價 " + source.sellPrice +
           "；到年末價格為 " + source.endOfYearPrice + "，這筆賣出的機會成本約 " + source.missedText + "。",
@@ -697,7 +703,7 @@
       kind: "personal",
       title: "最近的我，還沿著原本方向嗎？",
       question: "最近的我，還沿著原本方向嗎？",
-      source: ev("src_plan", "資料來源", "你的問卷回答 ＋ 帳戶健檢報告", "投資樣貌", generatedAt()),
+      source: ev("src_plan", "資料來源", "你的問卷回答 ＋ 示範資料集（2025 全年）", "投資樣貌", generatedAt()),
       hero: {
         conclusion: comparableCount === 0
           ? "目前可以對照的項目不夠，麥麥先不下結論。"
@@ -790,7 +796,7 @@
         "帳戶變化歸因", generatedAt()),
       ...contributors.map((item, index) => ev("ev_attr_" + index, item.label + " 貢獻",
         item.pct + "%（" + money(item.valueTwd) + "）", "帳戶變化歸因", generatedAt())),
-      ev("ev_period", "資料期間", periodLabel(), "帳戶健檢報告", generatedAt()),
+      ev("ev_period", "資料期間", periodLabel(), "示範資料集", generatedAt()),
     ];
 
     const limitations = [
@@ -829,7 +835,7 @@
       kind: "personal",
       title: "今天的帳戶變化從哪裡來？",
       question: "今天的帳戶變化從哪裡來？",
-      source: ev("src_change", "資料來源", "你的帳戶健檢報告（" + attribution.period + " 歸因）",
+      source: ev("src_change", "資料來源", "示範資料集：命題方提供的 2025 全年紀錄（" + attribution.period + " 歸因）",
         "帳戶變化歸因", generatedAt()),
       hero: {
         conclusion: attribution.period + " 帳戶市值" + (rising ? "增加" : "減少") + "約 " + deltaText +
@@ -886,7 +892,7 @@
         pct(portfolio.topAssetRatio), "持倉摘要", generatedAt()));
       have.push({ label: "每月最大持有標的與占比", value: portfolio.topAssetLabel + " " + pct(portfolio.topAssetRatio) });
     }
-    evidence.push(ev("ev_period", "資料期間", periodLabel(), "帳戶健檢報告", generatedAt()));
+    evidence.push(ev("ev_period", "資料期間", periodLabel(), "示範資料集", generatedAt()));
     have.push({ label: "資料期間", value: periodLabel() });
     have.push({ label: "各幣種持倉比例", value: "報告未提供" });
     have.push({ label: "每日帳戶淨值", value: "報告未提供" });
@@ -894,7 +900,7 @@
     return buildInsufficient({
       id: "account-change",
       title: "今天的帳戶變化從哪裡來？",
-      source: ev("src_change", "資料來源", "你的帳戶健檢報告（聚合值）", "持倉摘要", generatedAt()),
+      source: ev("src_change", "資料來源", "示範資料集：命題方提供的 2025 全年紀錄（聚合值）", "持倉摘要", generatedAt()),
       conclusion: "這一題目前的資料不足以回答，所以麥麥不替你猜。",
       whyItMatters: [
         "「今天為什麼變多／變少」要拆成市場、配置與近期交易三個來源，才會是有意義的回答。",
@@ -960,7 +966,7 @@
       ...buckets.map((item, index) => ev("ev_bucket_" + index, "持有 " + item.label + " 的比重",
         item.pct + "%", "持有期間分布", generatedAt())),
       ev("ev_method", "計算方式", method, "持有期間分布", generatedAt()),
-      ev("ev_period", "資料期間", periodLabel(), "帳戶健檢報告", generatedAt()),
+      ev("ev_period", "資料期間", periodLabel(), "示範資料集", generatedAt()),
     ];
     if (distribution.note) {
       evidence.push(ev("ev_note", "不計入的部分", distribution.note, "持有期間分布", generatedAt()));
@@ -997,7 +1003,7 @@
       kind: "personal",
       title: "你通常持有多久？",
       question: "你通常持有多久？",
-      source: ev("src_holding", "資料來源", "你的帳戶健檢報告（持有期間分布）", "持有期間分布", generatedAt()),
+      source: ev("src_holding", "資料來源", "示範資料集：命題方提供的 2025 全年紀錄（持有期間分布）", "持有期間分布", generatedAt()),
       hero: {
         conclusion: "你的賣出有約 " + shortTerm.pct + "% 發生在買進後 " + shortTerm.label + "。",
         primaryMetric: {
@@ -1041,7 +1047,7 @@
     }
     const market = adapters().market.read();
     const tx = adapters().transactions.read(readState(), market.observedAt);
-    const evidence = [ev("ev_period", "資料期間", periodLabel(), "帳戶健檢報告", generatedAt())];
+    const evidence = [ev("ev_period", "資料期間", periodLabel(), "示範資料集", generatedAt())];
     const have = [{ label: "資料期間", value: periodLabel() }];
     if (tx.available) {
       evidence.push(ev("ev_buy_sell", "買入／賣出筆數", count(tx.buyTotal) + "／" + count(tx.sellTotal), "交易紀錄", generatedAt()));
@@ -1055,7 +1061,7 @@
     return buildInsufficient({
       id: "holding-pattern",
       title: "你通常持有多久？",
-      source: ev("src_holding", "資料來源", "你的帳戶健檢報告（聚合值）", "交易紀錄", generatedAt()),
+      source: ev("src_holding", "資料來源", "示範資料集：命題方提供的 2025 全年紀錄（聚合值）", "交易紀錄", generatedAt()),
       conclusion: "算不出來：要知道持有多久，需要逐筆買賣紀錄，這份報告沒有。",
       whyItMatters: [
         "持有期間是把每一筆買入和後來的賣出配成一對，再算中間隔了多久。",
@@ -1299,7 +1305,7 @@
       whyItMatters: {
         title: "為什麼這和你有關",
         paragraphs: [
-          "這一頁的每一個數字都來自你的帳戶健檢報告；沒有授權時，麥麥不會用任何替代值把畫面填滿。",
+          "這一頁的每一個數字都來自示範資料集（命題方提供的 2025 全年紀錄）；沒有授權時，麥麥不會用任何替代值把畫面填滿。",
           "你仍然可以看名詞解釋，那部分完全不需要你的帳戶資料。",
         ],
       },
@@ -1341,7 +1347,7 @@
     return buildInsufficient({
       id: insightId,
       title: titles[0],
-      source: ev("src_unavailable", "資料來源", "你的帳戶健檢報告", "MaiMate", generatedAt()),
+      source: ev("src_unavailable", "資料來源", "示範資料集：命題方提供的 2025 全年紀錄", "MaiMate", generatedAt()),
       conclusion: "目前的資料算不出這一頁的內容，所以麥麥先不顯示。",
       whyItMatters: [
         "這一頁需要的欄位目前在報告裡找不到，麥麥不會用估算值代替。",
@@ -1355,7 +1361,7 @@
         { id: "chat", label: "回到對話問麥麥", type: "chat" },
       ],
       limitations: ["資料不足時麥麥不畫圖，也不給估算值。"],
-      evidence: [ev("ev_period", "資料期間", periodLabel() || "報告未提供", "帳戶健檢報告", generatedAt())],
+      evidence: [ev("ev_period", "資料期間", periodLabel() || "報告未提供", "示範資料集", generatedAt())],
       relatedTerms: ["concentration-basics", "weight-volatility"],
       suggestedQuestions: [{ id: "q_concentration_basics", text: "什麼是資產集中？" }],
       simple: {
