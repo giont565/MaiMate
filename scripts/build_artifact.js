@@ -86,16 +86,50 @@ function toDataUri(rel) {
   return uri;
 }
 
-html = html.replace(/\b(src|poster|data-video)="([^"]+)"/g, (m, attr, val) => {
-  if (/^(https?:|data:|\/\/|#)/.test(val)) return m;
-  const uri = toDataUri(val);
-  return uri ? `${attr}="${uri}"` : m;
-});
-html = html.replace(/url\((['"]?)([^'")]+)\1\)/g, (m, q, val) => {
-  if (/^(https?:|data:|\/\/|#)/.test(val)) return m;
-  const uri = toDataUri(val);
-  return uri ? `url(${uri})` : m;
-});
+/* 影片太多會超過部署上限。與其整份塞不進去，不如捨棄幾支最大的——
+ * 那幾格會退回顯示原本的截圖（poster 還在），簡報結構完全不受影響。
+ * 上台用的是無損的 standalone，這裡犧牲的只有線上對稿版。
+ * 捨棄哪幾支一定要印出來：靜靜地少掉幾支影片，看的人會以為那幾頁本來就沒錄。 */
+const LIMIT = 16 * 1024 * 1024;
+const SRC_HTML = html;
+const dropped = [];
+const droppedSet = new Set();
+
+function inlineAll() {
+  let out = SRC_HTML.replace(/\b(src|poster|data-video)="([^"]+)"/g, (m, attr, val) => {
+    if (/^(https?:|data:|\/\/|#)/.test(val)) return m;
+    if (attr === 'data-video' && droppedSet.has(val)) return '';  // 屬性整個拿掉，留 img 的截圖
+    const uri = toDataUri(val);
+    return uri ? `${attr}="${uri}"` : m;
+  });
+  out = out.replace(/url\((['"]?)([^'")]+)\1\)/g, (m, q, val) => {
+    if (/^(https?:|data:|\/\/|#)/.test(val)) return m;
+    const uri = toDataUri(val);
+    return uri ? `url(${uri})` : m;
+  });
+  return out;
+}
+
+html = inlineAll();
+
+// 超過上限就從最大的影片開始捨棄，量了再砍——估的會失準。
+// 圖片轉檔結果留在 seen 快取裡，重跑幾乎不花時間。
+if (Buffer.byteLength(html) > LIMIT) {
+  const bySize = [...new Set([...SRC_HTML.matchAll(/\bdata-video="([^"]+)"/g)].map(m => m[1]))]
+    .filter(f => !/^(https?:|data:)/.test(f))
+    .map(rel => {
+      const abs = path.join(DOCS, rel);
+      return { rel, size: fs.existsSync(abs) ? fs.statSync(abs).size : 0 };
+    })
+    .sort((a, b) => b.size - a.size);
+
+  for (const v of bySize) {
+    if (Buffer.byteLength(html) <= LIMIT) break;
+    dropped.push(v);
+    droppedSet.add(v.rel);
+    html = inlineAll();
+  }
+}
 
 // 拆骨架：平台會自己包 <!doctype><html><head></head><body>
 const headMatch = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
@@ -118,7 +152,12 @@ fs.rmSync(TMP, { recursive: true, force: true });
 const mb = n => (n / 1024 / 1024).toFixed(2) + ' MB';
 const size = Buffer.byteLength(out);
 console.log(`→ ${path.relative(process.cwd(), OUT)}  ${mb(size)}（內嵌 ${inlined} 個素材，圖片省下 ${mb(savedTotal)}）`);
-if (size > 16 * 1024 * 1024) console.log(`   ⚠ 仍超過 16 MB 上限，要再減素材`);
+if (dropped.length) {
+  console.log(`   ✂ 為了塞進 16 MB，這 ${dropped.length} 支影片沒放進線上版，該格顯示截圖：`);
+  dropped.forEach(v => console.log(`     · ${v.rel}（${mb(v.size)}）`));
+  console.log(`   → 上台請用 PITCH_DECK.standalone.html，那份是完整的`);
+}
+if (size > LIMIT) console.log(`   ⚠ 仍超過 16 MB 上限，要再減素材`);
 const vids = missing.filter(f => /\.(mp4|webm|mov)$/i.test(f));
 if (vids.length) {
   console.log(`   ℹ 尚未錄製 ${vids.length} 支影片，該格顯示截圖：`);
