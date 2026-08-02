@@ -203,7 +203,7 @@
 | 11.3 | **零硬編碼** | 一切走環境變數（因應官方環境當天才公布） | 🟢 | 口頭 |
 | 11.4 | **46 分鐘從零重建** | 砍掉整套 stack 實測 | 🟢 | 口頭（可行性王牌） |
 | 11.5 | CI 每次推送跑全套 | Python 編譯＋後端＋Python 單元＋SAM 驗證＋SAM build＋前端煙測 | 🟢 | 口頭 |
-| 11.6 | 驗收數字 | 後端 21/22、前端完整性 13/13、Python 50 項、九組煙測 | 🟢 | 口頭 |
+| 11.6 | 驗收數字 | 後端 47 項全過、前端完整性 13/13、Python 112 項、12 組煙測 | 🟢 | 口頭 |
 | 11.7 | 成本 | Haiku ≈0.3 元／次、Sonnet ≈2.2、混合＋快取 **<0.6**；千人 <3,000 元/月 | 🟡 **估算非實測** | 口頭 |
 
 ---
@@ -212,13 +212,14 @@
 
 | 項目 | 實際內容 |
 |---|---|
-| `.kiro/steering/` × **4** | `product.md`（四紅線）、`tech.md`、`workflow.md`（全隊＋所有 AI 工具共用的開發紀律）、`data-schema.md` |
-| `.kiro/specs/` × **7** | `behavior-engine`、`chat-agent`、`profile-engine`、`trade-scenarios`、`order-flow`、`audit-log`、`deploy-drill` |
+| `.kiro/steering/` × **5** | `product.md`（四紅線）、`tech.md`、`workflow.md`（全隊＋所有 AI 工具共用的開發紀律）、`data-schema.md` |
+| `.kiro/specs/` × **8** | `behavior-engine`、`chat-agent`、`profile-engine`、`trade-scenarios`、`order-flow`、`audit-log`、`deploy-drill` |
 | MCP | 已設定 |
 | Autopilot | 只在跑定義好的 task 時開 |
 | 證據 | 過程截圖存 Drive |
 
-> ⚠️ 簡報舊版寫「steering×3、spec×6」是舊數字，**實際是 4 與 7**（多了 `deploy-drill`）。
+> ⚠️ 這組數字改過兩輪。**現在是 steering×5、spec×8**（08-02 對回 repo 實況；
+> 新增 `structure.md` 與 `entry-strategies`）。簡報與講稿已同步。
 
 ---
 

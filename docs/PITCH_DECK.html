@@ -275,6 +275,11 @@
   .jscore{margin-top:26px;padding-top:18px;border-top:1px solid #26262A;
           font-size:17px;line-height:1.7;color:#86868B;font-weight:600}
   .stackline{font-size:20px;color:#5A5A5F;text-align:center;margin-top:32px;letter-spacing:.06em}
+  /* 停留頁的五件事：這頁會在螢幕上待很久，所以行距放鬆、不要密 */
+  .recap{display:flex;flex-direction:column;gap:20px;margin-top:38px}
+  .recap div{display:flex;align-items:baseline;gap:18px}
+  .recap b{flex:none;width:180px;font-size:27px;font-weight:800;color:#F5F5F7;letter-spacing:-.01em}
+  .recap span{font-size:22px;line-height:1.5;color:#86868B}
   /* 入口動畫定格：三支手機並排。高度給 flex:1 自己算，寫死 px 換一台投影機就爆版 */
   .frames{display:flex;gap:40px;width:100%;flex:1;min-height:0;align-items:stretch}
   .frames figure{flex:1;display:flex;flex-direction:column;gap:16px;min-height:0}
@@ -324,6 +329,12 @@
            transform:none!important;break-after:page;page-break-after:always}
     .slide:last-child{break-after:auto;page-break-after:auto}
     .bar,#hud{display:none}
+    /* background-clip:text 在 Chromium 印 PDF 時不可靠：漸層會整塊印出來、文字變透明，
+       畫面上就是一條色塊把字蓋掉。列印時改成實色，不要用漸層文字。 */
+    .grad{background:none!important;-webkit-background-clip:border-box!important;
+          background-clip:border-box!important;
+          -webkit-text-fill-color:#FF7A7A!important;color:#FF7A7A!important}
+    .light .grad{-webkit-text-fill-color:#E64A4D!important;color:#E64A4D!important}
   }
 </style>
 </head>
@@ -354,13 +365,11 @@
   <div class="sig"><i></i><i></i></div>
   <!-- 三層：鋪陳（退）→ 主張（唯一的大字）→ 細節（退更遠）。
        不要讓鋪陳跟主張一樣大，那是兩個標題在打架，不是層次 -->
-  <p style="font-size:42px;color:#86868B;font-weight:400;letter-spacing:-.01em">
-    2017 年，我第一次走進幣圈。
-  </p>
-  <h1 class="grad" style="margin-top:36px">最深的感覺不是興奮。<br>是害怕。</h1>
-  <p class="lede" style="margin-top:132px;max-width:1000px;font-size:27px;color:#6E6E73">
-    資訊封閉，充斥高風險的場外交易。看著螢幕上跳動的紅紅綠綠，<br>
-    我感受到的是冰冷，<span style="color:#A1A1A6">還有孤獨</span>。
+  <h1>2017 年，<br>我第一次走進幣圈。</h1>
+  <h1 class="grad" style="margin-top:34px">最深的感覺是害怕、孤獨。</h1>
+  <p class="lede" style="margin-top:74px;max-width:1000px;font-size:27px;color:#6E6E73">
+    資訊封閉，充斥高風險的場外交易。<br>
+    看著螢幕上跳動的紅紅綠綠，我感受到的只有冰冷。
   </p>
   <div class="foot">MaiMate 麥麥</div>
 </section>
@@ -515,7 +524,7 @@
       <div class="tags"><em class="hot">技術可行性 20%</em><em>主題切合度 10%</em><em>完成度 10%</em></div>
     </div>
     <div class="right">
-      <div class="vbox"><img class="media" data-video="demo/01_entry.webm" src="pitch_shots/01_health.png" alt=""></div>
+      <div class="vbox"><img class="media" data-video="demo/01_entry.webm" src="pitch_shots/auto/01_entry.jpg" alt=""></div>
       <div class="vcap">從 MAX 的持倉頁，一鍵進入麥麥</div>
     </div>
   </div>
@@ -529,21 +538,42 @@
       <h2>它的臉，<br><span class="grad">是兩個品牌長出來的。</span></h2>
       <p class="val">紅色來自 <b>MaiCoin</b>，藍色來自 <b>MAX</b>——<br>拆解重組成麥麥的情緒燈與身體。</p>
       <ul>
-        <li><b>九屏入口動畫</b>，八到十秒建立角色與界線</li>
+        <li>紅藍兩色<b>拆解重組</b>成情緒燈與身體</li>
         <li>情緒燈七種狀態：思考、分析、<b>風險提醒</b>、完成任務</li>
-        <li>第一句話就講清楚：<b>「看懂你的投資，而不是替你決定」</b></li>
+        <li>不是換皮——<b>它的長相就是這場合作本身</b></li>
       </ul>
       <div class="tags"><em class="hot">創意度 25%</em><em>主題切合度 10%</em></div>
     </div>
     <div class="right">
-      <div class="vbox"><img class="media" data-video="brand/intro/intro-shot1-3.mp4" src="brand/intro/shot2.jpg" alt=""></div>
+      <div class="vbox"><img class="media" data-video="brand/intro/intro-shot1-3.mp4" src="pitch_shots/auto/intro-shot1-3.jpg" alt=""></div>
       <div class="vcap">紅色的 MaiCoin、藍色的 MAX——合成一個夥伴</div>
     </div>
   </div>
 </section>
 
-<!-- ═══ 6 ═══ -->
+<!-- ═══ 九幕入口動畫（實際展示時這一頁要放完整動畫）═══ -->
 <section class="slide" data-n="8" style="padding:104px 120px">
+  <div class="gp">
+    <div class="left">
+      <div class="sig" style="justify-content:flex-start;margin-bottom:26px"><i></i><i></i></div>
+      <h2>八秒鐘，<br><span class="grad">先講清楚它是誰。</span></h2>
+      <p class="val">九幕入口動畫——<b>不是開場動畫，是第一次自我介紹。</b></p>
+      <ul>
+        <li>看懂市場：K 線、新聞、ETF、BTC <b>換成一句聽得懂的話</b></li>
+        <li>陪伴成長：健康分與已實現損益，<b>數字都是程式算的</b></li>
+        <li>最後一句就是立場：<b>「看懂你的投資，而不是替你決定」</b></li>
+      </ul>
+      <div class="tags"><em class="hot">創意度 25%</em><em>AI 設計 15%</em><em>個人化體驗</em></div>
+    </div>
+    <div class="right">
+      <div class="vbox"><img class="media" data-video="demo/02_intro.webm" src="pitch_shots/auto/02_intro.jpg" alt=""></div>
+      <div class="vcap">九幕走完約八秒：出生 → 看懂市場 → 陪伴成長 → 界線 → 開始</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 6 ═══ -->
+<section class="slide" data-n="9" style="padding:104px 120px">
   <div class="gp">
     <div class="left">
       <div class="sig" style="justify-content:flex-start;margin-bottom:26px"><i></i><i></i></div>
@@ -557,14 +587,14 @@
       <div class="tags"><em class="hot">AI 設計 15%</em><em>完成度 10%</em><em>安全與法遵</em></div>
     </div>
     <div class="right">
-      <div class="vbox"><img class="media" data-video="demo/03_consent.webm" src="pitch_shots/05_confirm.png" alt=""></div>
+      <div class="vbox"><img class="media" data-video="demo/03_consent.webm" src="pitch_shots/auto/03_consent.jpg" alt=""></div>
       <div class="vcap">持倉 · 12 個月交易紀錄 · 入出金 · 使用紀錄——你自己決定給哪些</div>
     </div>
   </div>
 </section>
 
 <!-- ═══ 7 ═══ -->
-<section class="slide" data-n="9" style="padding:104px 120px">
+<section class="slide" data-n="10" style="padding:104px 120px">
   <div class="gp">
     <div class="left">
       <div class="sig" style="justify-content:flex-start;margin-bottom:26px"><i></i><i></i></div>
@@ -578,14 +608,14 @@
       <div class="tags"><em class="hot">創意度 25%</em><em class="hot">商業應用性 20%</em><em>留存與長期價值</em></div>
     </div>
     <div class="right">
-      <div class="vbox"><img class="media" data-video="demo/04_welcome.webm" src="brand/kv_meet.png" alt=""></div>
+      <div class="vbox"><img class="media" data-video="demo/04_welcome.webm" src="pitch_shots/auto/04_welcome.jpg" alt=""></div>
       <div class="vcap">六題對答 → 開始分析 → 麥麥整理出的投資樣貌</div>
     </div>
   </div>
 </section>
 
 <!-- ═══ 8 ═══ -->
-<section class="slide" data-n="10" style="padding:104px 120px">
+<section class="slide" data-n="11" style="padding:104px 120px">
   <div class="gp">
     <div class="left">
       <div class="sig" style="justify-content:flex-start;margin-bottom:26px"><i></i><i></i></div>
@@ -599,14 +629,14 @@
       <div class="tags"><em class="hot">創意度 25%</em><em>AI 設計 15%</em><em>企業資料應用</em></div>
     </div>
     <div class="right">
-      <div class="vbox"><img class="media" data-video="demo/05_health.webm" src="pitch_shots/01_health.png" alt=""></div>
+      <div class="vbox"><img class="media" data-video="demo/05_health.webm" src="pitch_shots/auto/05_health.jpg" alt=""></div>
       <div class="vcap">原本的我 vs 最近的我 → 變化從哪來 → 麥麥幫你注意到</div>
     </div>
   </div>
 </section>
 
 <!-- ═══ 9 ═══ -->
-<section class="slide" data-n="11" style="padding:104px 120px">
+<section class="slide" data-n="12" style="padding:104px 120px">
   <div class="gp">
     <div class="left">
       <div class="sig" style="justify-content:flex-start;margin-bottom:26px"><i></i><i></i></div>
@@ -620,14 +650,14 @@
       <div class="tags"><em>AI Agent</em><em>MAX API</em><em class="hot">技術可行性 20%</em></div>
     </div>
     <div class="right">
-      <div class="vbox"><img class="media" data-video="demo/06_chat_tools.webm" src="pitch_shots/02_chips.png" alt=""></div>
+      <div class="vbox"><img class="media" data-video="demo/02_tools.mp4" src="pitch_shots/auto/02_tools.jpg" alt=""></div>
       <div class="vcap">輸入「全部賣掉」→ ticker → portfolio → 交易歷史 → 分析中</div>
     </div>
   </div>
 </section>
 
 <!-- ═══ 10 ═══ -->
-<section class="slide" data-n="12" style="padding:104px 120px">
+<section class="slide" data-n="13" style="padding:104px 120px">
   <div class="gp">
     <div class="left">
       <div class="sig" style="justify-content:flex-start;margin-bottom:26px"><i></i><i></i></div>
@@ -641,14 +671,14 @@
       <div class="tags"><em class="hot">創意度 25%</em><em>AI 設計 15%</em><em>個人化風險提醒</em></div>
     </div>
     <div class="right">
-      <div class="vbox"><img class="media" data-video="demo/07_chat_context.webm" src="pitch_shots/03_context.png" alt=""></div>
+      <div class="vbox"><img class="media" data-video="demo/03_context.mp4" src="pitch_shots/auto/03_context.jpg" alt=""></div>
       <div class="vcap">「這次的行為，和你過去幾次急跌時全部離場的模式相似。」</div>
     </div>
   </div>
 </section>
 
 <!-- ═══ 11 ═══ -->
-<section class="slide" data-n="13" style="padding:104px 120px">
+<section class="slide" data-n="14" style="padding:104px 120px">
   <div class="gp">
     <div class="left">
       <div class="sig" style="justify-content:flex-start;margin-bottom:26px"><i></i><i></i></div>
@@ -662,14 +692,14 @@
       <div class="tags"><em>AI 設計 15%</em><em>技術可行性 20%</em><em class="hot">商業應用性 20%</em></div>
     </div>
     <div class="right">
-      <div class="vbox"><img class="media" data-video="demo/08_chat_scenarios.webm" src="pitch_shots/04_scenarios.png" alt=""></div>
+      <div class="vbox"><img class="media" data-video="demo/04_scenarios.mp4" src="pitch_shots/auto/04_scenarios.jpg" alt=""></div>
       <div class="vcap">三張方案卡切換 → 比較表更新 → 選定後只建立訂單草稿</div>
     </div>
   </div>
 </section>
 
 <!-- ═══ 12 ═══ -->
-<section class="slide" data-n="14" style="padding:104px 120px">
+<section class="slide" data-n="15" style="padding:104px 120px">
   <div class="gp">
     <div class="left">
       <div class="sig" style="justify-content:flex-start;margin-bottom:26px"><i></i><i></i></div>
@@ -683,14 +713,14 @@
       <div class="tags"><em class="hot">完成度 10%</em><em class="hot">MAX Lv2 Private API +5%</em><em>技術可行性 20%</em></div>
     </div>
     <div class="right">
-      <div class="vbox"><img class="media" data-video="demo/09_chat_execute.webm" src="pitch_shots/05_confirm.png" alt=""></div>
+      <div class="vbox"><img class="media" data-video="demo/05_execute.mp4" src="pitch_shots/auto/05_execute.jpg" alt=""></div>
       <div class="vcap">確認卡（60 秒倒數）→ 7/31 真實成交 #20720919534 → 決策軌跡</div>
     </div>
   </div>
 </section>
 
 <!-- ═══ 11 願景（7:35–8:00）═══ -->
-<section class="slide stage spot" data-n="15">
+<section class="slide stage spot" data-n="16">
   <img class="bob" src="brand/mascot.png" alt="麥麥" style="height:196px;margin-bottom:24px;
        filter:drop-shadow(0 34px 50px rgba(0,0,0,.55))">
   <h3 class="grad" style="font-size:36px;margin-bottom:22px;letter-spacing:.02em">
@@ -706,6 +736,31 @@
     未來，由你定義　｜　Own Your Future
   </h3>
   <div class="foot">謝謝大家 ｜ https://d1z0776b4u2tmf.cloudfront.net ｜ 問答時可現場開站實測</div>
+</section>
+
+<!-- ═══ 停留頁：講完到問答之間，畫面不要空著。
+     這一頁不算展示時間，動畫循環播，評審寫分數時就是它在幫我們複習。 ═══ -->
+<section class="slide" data-n="17" style="padding:96px 120px">
+  <div class="gp">
+    <div class="left">
+      <div class="sig" style="justify-content:flex-start;margin-bottom:26px"><i></i><i></i></div>
+      <h2 style="font-size:62px">麥麥做的<br><span class="grad">五件事。</span></h2>
+      <div class="recap">
+        <div><b>看懂你</b><span>一萬筆交易 · 追高 65% · 健康分 60</span></div>
+        <div><b>看懂現在</b><span>MAX 即時行情 · 持倉 · RAG 知識庫</span></div>
+        <div><b>把選擇說清楚</b><span>三方案對等呈現 · 數字全由程式算</span></div>
+        <div><b>安全地行動</b><span>prepare／execute 分離 · 60 秒單次憑證</span></div>
+        <div><b>陪你繼續成長</b><span>三種模式 · 決策軌跡 append-only</span></div>
+      </div>
+      <p style="margin-top:34px;font-size:26px;color:#86868B">
+        線上可點：<b style="color:#C7C7CC">d1z0776b4u2tmf.cloudfront.net</b>
+      </p>
+    </div>
+    <div class="right">
+      <div class="vbox"><img class="media" data-video="demo/02_intro.webm" src="pitch_shots/auto/02_intro.jpg" alt=""></div>
+      <div class="vcap">謝謝各位 · 歡迎提問</div>
+    </div>
+  </div>
 </section>
 
 <!-- ═══ 附錄 · 命題對照（引用 MaiCoin 工作坊說明 p.28 的六條期望用途）═══ -->
@@ -883,7 +938,7 @@
   <div class="cols">
     <div class="colx">
       <h3 class="blue">已上線並驗收</h3>
-      <p>後端驗收 <b>21/22 通過</b>｜前端完整性 <b>13/13</b>｜Python 單元 <b>50 項</b><br>
+      <p>後端驗收 <b>47 項全過</b>｜前端完整性 <b>13/13</b>｜Python 單元 <b>112 項</b><br>
          砍掉整套 stack 從零重建 <b>實測 46 分鐘</b><br>
          手機實機：PWA 可加到主畫面、斷網可開<br>
          每次推送 CI 自動跑全套測試</p>
@@ -899,8 +954,8 @@
     </div>
     <div class="colx">
       <h3>Kiro 全程參與</h3>
-      <p><b>.kiro/steering × 4</b>（全隊＋所有 AI 工具共用的開發紀律）<br>
-         <b>.kiro/specs × 7</b>（行為引擎／對話／Profile／三方案／下單／稽核／部署演練）<br>
+      <p><b>.kiro/steering × 5</b>（全隊＋所有 AI 工具共用的開發紀律）<br>
+         <b>.kiro/specs × 8</b>（行為引擎／對話／Profile／三方案／下單／稽核／部署演練／進場策略）<br>
          MCP 設定、Autopilot 只在跑定義好的 task 時開</p>
       <p class="kick">steering 是唯一真相來源——用其他 AI 開發時也把它餵進去。</p>
     </div>
@@ -978,7 +1033,7 @@
         <dd>三方案金額隨即時報價浮動，確認卡上有紅字滑價聲明。買賣價差
             <code>spread_pct</code> 與台北／UTC 時間戳都由後端算好給模型，<b>LLM 不得自行計算</b>。</dd>
         <dt>完成度到哪？</dt>
-        <dd>後端驗收 21/22、前端 13/13、Python 50 項；真實成交打通那次修掉<b>六個</b>各自足以讓下單失敗的問題；
+        <dd>後端驗收 47 項全過、前端 13/13、Python 112 項；真實成交打通那次修掉<b>六個</b>各自足以讓下單失敗的問題；
             砍掉整套環境從零重建<b>實測 46 分鐘</b>。</dd>
       </dl>
     </div>
@@ -1030,14 +1085,25 @@
   let i = 0;
   const stage = document.getElementById('stage');
 
-  // 預設顯示實機截圖；docs/demo/ 裡有對應影片才換成影片播放
-  document.querySelectorAll('img.media[data-video]').forEach(img => {
+  // 預設顯示實機截圖；docs/demo/ 裡有對應影片才換成影片播放。
+  // 印 PDF 時整段跳過——PDF 播不了影片，換成 <video> 只會印出一格空白。
+  if (!window.__PRINT__) document.querySelectorAll('img.media[data-video]').forEach(img => {
     const v = document.createElement('video');
     v.src = img.dataset.video;
     v.muted = true; v.loop = true; v.playsInline = true; v.className = 'media';
+    // 沿用原本的截圖當 poster：有些影片第 0 幀是白的（入口動畫就是），
+    // 沒有 poster 的話載入中與緩衝時那一格會整片空白。
+    // ⚠ 有 poster 時瀏覽器會延後載入影片資料，loadeddata 不觸發、img 就永遠不會被換掉，
+    //   看起來就像那支影片不見了。preload='auto' 是這一行的必要配套，不要拿掉。
+    v.poster = img.currentSrc || img.src;
+    v.preload = 'auto';
     v.addEventListener('loadeddata', () => {
       img.replaceWith(v);
       if (v.closest('.slide').classList.contains('on')) v.play();
+    });
+    // 這個格式播不動就別動——留著原本的截圖，總比一格空白好
+    v.addEventListener('error', () => {
+      console.warn('[deck] 影片載不動，該格維持截圖：', img.dataset.video);
     });
     v.addEventListener('click', e => e.stopPropagation());
   });

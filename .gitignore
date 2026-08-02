@@ -27,6 +27,6 @@ smoke_*.png
 # 評估用打包（內容都在 docs/ 裡，不需要版控壓縮檔）
 docs/MaiMate_review-bundle.zip
 docs/review-bundle/03_PITCH_DECK.pdf
-docs/PITCH_DECK.standalone.html
+# 單檔版進版控：隊友不必 clone 整包，GitHub 上直接下載就能開（24 MB，遠低於 100 MB 上限）
 docs/PITCH_DECK.artifact.html
 .artifact_tmp/

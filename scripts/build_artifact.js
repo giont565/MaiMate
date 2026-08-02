@@ -28,7 +28,14 @@ const VIDEO_MIME = { '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/
 const IMAGE_MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
                      '.gif': 'image/gif', '.svg': 'image/svg+xml', '.webp': 'image/webp' };
 
-const JPEG_QUALITY = 78;
+/* 圖片品質。塞不下時會自動往下降，不夠才動影片——
+ * 圖片糊一點沒人會發現，影片整支不見那一頁就沒東西看了。 */
+const QUALITY_STEPS = [78, 66, 55];
+let jpegQuality = QUALITY_STEPS[0];
+
+/* 這幾支就算超過上限也不能丟：它們是那一頁的內容本身。
+ * 第 8 頁整頁就是在講這段九幕動畫，退回截圖等於那頁白講。 */
+const KEEP_VIDEOS = ['demo/02_intro.webm'];
 
 function hasAlpha(abs) {
   try {
@@ -49,7 +56,7 @@ function encodeImage(abs, rel) {
 
   const dest = path.join(TMP, rel.replace(/[\/\\]/g, '__') + '.jpg');
   try {
-    execFileSync('sips', ['-s', 'format', 'jpeg', '-s', 'formatOptions', String(JPEG_QUALITY),
+    execFileSync('sips', ['-s', 'format', 'jpeg', '-s', 'formatOptions', String(jpegQuality),
                           abs, '--out', dest], { stdio: 'ignore' });
     const jpg = fs.readFileSync(dest);
     if (jpg.length >= original.length) return { buf: original, mime, kept: '轉檔沒變小' };
@@ -86,16 +93,62 @@ function toDataUri(rel) {
   return uri;
 }
 
-html = html.replace(/\b(src|poster|data-video)="([^"]+)"/g, (m, attr, val) => {
-  if (/^(https?:|data:|\/\/|#)/.test(val)) return m;
-  const uri = toDataUri(val);
-  return uri ? `${attr}="${uri}"` : m;
-});
-html = html.replace(/url\((['"]?)([^'")]+)\1\)/g, (m, q, val) => {
-  if (/^(https?:|data:|\/\/|#)/.test(val)) return m;
-  const uri = toDataUri(val);
-  return uri ? `url(${uri})` : m;
-});
+/* 影片太多會超過部署上限。與其整份塞不進去，不如捨棄幾支最大的——
+ * 那幾格會退回顯示原本的截圖（poster 還在），簡報結構完全不受影響。
+ * 上台用的是無損的 standalone，這裡犧牲的只有線上對稿版。
+ * 捨棄哪幾支一定要印出來：靜靜地少掉幾支影片，看的人會以為那幾頁本來就沒錄。 */
+const LIMIT = 16 * 1024 * 1024;
+const SRC_HTML = html;
+const dropped = [];
+const droppedSet = new Set();
+
+function inlineAll() {
+  let out = SRC_HTML.replace(/\b(src|poster|data-video)="([^"]+)"/g, (m, attr, val) => {
+    if (/^(https?:|data:|\/\/|#)/.test(val)) return m;
+    if (attr === 'data-video' && droppedSet.has(val)) return '';  // 屬性整個拿掉，留 img 的截圖
+    const uri = toDataUri(val);
+    return uri ? `${attr}="${uri}"` : m;
+  });
+  out = out.replace(/url\((['"]?)([^'")]+)\1\)/g, (m, q, val) => {
+    if (/^(https?:|data:|\/\/|#)/.test(val)) return m;
+    const uri = toDataUri(val);
+    return uri ? `url(${uri})` : m;
+  });
+  return out;
+}
+
+html = inlineAll();
+
+/* 預設「完整優先」：不降畫質、不丟影片，超過上限就照實講，由人決定怎麼辦。
+ * 加 --fit 才會為了塞進部署上限犧牲東西。
+ * 這個預設是刻意的——安靜地降級，看的人會以為簡報本來就長那樣。 */
+const FIT = process.argv.includes('--fit');
+
+// 量了再砍——用估的會失準（第一版就估錯，砍不到東西）。
+// 第一步：把圖片品質往下降。圖片轉檔結果在 seen 裡，換品質要清掉重轉。
+for (let i = 1; FIT && i < QUALITY_STEPS.length && Buffer.byteLength(html) > LIMIT; i++) {
+  jpegQuality = QUALITY_STEPS[i];
+  seen.clear(); savedTotal = 0; inlined = 0; missing = [];
+  html = inlineAll();
+}
+
+// 第二步：還是塞不下才動影片，從最大的開始，且永遠跳過 KEEP_VIDEOS。
+if (FIT && Buffer.byteLength(html) > LIMIT) {
+  const bySize = [...new Set([...SRC_HTML.matchAll(/\bdata-video="([^"]+)"/g)].map(m => m[1]))]
+    .filter(f => !/^(https?:|data:)/.test(f) && !KEEP_VIDEOS.includes(f))
+    .map(rel => {
+      const abs = path.join(DOCS, rel);
+      return { rel, size: fs.existsSync(abs) ? fs.statSync(abs).size : 0 };
+    })
+    .sort((a, b) => b.size - a.size);
+
+  for (const v of bySize) {
+    if (Buffer.byteLength(html) <= LIMIT) break;
+    dropped.push(v);
+    droppedSet.add(v.rel);
+    html = inlineAll();
+  }
+}
 
 // 拆骨架：平台會自己包 <!doctype><html><head></head><body>
 const headMatch = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
@@ -118,7 +171,19 @@ fs.rmSync(TMP, { recursive: true, force: true });
 const mb = n => (n / 1024 / 1024).toFixed(2) + ' MB';
 const size = Buffer.byteLength(out);
 console.log(`→ ${path.relative(process.cwd(), OUT)}  ${mb(size)}（內嵌 ${inlined} 個素材，圖片省下 ${mb(savedTotal)}）`);
-if (size > 16 * 1024 * 1024) console.log(`   ⚠ 仍超過 16 MB 上限，要再減素材`);
+if (jpegQuality !== QUALITY_STEPS[0]) {
+  console.log(`   ↓ 圖片品質降到 ${jpegQuality}（起始 ${QUALITY_STEPS[0]}）才塞得進 16 MB——影片全數保留`);
+}
+if (dropped.length) {
+  console.log(`   ✂ 為了塞進 16 MB，這 ${dropped.length} 支影片沒放進線上版，該格顯示截圖：`);
+  dropped.forEach(v => console.log(`     · ${v.rel}（${mb(v.size)}）`));
+  console.log(`   → 上台請用 PITCH_DECK.standalone.html，那份是完整的`);
+}
+if (size > LIMIT) {
+  console.log(`   ⚠ 超過部署上限 16 MB ${mb(size - LIMIT)}——這份是完整版，無法部署成網址。`);
+  console.log(`     要壓到能部署：node scripts/build_artifact.js --fit（會降畫質、可能丟影片）`);
+  console.log(`     不想犧牲就直接發 PITCH_DECK.standalone.html 給隊友，本機開一樣完整。`);
+}
 const vids = missing.filter(f => /\.(mp4|webm|mov)$/i.test(f));
 if (vids.length) {
   console.log(`   ℹ 尚未錄製 ${vids.length} 支影片，該格顯示截圖：`);
