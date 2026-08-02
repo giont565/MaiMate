@@ -86,7 +86,7 @@ mockup HTML 在 `docs/mockups/`＝C 包前端起點，畫面中所有數字皆�
 - ✅ E2E Golden Path｜✅ 官方環境重部署（Lambda 金鑰待補，issue #70）
 - 🟡 #8 Demo 錄影：08-02 前端改版後主片鏡 1–5／7／8 已重錄，尚有四項待決（issue #75）
 - ⬜ #6 Guardrails 主控台建置（同 A 包最後一項）
-- ⬜ #15 Kiro 證據截圖 F–J：需要 Kiro IDE 介面存取，只能由人代截（issue #42）
+- ✅ #15 Kiro 證據截圖 F–J：08/02 由隊友以 Kiro IDE 拍齊，存受限 Drive（issue #42 已關）
 
 **全員共同**：#3 自己的 Lv2 KYC＋API Key、Kiro 設定、過程截圖存 Drive、每天合回 main。
 
@@ -403,7 +403,11 @@ Response：`{ "trail":[{"seq","ts","type":"tool_call|draft_created|user_confirme
 - [x] E2E Golden Path 全線通過（含真實成交）
 - [x] 官方環境重部署完成（Lambda 的 MAX 金鑰待補，issue #70）
 - [ ] Demo 錄影 final：08-02 前端改版後鏡 1–5／7／8 已重錄，四項待決（issue #75）
-- [ ] Kiro 證據截圖 F–J：需 Kiro IDE 介面存取，只能由人代截（issue #42）
+- [x] Kiro 證據截圖 F–J：08/02 拍齊（Specs 面板／task 執行／MCP／steering 生效／credit 用量），
+      存受限 Drive（#42 已關）
+- ⚠ 那組截圖拍的是當下的 repo：F 顯示 7 個 spec、I 顯示 4 份 steering。之後補的
+      `entry-strategies` spec 與 `steering/structure.md` 不在畫面裡——**對外不要報份數**，
+      報結構（每個功能一份 spec、三件套齊全）才不會跟證據對不起來
 
 ---
 
