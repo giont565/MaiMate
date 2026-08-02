@@ -232,6 +232,7 @@
     const rest = portfolio.assets.slice(1);
     const other = portfolio.assets[1] || null;
     const topLabel = portfolio.topAssetLabel;
+    const topIsCash = Boolean(portfolio.topAssetIsCash);
     const topPct = pct(portfolio.topAssetRatio);
     const restRatio = detailed
       ? rest.reduce((sum, asset) => sum + asset.weight, 0)
@@ -323,7 +324,12 @@
           String(portfolio.snapshotAsOf || "").replace("T", " ").slice(0, 16))
         : ev("src_cash", "資料來源", "你的帳戶健檢報告（" + portfolio.asOfMonth + " 快照）", "持倉摘要", generatedAt()),
       hero: {
-        conclusion: "你的資金主要停在" + topLabel + "，約占 " + topPct + "。",
+        /* 最大持有是現金還是加密資產，講法完全不同——這一整段原本寫死成「停在現金」的
+           語氣，接上真帳戶（最大持有是 ETH）之後就會說出「加密資產漲跌帶動帳戶的幅度
+           比較小」這種與事實相反的話。措辭必須跟著 isCash 分岔。 */
+        conclusion: topIsCash
+          ? "你的資金主要停在" + topLabel + "，約占 " + topPct + "。"
+          : "你的資金最集中在" + topLabel + "，約占 " + topPct + "。",
         primaryMetric: {
           label: "最大持有（" + portfolio.asOfMonth + "）",
           value: topPct,
@@ -333,9 +339,14 @@
       whyItMatters: {
         title: "為什麼這和你有關",
         paragraphs: [
-          "帳戶整體的變化，是各項資產的漲跌依占比加權後的結果。資金多在" + topLabel +
-            "時，加密資產的漲跌帶動整體帳戶的幅度就比較小。",
-          "這是「資金停在哪裡」的描述，不是把資金押在某一種加密資產上，兩者的意思剛好相反。",
+          topIsCash
+            ? "帳戶整體的變化，是各項資產的漲跌依占比加權後的結果。資金多在" + topLabel +
+              "時，加密資產的漲跌帶動整體帳戶的幅度就比較小。"
+            : "帳戶整體的變化，是各項資產的漲跌依占比加權後的結果。" + topLabel + "占了 " + topPct +
+              "，所以它的漲跌對整體帳戶的影響也最大。",
+          topIsCash
+            ? "這是「資金停在哪裡」的描述，不是把資金押在某一種加密資產上，兩者的意思剛好相反。"
+            : "這是「資金分布在哪裡」的描述，不是在說" + topLabel + "好或不好。",
           "它也不代表這樣做比較好或比較差——重點是這個分布是不是你原本想要的。",
         ],
       },
@@ -346,7 +357,10 @@
           core: detailed
             ? "你手上的錢，大約 " + topPct + " 是" + topLabel + "，剩下 " + otherPct + " 分散在另外 " + rest.length + " 種資產。"
             : "你手上的錢，大約 " + topPct + " 是" + topLabel + "，剩下 " + otherPct + " 是其他資產（報告沒有再細分）。",
-          analogy: "可以把帳戶想成一個籃子：現在籃子裡大部分是還沒放進市場的資金，所以市場搖晃時，整個籃子跟著搖的幅度比較小。",
+          analogy: topIsCash
+            ? "可以把帳戶想成一個籃子：現在籃子裡大部分是還沒放進市場的資金，所以市場搖晃時，整個籃子跟著搖的幅度比較小。"
+            : "可以把帳戶想成一個籃子：現在籃子裡最重的一塊是" + topLabel +
+              "，所以它漲跌的時候，整個籃子跟著搖的幅度也最明顯。",
           detail: detailed
             ? "計算方式是把每一種資產的市值除以帳戶總值；市值採「" + (portfolio.snapshotMethod || "各幣最後成交價估值") + "」，所以是估值而不是結算金額。"
             : "計算方式是把該月最大持有標的的市值除以帳戶總值；其餘部位在報告裡沒有再細分到各幣種，所以只能以合計呈現。",
